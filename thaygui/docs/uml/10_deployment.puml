@@ -1,0 +1,25 @@
+@startuml deployment
+title Biểu đồ triển khai – môi trường test (Docker Compose)
+
+node "Máy dev / máy chủ test\n(Docker Engine)" {
+  node "backend\nimage: vsa-backend\nport 8080" as be {
+    artifact "video-sharing-api.jar"
+  }
+  node "db\nimage: mysql:8.4\nport 3306" as db {
+    database "video_sharing"
+  }
+  folder "volume uploads_data" as up
+  folder "volume mysql_data" as md
+}
+
+node "Điện thoại / Trình duyệt" {
+  node "Expo Go / Expo Web" as eg {
+    artifact "Ứng dụng JS bundle (Metro, port 8081)"
+  }
+}
+
+eg --> be : HTTP :8080 (REST + WebSocket)
+be --> db : JDBC :3306
+be --> up
+db --> md
+@enduml

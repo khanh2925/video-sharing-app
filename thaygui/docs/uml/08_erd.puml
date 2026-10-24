@@ -1,0 +1,154 @@
+@startuml erd
+hide circle
+skinparam linetype ortho
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #444444
+  HeaderBackgroundColor #FFE4EE
+}
+title ERD – Cơ sở dữ liệu video_sharing (MySQL)
+
+entity "users" as users {
+  * id : BIGINT <<PK>>
+  --
+  * username : VARCHAR(30) <<UQ>>
+  * email : VARCHAR(120) <<UQ>>
+  * password_hash : VARCHAR(100)
+  display_name : VARCHAR(60)
+  bio : VARCHAR(255)
+  avatar_url : VARCHAR(255)
+  * role : VARCHAR(10)
+  * locked : BOOLEAN
+  * created_at : DATETIME
+}
+
+entity "follows" as follows {
+  * id : BIGINT <<PK>>
+  --
+  * follower_id : BIGINT <<FK>>
+  * following_id : BIGINT <<FK>>
+  * created_at : DATETIME
+  UQ(follower_id, following_id)
+}
+
+entity "topics" as topics {
+  * id : BIGINT <<PK>>
+  --
+  * name : VARCHAR(50) <<UQ>>
+  icon : VARCHAR(30)
+  color : VARCHAR(10)
+}
+
+entity "audios" as audios {
+  * id : BIGINT <<PK>>
+  --
+  * title : VARCHAR(100)
+  artist : VARCHAR(100)
+  category : VARCHAR(50)
+  cover_url : VARCHAR(255)
+  duration_sec : INT
+  * trending : BOOLEAN
+}
+
+entity "videos" as videos {
+  * id : BIGINT <<PK>>
+  --
+  * owner_id : BIGINT <<FK>>
+  topic_id : BIGINT <<FK>>
+  audio_id : BIGINT <<FK>>
+  * title : VARCHAR(150)
+  description : VARCHAR(2000)
+  * video_url : VARCHAR(255)
+  thumbnail_url : VARCHAR(255)
+  filter : VARCHAR(30)
+  * visibility : VARCHAR(10)
+  * status : VARCHAR(10)
+  * allow_comments : BOOLEAN
+  * view_count : BIGINT
+  * like_count : BIGINT
+  * comment_count : BIGINT
+  * created_at : DATETIME
+}
+
+entity "hashtags" as hashtags {
+  * id : BIGINT <<PK>>
+  --
+  * name : VARCHAR(50) <<UQ>>
+}
+
+entity "video_hashtags" as vh {
+  * video_id : BIGINT <<PK,FK>>
+  * hashtag_id : BIGINT <<PK,FK>>
+}
+
+entity "video_likes" as vl {
+  * id : BIGINT <<PK>>
+  --
+  * user_id : BIGINT <<FK>>
+  * video_id : BIGINT <<FK>>
+  * created_at : DATETIME
+  UQ(user_id, video_id)
+}
+
+entity "comments" as comments {
+  * id : BIGINT <<PK>>
+  --
+  * video_id : BIGINT <<FK>>
+  * user_id : BIGINT <<FK>>
+  * content : VARCHAR(500)
+  * like_count : BIGINT
+  * created_at : DATETIME
+}
+
+entity "comment_likes" as cl {
+  * id : BIGINT <<PK>>
+  --
+  * user_id : BIGINT <<FK>>
+  * comment_id : BIGINT <<FK>>
+  UQ(user_id, comment_id)
+}
+
+entity "live_streams" as ls {
+  * id : BIGINT <<PK>>
+  --
+  * host_id : BIGINT <<FK>>
+  * title : VARCHAR(150)
+  * source_video_url : VARCHAR(255)
+  thumbnail_url : VARCHAR(255)
+  * status : VARCHAR(10)
+  * viewer_count : INT
+  product_name : VARCHAR(100)
+  product_price : DECIMAL(12,2)
+  product_image_url : VARCHAR(255)
+  product_sold : INT
+  * started_at : DATETIME
+  ended_at : DATETIME
+}
+
+entity "live_messages" as lm {
+  * id : BIGINT <<PK>>
+  --
+  * live_id : BIGINT <<FK>>
+  * user_id : BIGINT <<FK>>
+  * type : VARCHAR(10)
+  content : VARCHAR(500)
+  * created_at : DATETIME
+}
+
+users ||--o{ follows : "follower_id"
+users ||--o{ follows : "following_id"
+users ||--o{ videos : owner_id
+topics |o--o{ videos
+audios |o--o{ videos
+videos ||--o{ vh
+hashtags ||--o{ vh
+users ||--o{ vl
+videos ||--o{ vl
+videos ||--o{ comments
+users ||--o{ comments
+comments ||--o{ cl
+users ||--o{ cl
+users ||--o{ ls : host_id
+ls ||--o{ lm
+users ||--o{ lm
+@enduml

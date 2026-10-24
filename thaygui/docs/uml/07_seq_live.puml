@@ -1,0 +1,44 @@
+@startuml seq_live
+autonumber
+title Sequence – UC18 Xem livestream và chat (WebSocket/STOMP)
+
+actor "Người xem A" as A
+participant "LiveScreen (A)" as AppA
+participant "LiveScreen (B)" as AppB
+participant "STOMP Broker\n/ws" as WS
+participant "LiveSocketController" as LC
+participant "LiveService" as S
+database "MySQL" as DB
+
+A -> AppA : chọn live từ mục Streaming
+AppA -> WS : CONNECT (header Authorization: Bearer JWT)
+WS -> WS : StompAuthInterceptor xác thực JWT
+AppA -> WS : SUBSCRIBE /topic/live/{id}
+AppA -> WS : SEND /app/live/{id}/join
+WS -> LC : join(id)
+LC -> S : changeViewers(id, +1)
+S -> DB : UPDATE live_streams SET viewer_count
+S --> LC : viewerCount
+LC -> WS : broadcast {type: VIEWERS, count}
+WS --> AppA : VIEWERS
+WS --> AppB : VIEWERS
+
+A -> AppA : nhập "Còn màu đen không?"
+AppA -> WS : SEND /app/live/{id}/chat {content}
+WS -> LC : chat(id, msg, principal)
+LC -> S : saveMessage(id, user, COMMENT, content)
+S -> DB : INSERT live_messages
+S --> LC : LiveMessageDto
+LC -> WS : broadcast /topic/live/{id}
+WS --> AppA : COMMENT
+WS --> AppB : COMMENT (hiện realtime)
+
+A -> AppA : chạm ❤️
+AppA -> WS : SEND /app/live/{id}/react {content: "heart"}
+LC -> WS : broadcast {type: REACTION}
+WS --> AppB : REACTION (hiệu ứng bay lên)
+
+A -> AppA : đóng live
+AppA -> WS : SEND /app/live/{id}/leave
+LC -> S : changeViewers(id, -1)
+@enduml

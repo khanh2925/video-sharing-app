@@ -1,0 +1,36 @@
+@startuml seq_login
+autonumber
+skinparam sequenceParticipant underline
+title Sequence – UC02 Đăng nhập
+
+actor "Người dùng" as U
+participant "LoginScreen\n(Expo app)" as App
+participant "AuthController" as C
+participant "AuthService" as S
+participant "UserRepository" as R
+participant "JwtService" as J
+database "MySQL" as DB
+
+U -> App : nhập username/email + mật khẩu
+App -> C : POST /api/auth/login {login, password}
+C -> S : login(req)
+S -> R : findByUsernameOrEmail(login)
+R -> DB : SELECT * FROM users WHERE ...
+DB --> R : bản ghi user
+R --> S : Optional<User>
+alt không tìm thấy hoặc sai mật khẩu
+  S --> C : throw BadCredentialsException
+  C --> App : 401 {message: "Tên đăng nhập hoặc mật khẩu không đúng"}
+  App --> U : hiển thị lỗi
+else tài khoản bị khóa
+  S --> C : throw AccountLockedException
+  C --> App : 403 {message: "Tài khoản đã bị khóa"}
+else hợp lệ
+  S -> J : generateToken(user)
+  J --> S : JWT (hết hạn 7 ngày)
+  S --> C : AuthResponse{token, user}
+  C --> App : 200 {token, user}
+  App -> App : lưu token (SecureStore)\nđặt header Authorization
+  App --> U : chuyển tới Home
+end
+@enduml

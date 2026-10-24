@@ -1,0 +1,14 @@
+services:
+  db:
+    image: mysql:8.4
+    container_name: vsa-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: video_sharing
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

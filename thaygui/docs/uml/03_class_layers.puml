@@ -1,0 +1,104 @@
+@startuml class_layers
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #3D7BF7
+  HeaderBackgroundColor #E6EEFF
+}
+hide empty members
+title Biểu đồ lớp – Các tầng xử lý (module Video, Comment, Live)
+
+package controller {
+  class VideoController {
+    + trending(page, size)
+    + byTopic(topicId, page, size)
+    + get(id)
+    + view(id)
+    + upload(file, thumbnail, meta)
+    + update(id, req)
+    + delete(id)
+    + like(id)
+    + unlike(id)
+  }
+  class CommentController {
+    + list(videoId, page)
+    + create(videoId, req)
+    + delete(id)
+    + like(id)
+    + unlike(id)
+  }
+  class LiveController {
+    + list()
+    + get(id)
+    + start(req)
+    + end(id)
+    + messages(id)
+  }
+  class LiveSocketController {
+    + chat(liveId, msg, principal)
+    + react(liveId, msg, principal)
+    + join(liveId)
+    + leave(liveId)
+  }
+}
+
+package service {
+  class VideoService {
+    + getTrending(viewer, pageable) : Page<VideoDto>
+    + getByTopic(topicId, viewer, pageable) : Page<VideoDto>
+    + getById(id, viewer) : VideoDto
+    + create(owner, file, thumb, req) : VideoDto
+    + update(id, user, req) : VideoDto
+    + delete(id, user)
+    + like(id, user) : VideoDto
+    + unlike(id, user) : VideoDto
+    + increaseView(id)
+  }
+  class CommentService {
+    + list(videoId, viewer, pageable) : Page<CommentDto>
+    + create(videoId, user, content) : CommentDto
+    + delete(id, user)
+    + like(id, user) : CommentDto
+  }
+  class LiveService {
+    + listLive() : List<LiveDto>
+    + start(host, req) : LiveDto
+    + end(id, host) : LiveDto
+    + saveMessage(liveId, user, type, content) : LiveMessageDto
+    + changeViewers(liveId, delta) : int
+  }
+  interface StorageService {
+    + store(file, folder) : String
+    + load(path) : Resource
+  }
+  class LocalStorageService
+}
+
+package repository {
+  interface VideoRepository
+  interface VideoLikeRepository
+  interface CommentRepository
+  interface FollowRepository
+  interface LiveStreamRepository
+  interface LiveMessageRepository
+}
+
+class "JpaRepository<T, ID>" as Jpa <<Spring Data>>
+
+VideoController --> VideoService
+CommentController --> CommentService
+LiveController --> LiveService
+LiveSocketController --> LiveService
+VideoService --> VideoRepository
+VideoService --> VideoLikeRepository
+VideoService --> FollowRepository
+VideoService --> StorageService
+CommentService --> CommentRepository
+CommentService --> VideoRepository
+LiveService --> LiveStreamRepository
+LiveService --> LiveMessageRepository
+LocalStorageService ..|> StorageService
+VideoRepository --|> Jpa
+CommentRepository --|> Jpa
+LiveStreamRepository --|> Jpa
+@enduml

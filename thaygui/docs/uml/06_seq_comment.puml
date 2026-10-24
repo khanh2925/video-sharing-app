@@ -1,0 +1,40 @@
+@startuml seq_comment
+autonumber
+title Sequence – UC08 Bình luận video
+
+actor "Người dùng" as U
+participant "CommentSheet" as App
+participant "JwtAuthFilter" as F
+participant "CommentController" as C
+participant "CommentService" as S
+participant "VideoRepository" as VR
+participant "CommentRepository" as CR
+database "MySQL" as DB
+
+U -> App : mở bình luận
+App -> C : GET /api/videos/{id}/comments?page=0
+C -> S : list(videoId, viewer, page)
+S -> CR : findByVideoIdOrderByCreatedAtDesc
+CR -> DB : SELECT ...
+DB --> CR : rows
+S --> C : Page<CommentDto>
+C --> App : 200 danh sách
+U -> App : nhập nội dung, bấm Gửi
+App -> F : POST /api/videos/{id}/comments\nAuthorization: Bearer <JWT>
+F -> F : xác thực JWT → SecurityContext
+F -> C : chuyển tiếp request
+C -> S : create(videoId, user, content)
+S -> VR : findById(videoId)
+VR --> S : Video
+alt video.allowComments = false
+  S --> C : throw ForbiddenException
+  C --> App : 403 "Video đã tắt bình luận"
+else cho phép
+  S -> CR : save(Comment)
+  S -> VR : video.commentCount + 1
+  CR -> DB : INSERT comments; UPDATE videos
+  S --> C : CommentDto
+  C --> App : 201 CommentDto
+  App --> U : chèn bình luận lên đầu danh sách
+end
+@enduml

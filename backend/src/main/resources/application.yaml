@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: video-sharing-api
+  datasource:
+    url: jdbc:mysql://localhost:3307/video_sharing
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+server:
+  port: 8080

@@ -1,0 +1,6 @@
+.DS_Store
+.idea/
+*.iml
+backend/target/
+node_modules/
+.expo/

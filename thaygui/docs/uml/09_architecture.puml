@@ -1,0 +1,43 @@
+@startuml architecture
+skinparam componentStyle rectangle
+title Kiến trúc hệ thống – Client/Server 3 tầng
+
+node "Điện thoại (Android/iOS – Expo Go)" as phone {
+  component "Expo App\n(React Native + TypeScript)" as app {
+    [Screens (12 màn hình)] as screens
+    [Navigation\n(Stack + Bottom Tabs)] as nav
+    [AuthContext\n(JWT trong SecureStore)] as auth
+    [API client (Axios)] as api
+    [STOMP client] as stomp
+  }
+}
+
+node "Server (Docker Compose)" as server {
+  node "container: backend (Spring Boot 3, Java 21)" as be {
+    [REST Controllers\n/api/**] as rc
+    [WebSocket STOMP\n/ws, /topic/live/*] as wsc
+    [Security\n(JWT filter, BCrypt)] as sec
+    [Services\n(business logic)] as svc
+    [Repositories\n(Spring Data JPA)] as repo
+    [Static files\n/files/** (HTTP Range)] as files
+  }
+  database "container: mysql 8\nvideo_sharing" as db
+  folder "volume: uploads/\n(videos, thumbnails, avatars)" as vol
+}
+
+screens --> nav
+screens --> auth
+screens --> api
+screens --> stomp
+api --> rc : HTTPS/HTTP JSON
+stomp --> wsc : WebSocket
+screens ..> files : phát video mp4
+rc --> sec
+wsc --> sec
+rc --> svc
+wsc --> svc
+svc --> repo
+repo --> db : JDBC
+svc --> vol : ghi file
+files --> vol : đọc file
+@enduml

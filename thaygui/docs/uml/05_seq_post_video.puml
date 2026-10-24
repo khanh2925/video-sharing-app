@@ -1,0 +1,48 @@
+@startuml seq_post_video
+autonumber
+title Sequence – UC13 Tạo và đăng video
+
+actor "Người dùng" as U
+participant "CreateVideoScreen" as Cam
+participant "PostVideoScreen" as Post
+participant "VideoController" as C
+participant "VideoService" as S
+participant "StorageService" as St
+participant "VideoRepository" as R
+database "MySQL" as DB
+
+U -> Cam : bấm "+" → Upload
+Cam -> Cam : mở thư viện (expo-image-picker)
+U -> Cam : chọn video
+opt UC14 chọn filter
+  U -> Cam : chọn filter "Vintage"
+end
+opt UC15 chọn nhạc
+  Cam -> C : GET /api/audios?tab=foryou
+  C --> Cam : danh sách audio
+  U -> Cam : bấm "Use" một bài
+end
+Cam -> Post : điều hướng (uri, filter, audioId)
+U -> Post : nhập title, mô tả, hashtag,\nquyền xem, bật/tắt bình luận
+alt Post on social
+  Post -> C : POST /api/videos (multipart: file, meta{status=PUBLISHED})
+else Save draft (UC16)
+  Post -> C : POST /api/videos (multipart: file, meta{status=DRAFT})
+end
+C -> S : create(owner, file, thumbnail, meta)
+S -> S : validate (loại file, ≤100MB, title bắt buộc)
+alt không hợp lệ
+  S --> C : throw BadRequestException
+  C --> Post : 400 {message}
+else hợp lệ
+  S -> St : store(file, "videos")
+  St --> S : "/files/videos/<uuid>.mp4"
+  S -> R : save(Video + hashtags)
+  R -> DB : INSERT videos, video_hashtags
+  DB --> R : id
+  R --> S : Video
+  S --> C : VideoDto
+  C --> Post : 201 Created VideoDto
+  Post --> U : thông báo "Đăng thành công", về My Profile
+end
+@enduml

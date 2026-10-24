@@ -1,0 +1,151 @@
+@startuml class_domain
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #E8457C
+  HeaderBackgroundColor #FFE4EE
+}
+hide circle
+title Biểu đồ lớp – Mô hình miền (package entity)
+
+enum Role {
+  USER
+  ADMIN
+}
+enum Visibility {
+  PUBLIC
+  FOLLOWERS
+  PRIVATE
+}
+enum VideoStatus {
+  DRAFT
+  PUBLISHED
+  HIDDEN
+}
+enum LiveStatus {
+  LIVE
+  ENDED
+}
+enum LiveMessageType {
+  COMMENT
+  REACTION
+  VIEWERS
+}
+
+class User {
+  - id : Long
+  - username : String
+  - email : String
+  - passwordHash : String
+  - displayName : String
+  - bio : String
+  - avatarUrl : String
+  - role : Role
+  - locked : boolean
+  - createdAt : Instant
+}
+
+class Follow {
+  - id : Long
+  - createdAt : Instant
+}
+
+class Topic {
+  - id : Long
+  - name : String
+  - icon : String
+  - color : String
+}
+
+class Audio {
+  - id : Long
+  - title : String
+  - artist : String
+  - category : String
+  - coverUrl : String
+  - durationSec : int
+  - trending : boolean
+}
+
+class Hashtag {
+  - id : Long
+  - name : String
+}
+
+class Video {
+  - id : Long
+  - title : String
+  - description : String
+  - videoUrl : String
+  - thumbnailUrl : String
+  - filter : String
+  - visibility : Visibility
+  - status : VideoStatus
+  - allowComments : boolean
+  - viewCount : long
+  - likeCount : long
+  - commentCount : long
+  - createdAt : Instant
+  + isVisibleTo(viewer : User, isFollower : boolean) : boolean
+}
+
+class VideoLike {
+  - id : Long
+  - createdAt : Instant
+}
+
+class Comment {
+  - id : Long
+  - content : String
+  - likeCount : long
+  - createdAt : Instant
+}
+
+class CommentLike {
+  - id : Long
+}
+
+class LiveStream {
+  - id : Long
+  - title : String
+  - sourceVideoUrl : String
+  - thumbnailUrl : String
+  - status : LiveStatus
+  - viewerCount : int
+  - productName : String
+  - productPrice : BigDecimal
+  - productImageUrl : String
+  - productSold : int
+  - startedAt : Instant
+  - endedAt : Instant
+}
+
+class LiveMessage {
+  - id : Long
+  - type : LiveMessageType
+  - content : String
+  - createdAt : Instant
+}
+
+User "1" -- "0..*" Video : đăng >
+User "1" -- "0..*" Follow : follower
+User "1" -- "0..*" Follow : following
+Video "0..*" --> "0..1" Topic
+Video "0..*" --> "0..1" Audio
+Video "0..*" -- "0..*" Hashtag
+User "1" -- "0..*" VideoLike
+Video "1" *-- "0..*" VideoLike
+Video "1" *-- "0..*" Comment
+User "1" -- "0..*" Comment : viết >
+Comment "1" *-- "0..*" CommentLike
+User "1" -- "0..*" CommentLike
+User "1" -- "0..*" LiveStream : phát >
+LiveStream "1" *-- "0..*" LiveMessage
+User "1" -- "0..*" LiveMessage : gửi >
+
+User ..> Role
+Video ..> Visibility
+Video ..> VideoStatus
+LiveStream ..> LiveStatus
+LiveMessage ..> LiveMessageType
+@enduml
