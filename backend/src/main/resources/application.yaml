@@ -7,8 +7,40 @@ spring:
     password: root
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update        # Hibernate tự tạo / sửa bảng theo các lớp @Entity
     show-sql: true
+    open-in-view: false
+  servlet:
+    multipart:
+      # "Trần cứng" để chặn file quá lớn trước khi vào code.
+      # Giới hạn thật do quản trị viên chỉnh (VIDEO_MAX_SIZE_MB), phải nhỏ hơn mức này.
+      max-file-size: 500MB
+      max-request-size: 510MB
 
 server:
   port: 8080
+
+# =====================================================================
+# Cấu hình kỹ thuật của ứng dụng (đọc qua lớp AppProperties).
+# Đổi số → lưu file → chạy lại backend, không phải sửa code.
+# Thông số quản trị viên chỉnh trên app (độ dài story, dung lượng video...)
+# KHÔNG nằm ở đây mà trong bảng system_settings (UC19).
+# =====================================================================
+app:
+  upload-dir: uploads          # nơi lưu file người dùng upload (đã bỏ khỏi Git)
+  seed-media-dir: seed-media   # video, ảnh mẫu cho DataSeeder
+
+  jwt:
+    # Khi chạy thật đặt biến môi trường JWT_SECRET (ít nhất 32 ký tự)
+    secret: ${JWT_SECRET:vsa-2026-chuoi-bi-mat-mac-dinh-chi-dung-khi-dev-0123456789}
+    expiration-days: 7
+
+  upload:
+    video-types: mp4,mov,webm
+    image-types: jpg,jpeg,png,webp
+    image-max-size-mb: 5
+
+  paging:
+    comment-page-size: 20      # số bình luận mỗi lần tải
+    trending-size: 10          # số video ở mục Top trending
+    suggestion-size: 10        # số tài khoản gợi ý

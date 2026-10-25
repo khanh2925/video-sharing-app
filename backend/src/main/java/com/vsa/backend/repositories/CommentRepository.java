@@ -1,0 +1,21 @@
+package com.vsa.backend.repositories;
+
+import com.vsa.backend.entities.Comment;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+// Bình luận. JpaRepository có sẵn: findById, findAll(Pageable), save, delete, count...
+@Repository
+public interface CommentRepository extends JpaRepository<Comment, Long> {
+
+    // Thêm hàm truy vấn khi cần, đặt tên theo quy tắc Spring Data:
+    // findBy<TenThuocTinh>, existsBy..., countBy..., ...OrderBy<TenThuocTinh>Desc
+
+    // UC10 xoá video: xoá hết bình luận của video (phải xoá lượt thích bình luận trước)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from Comment c where c.video.id = :videoId")
+    int deleteAllByVideoId(@Param("videoId") Long videoId);
+}

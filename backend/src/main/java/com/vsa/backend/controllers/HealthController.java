@@ -1,4 +1,4 @@
-package com.vsa.backend.controller;
+package com.vsa.backend.controllers;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
