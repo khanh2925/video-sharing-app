@@ -42,6 +42,10 @@ Thấy container `vsa-mysql` trạng thái `Up` là được.
 2. Đợi Maven tải thư viện xong
 3. Mở `BackendApplication.java` → bấm ▶
 4. Mở http://localhost:8080/api/health → thấy `{"status":"UP", "mysqlVersion":"8.4.x"}` là OK
+5. Lần chạy đầu backend tự nạp **dữ liệu mẫu** (8 video, chủ đề, nhạc, bình luận, 1 live). Mở http://localhost:8080/files/videos/video01.mp4 thấy video là OK.
+   Tài khoản mẫu, mật khẩu đều `123456`: `admin` (quản trị viên), `lan`, `minh`, `hoa`, `an`.
+
+> Trước khi code, đọc **[docs/NghiepVu_ChucNang.md](docs/NghiepVu_ChucNang.md)**: nghiệp vụ từng use case, quy ước đặt tên, phân công, quy ước Git và những thứ đã có sẵn để dùng lại.
 
 ## 5. Chạy mobile (Expo)
 Điện thoại và máy tính phải cùng WiFi.

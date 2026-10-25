@@ -4,3 +4,7 @@
 backend/target/
 node_modules/
 .expo/
+
+# File người dùng upload khi chạy thử (không đưa lên Git)
+uploads/
+backend/uploads/
