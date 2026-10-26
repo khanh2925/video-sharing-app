@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 // Lượt thích video. JpaRepository có sẵn: findById, findAll(Pageable), save, delete, count...
 @Repository
 public interface VideoLikeRepository extends JpaRepository<VideoLike, Long> {
@@ -15,6 +17,8 @@ public interface VideoLikeRepository extends JpaRepository<VideoLike, Long> {
     // findBy<TenThuocTinh>, existsBy..., countBy..., ...OrderBy<TenThuocTinh>Desc
 
     boolean existsByVideoIdAndUserId(Long videoId, Long userId);
+
+    Optional<VideoLike> findByVideoIdAndUserId(Long videoId, Long userId);
 
     // UC10 xoá video: xoá hết lượt thích của video bằng 1 câu DELETE
     @Modifying(flushAutomatically = true, clearAutomatically = true)

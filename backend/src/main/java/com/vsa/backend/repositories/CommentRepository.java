@@ -1,6 +1,8 @@
 package com.vsa.backend.repositories;
 
 import com.vsa.backend.entities.Comment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +12,8 @@ import org.springframework.stereotype.Repository;
 // Bình luận. JpaRepository có sẵn: findById, findAll(Pageable), save, delete, count...
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Long> {
+
+    Page<Comment> findByVideoIdOrderByCreatedAtDesc(Long videoId, Pageable pageable);
 
     // Thêm hàm truy vấn khi cần, đặt tên theo quy tắc Spring Data:
     // findBy<TenThuocTinh>, existsBy..., countBy..., ...OrderBy<TenThuocTinh>Desc

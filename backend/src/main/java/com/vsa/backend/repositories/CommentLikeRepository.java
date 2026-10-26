@@ -7,9 +7,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 // Lượt thích bình luận. JpaRepository có sẵn: findById, findAll(Pageable), save, delete, count...
 @Repository
 public interface CommentLikeRepository extends JpaRepository<CommentLike, Long> {
+
+    boolean existsByCommentIdAndUserId(Long commentId, Long userId);
+
+    Optional<CommentLike> findByCommentIdAndUserId(Long commentId, Long userId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from CommentLike cl where cl.comment.id = :commentId")
+    int deleteAllByCommentId(@Param("commentId") Long commentId);
 
     // Thêm hàm truy vấn khi cần, đặt tên theo quy tắc Spring Data:
     // findBy<TenThuocTinh>, existsBy..., countBy..., ...OrderBy<TenThuocTinh>Desc
