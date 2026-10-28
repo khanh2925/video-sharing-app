@@ -6,6 +6,7 @@ public record AudioResponse(
         String title,
         String artist,
         String coverUrl,
+        String fileUrl,
         int durationSec,
         boolean trending
 ) {

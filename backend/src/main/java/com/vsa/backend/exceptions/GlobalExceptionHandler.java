@@ -3,16 +3,20 @@ package com.vsa.backend.exceptions;
 import com.vsa.backend.dtos.response.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /** Bắt mọi lỗi ném ra từ controller / service và trả về JSON thống nhất (NFR09). */
 @Slf4j
@@ -35,9 +39,30 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, message);
     }
 
-    @ExceptionHandler({MissingServletRequestParameterException.class, MissingServletRequestPartException.class})
-    public ResponseEntity<ErrorResponse> handleMissingParam(Exception e) {
-        return build(HttpStatus.BAD_REQUEST, "Thiếu dữ liệu bắt buộc: " + e.getMessage());
+    // Thiếu file trong form multipart (vd không gửi "file" khi đăng video)
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException e) {
+        return build(HttpStatus.BAD_REQUEST, "Thiếu dữ liệu bắt buộc: " + e.getRequestPartName());
+    }
+
+    // JSON sai cú pháp, sai kiểu (vd ?page=abc, /api/videos/abc), thiếu tham số bắt buộc trên URL.
+    // Không có các dòng này thì rơi xuống handleOther → trả 500 sai bản chất.
+    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class})
+    public ResponseEntity<ErrorResponse> handleBadInput(Exception e) {
+        return build(HttpStatus.BAD_REQUEST, "Dữ liệu gửi lên không hợp lệ");
+    }
+
+    // Sắp xếp theo thuộc tính không có (vd ?sort=abc với API nhận Pageable)
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ErrorResponse> handleBadSort(PropertyReferenceException e) {
+        return build(HttpStatus.BAD_REQUEST, "Dữ liệu gửi lên không hợp lệ");
+    }
+
+    // Gọi đường dẫn không có API nào, hoặc file trong /files/** không tồn tại
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException e) {
+        return build(HttpStatus.NOT_FOUND, "Không tìm thấy");
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

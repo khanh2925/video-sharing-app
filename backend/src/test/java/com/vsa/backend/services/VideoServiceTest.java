@@ -2,6 +2,7 @@ package com.vsa.backend.services;
 
 import com.vsa.backend.dtos.request.CreateVideoRequest;
 import com.vsa.backend.dtos.request.UpdateVideoRequest;
+import com.vsa.backend.dtos.response.PageResponse;
 import com.vsa.backend.dtos.response.VideoResponse;
 import com.vsa.backend.entities.Hashtag;
 import com.vsa.backend.entities.User;
@@ -17,6 +18,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,7 +31,9 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /** Test UC08–UC10. Người đang đăng nhập giả lập là user id 2. */
@@ -64,8 +70,9 @@ class VideoServiceTest {
         VideoMapper videoMapper = new VideoMapper(new UserMapper(), new CatalogMapper());
 
         videoService = new VideoService(videoRepository, userRepository, topicRepository,
-                mock(AudioRepository.class), hashtagRepository, followRepository, videoLikeRepository,
-                commentRepository, commentLikeRepository, fileStorageService, videoMapper);
+                mock(AudioRepository.class), hashtagRepository, videoLikeRepository,
+                commentRepository, commentLikeRepository, fileStorageService, videoMapper,
+                new VideoAccessPolicy(videoRepository, followRepository));
 
         // Giả lập "đã đăng nhập" giống JwtAuthFilter: principal là id người dùng
         SecurityContextHolder.getContext().setAuthentication(
@@ -84,6 +91,29 @@ class VideoServiceTest {
     }
 
     // ---------- UC08 ----------
+
+    // ---------- UC05: feed "Đang theo dõi" ----------
+
+    @Test
+    void getFollowingFeed_layVideoCongKhaiVaNguoiTheoDoi_cuaNguoiMinhTheoDoi() {
+        when(videoRepository.findFollowingFeed(eq(ME), eq(VideoStatus.PUBLISHED), anyCollection(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(video(5L, 3L, VideoStatus.PUBLISHED))));
+
+        PageResponse<VideoResponse> page = videoService.getFollowingFeed(PageRequest.of(0, 10));
+
+        assertEquals(1, page.content().size());
+        verify(videoRepository).findFollowingFeed(eq(ME), eq(VideoStatus.PUBLISHED),
+                eq(List.of(Visibility.PUBLIC, Visibility.FOLLOWERS)), any(Pageable.class));
+    }
+
+    @Test
+    void getFollowingFeed_khach_bi401() {
+        SecurityContextHolder.clearContext();
+
+        ApiException e = assertThrows(ApiException.class, () -> videoService.getFollowingFeed(PageRequest.of(0, 10)));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, e.getStatus());
+    }
 
     @Test
     void create_macDinhDangCongKhai_vaChuanHoaHashtag() {

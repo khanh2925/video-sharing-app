@@ -1,5 +1,7 @@
 package com.vsa.backend.services;
 
+import com.vsa.backend.dtos.request.UpdateProfileRequest;
+import com.vsa.backend.dtos.response.AuthUserResponse;
 import com.vsa.backend.dtos.response.PageResponse;
 import com.vsa.backend.dtos.response.UserProfileResponse;
 import com.vsa.backend.dtos.response.VideoResponse;
@@ -25,6 +27,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -49,6 +52,7 @@ class UserServiceTest {
     private FollowRepository followRepository;
     private VideoRepository videoRepository;
     private VideoLikeRepository videoLikeRepository;
+    private FileStorageService fileStorageService;
     private UserService userService;
 
     @BeforeEach
@@ -57,9 +61,10 @@ class UserServiceTest {
         followRepository = mock(FollowRepository.class);
         videoRepository = mock(VideoRepository.class);
         videoLikeRepository = mock(VideoLikeRepository.class);
+        fileStorageService = mock(FileStorageService.class);
         VideoMapper videoMapper = new VideoMapper(new UserMapper(), new CatalogMapper());
         userService = new UserService(userRepository, followRepository, videoRepository,
-                videoLikeRepository, new UserMapper(), videoMapper);
+                videoLikeRepository, new UserMapper(), videoMapper, fileStorageService);
 
         when(userRepository.findById(MINH)).thenReturn(Optional.of(taoUser(MINH, "minh")));
         when(userRepository.findById(LAN)).thenReturn(Optional.of(taoUser(LAN, "lan")));
@@ -193,6 +198,47 @@ class UserServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, e.getStatus());
         verifyNoInteractions(videoLikeRepository);
+    }
+
+    // ---------- UC07: sửa thông tin cá nhân ----------
+
+    @Test
+    void updateMyProfile_doiTenVaTieuSu_trimKhoangTrang() {
+        dangNhapLa(MINH);
+
+        AuthUserResponse res = userService.updateMyProfile(new UpdateProfileRequest("  Minh Trần ", " Thích nấu ăn "));
+
+        assertEquals("Minh Trần", res.displayName());
+        assertEquals("Thích nấu ăn", res.bio());
+    }
+
+    @Test
+    void updateMyProfile_bioRong_xoaTieuSu() {
+        dangNhapLa(MINH);
+
+        AuthUserResponse res = userService.updateMyProfile(new UpdateProfileRequest("Minh", ""));
+
+        assertNull(res.bio());
+    }
+
+    @Test
+    void updateMyProfile_khach_bi401() {
+        ApiException ex = assertThrows(ApiException.class,
+                () -> userService.updateMyProfile(new UpdateProfileRequest("Minh", null)));
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatus());
+    }
+
+    @Test
+    void updateMyAvatar_luuAnhMoi_roiXoaAnhCu() {
+        dangNhapLa(MINH);
+        userRepository.findById(MINH).orElseThrow().setAvatarUrl("/files/avatars/cu.jpg");
+        MultipartFile file = mock(MultipartFile.class);
+        when(fileStorageService.saveImage(file, FileStorageService.AVATAR_DIR)).thenReturn("/files/avatars/moi.jpg");
+
+        AuthUserResponse res = userService.updateMyAvatar(file);
+
+        assertEquals("/files/avatars/moi.jpg", res.avatarUrl());
+        verify(fileStorageService).delete("/files/avatars/cu.jpg");
     }
 
     // ---------- Hàm phụ ----------

@@ -2,6 +2,7 @@ package com.vsa.backend.services;
 
 import com.vsa.backend.dtos.response.StoryGroupResponse;
 import com.vsa.backend.dtos.response.StoryResponse;
+import com.vsa.backend.entities.Audio;
 import com.vsa.backend.entities.Story;
 import com.vsa.backend.entities.StoryView;
 import com.vsa.backend.entities.User;
@@ -10,6 +11,7 @@ import com.vsa.backend.enums.SettingKey;
 import com.vsa.backend.exceptions.ApiException;
 import com.vsa.backend.mappers.StoryMapper;
 import com.vsa.backend.mappers.UserMapper;
+import com.vsa.backend.repositories.AudioRepository;
 import com.vsa.backend.repositories.FollowRepository;
 import com.vsa.backend.repositories.StoryRepository;
 import com.vsa.backend.repositories.StoryViewRepository;
@@ -46,15 +48,17 @@ public class StoryService {
     private final SystemSettingService systemSettingService;
     private final StoryMapper storyMapper;
     private final UserMapper userMapper;
+    private final AudioRepository audioRepository;
 
     // ===================== UC17: đăng, xoá story =====================
 
     /**
      * @param durationSec độ dài video tính bằng giây, app đọc từ file rồi gửi lên (ảnh thì bỏ trống).
      *                    Server không tự đọc được độ dài video nên tin số app gửi, chỉ kiểm tra giới hạn.
+     * @param audioId     nhạc nền chọn ở màn Chọn nhạc (không bắt buộc)
      */
     @Transactional
-    public StoryResponse create(MultipartFile file, Integer durationSec) {
+    public StoryResponse create(MultipartFile file, Integer durationSec, Long audioId) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         User owner = userRepository.findById(currentUserId)
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy người dùng"));
@@ -75,6 +79,9 @@ public class StoryService {
             duration = durationSec;
         }
 
+        Audio audio = audioId == null ? null : audioRepository.findById(audioId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy bài nhạc id = " + audioId));
+
         String mediaUrl = fileStorageService.saveStoryFile(file);   // tự kiểm tra định dạng, dung lượng
         try {
             int lifetimeHours = systemSettingService.getInt(SettingKey.STORY_LIFETIME_HOURS);
@@ -84,6 +91,7 @@ public class StoryService {
                     .durationSec(duration)
                     .expiresAt(LocalDateTime.now().plusHours(lifetimeHours))   // R11
                     .owner(owner)
+                    .audio(audio)
                     .build();
             storyRepository.saveAndFlush(story);
             return storyMapper.toResponse(story, true);

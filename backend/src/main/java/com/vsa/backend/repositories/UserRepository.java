@@ -4,8 +4,11 @@ import com.vsa.backend.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 // Người dùng. JpaRepository có sẵn: findById, findAll(Pageable), save, delete, count...
@@ -19,4 +22,30 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Page<User> findByUsernameContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(
             String username, String displayName, Pageable pageable);
+
+    // UC04 tìm tài khoản: chỉ người dùng thường chưa bị khoá (giống điều kiện gợi ý bên dưới),
+    // tên đăng nhập hoặc tên hiển thị chứa từ khoá. :query đã được SearchService thoát %, _, ! sẵn.
+    @Query("""
+            select u from User u
+            where u.role = com.vsa.backend.enums.Role.USER
+              and u.locked = false
+              and (lower(u.username) like lower(concat('%', :query, '%')) escape '!'
+                   or lower(coalesce(u.displayName, '')) like lower(concat('%', :query, '%')) escape '!')
+            order by u.id asc
+            """)
+    Page<User> searchAccounts(@Param("query") String query, Pageable pageable);
+
+    // UC12 gợi ý: người dùng thường (không gợi ý quản trị viên), chưa bị khoá, không phải mình,
+    // mình chưa theo dõi; nhiều người theo dõi xếp trước
+    @Query("""
+            select u from User u
+            left join Follow f on f.following = u
+            where u.id <> :viewerId
+              and u.role = com.vsa.backend.enums.Role.USER
+              and u.locked = false
+              and u.id not in (select f2.following.id from Follow f2 where f2.follower.id = :viewerId)
+            group by u
+            order by count(f) desc, u.id asc
+            """)
+    List<User> findSuggestions(@Param("viewerId") Long viewerId, Pageable pageable);
 }

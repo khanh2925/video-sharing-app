@@ -1,0 +1,13 @@
+/**
+ * Bình luận — UC11
+ * Phụ trách giao diện: Thanh
+ *
+ * Màn tạm: XOÁ dòng PlaceholderScreen và code giao diện thật theo
+ * docs/HuongDanCode_Mobile.html (tab "Thanh").
+ */
+import { PlaceholderScreen } from '../../components';
+import type { RootScreenProps } from '../../navigation/types';
+
+export default function CommentsScreen(_props: RootScreenProps<'Comments'>) {
+  return <PlaceholderScreen title="Bình luận" owner="Thanh" useCase="UC11" />;
+}

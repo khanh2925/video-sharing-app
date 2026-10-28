@@ -5,10 +5,10 @@ import com.vsa.backend.dtos.request.UpdateVideoRequest;
 import com.vsa.backend.dtos.response.PageResponse;
 import com.vsa.backend.dtos.response.VideoResponse;
 import com.vsa.backend.services.VideoService;
+import com.vsa.backend.utils.PageUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -34,7 +34,15 @@ public class VideoController {
     public PageResponse<VideoResponse> getTrending(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return videoService.getTrending(PageRequest.of(page, size));
+        return videoService.getTrending(PageUtils.of(page, size));
+    }
+
+    // GET /api/videos/following?page=0&size=10 → feed "Đang theo dõi" (cần đăng nhập)
+    @GetMapping("/following")
+    public PageResponse<VideoResponse> getFollowingFeed(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return videoService.getFollowingFeed(PageUtils.of(page, size));
     }
 
     @GetMapping
@@ -43,7 +51,7 @@ public class VideoController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return videoService.getByTopic(topicId,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+                PageUtils.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
     }
 
     @GetMapping("/{id}")
@@ -67,7 +75,7 @@ public class VideoController {
 
     @GetMapping("/me/drafts")
     public PageResponse<VideoResponse> getMyDrafts(Pageable pageable) {
-        return videoService.getMyDrafts(pageable);
+        return videoService.getMyDrafts(PageUtils.clamp(pageable));
     }
 
     @PutMapping("/{id}")

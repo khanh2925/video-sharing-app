@@ -2,14 +2,17 @@ package com.vsa.backend.services;
 
 import com.vsa.backend.dtos.response.StoryGroupResponse;
 import com.vsa.backend.dtos.response.StoryResponse;
+import com.vsa.backend.entities.Audio;
 import com.vsa.backend.entities.Story;
 import com.vsa.backend.entities.StoryView;
 import com.vsa.backend.entities.User;
 import com.vsa.backend.enums.MediaType;
 import com.vsa.backend.enums.SettingKey;
 import com.vsa.backend.exceptions.ApiException;
+import com.vsa.backend.mappers.CatalogMapper;
 import com.vsa.backend.mappers.StoryMapper;
 import com.vsa.backend.mappers.UserMapper;
+import com.vsa.backend.repositories.AudioRepository;
 import com.vsa.backend.repositories.FollowRepository;
 import com.vsa.backend.repositories.StoryRepository;
 import com.vsa.backend.repositories.StoryViewRepository;
@@ -41,6 +44,7 @@ class StoryServiceTest {
     private StoryViewRepository storyViewRepository;
     private FollowRepository followRepository;
     private UserRepository userRepository;
+    private AudioRepository audioRepository;
     private FileStorageService fileStorageService;
     private SystemSettingService systemSettingService;
     private StoryService storyService;
@@ -51,11 +55,13 @@ class StoryServiceTest {
         storyViewRepository = mock(StoryViewRepository.class);
         followRepository = mock(FollowRepository.class);
         userRepository = mock(UserRepository.class);
+        audioRepository = mock(AudioRepository.class);
         fileStorageService = mock(FileStorageService.class);
         systemSettingService = mock(SystemSettingService.class);
 
         storyService = new StoryService(storyRepository, storyViewRepository, followRepository, userRepository,
-                fileStorageService, systemSettingService, new StoryMapper(), new UserMapper());
+                fileStorageService, systemSettingService, new StoryMapper(new CatalogMapper()), new UserMapper(),
+                audioRepository);
 
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(ME, null, List.of()));
@@ -79,7 +85,7 @@ class StoryServiceTest {
         when(fileStorageService.isVideo(image)).thenReturn(false);
         when(fileStorageService.saveStoryFile(image)).thenReturn("/files/stories/a.jpg");
 
-        StoryResponse response = storyService.create(image, null);
+        StoryResponse response = storyService.create(image, null, null);
 
         assertEquals(MediaType.IMAGE, response.mediaType());
         assertEquals(0, response.durationSec());
@@ -89,11 +95,35 @@ class StoryServiceTest {
     }
 
     @Test
+    void create_coChonNhac_traVeNhacTrongStory() {
+        MockMultipartFile image = new MockMultipartFile("file", "a.jpg", "image/jpeg", new byte[]{1});
+        when(fileStorageService.saveStoryFile(image)).thenReturn("/files/stories/a.jpg");
+        when(audioRepository.findById(2L)).thenReturn(Optional.of(Audio.builder()
+                .id(2L).title("Nhịp vui").artist("Beat House").fileUrl("/files/audios/audio02.mp3").durationSec(45).build()));
+
+        StoryResponse response = storyService.create(image, null, 2L);
+
+        assertEquals("Nhịp vui", response.audio().title());
+        assertEquals("/files/audios/audio02.mp3", response.audio().fileUrl());
+    }
+
+    @Test
+    void create_nhacKhongTonTai_bao404_vaKhongLuuFile() {
+        MockMultipartFile image = new MockMultipartFile("file", "a.jpg", "image/jpeg", new byte[]{1});
+        when(audioRepository.findById(99L)).thenReturn(Optional.empty());
+
+        ApiException e = assertThrows(ApiException.class, () -> storyService.create(image, null, 99L));
+
+        assertEquals(HttpStatus.NOT_FOUND, e.getStatus());
+        verify(fileStorageService, never()).saveStoryFile(any());
+    }
+
+    @Test
     void create_videoDaiHonGioiHan_bao400_vaKhongLuuFile() {
         MockMultipartFile clip = new MockMultipartFile("file", "a.mp4", "video/mp4", new byte[]{1});
         when(fileStorageService.isVideo(clip)).thenReturn(true);
 
-        ApiException e = assertThrows(ApiException.class, () -> storyService.create(clip, 20));
+        ApiException e = assertThrows(ApiException.class, () -> storyService.create(clip, 20, null));
 
         assertEquals(HttpStatus.BAD_REQUEST, e.getStatus());
         assertEquals("Video story tối đa 15 giây", e.getMessage());

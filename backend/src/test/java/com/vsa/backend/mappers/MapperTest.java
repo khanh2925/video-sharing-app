@@ -21,7 +21,7 @@ class MapperTest {
 
     private final UserMapper userMapper = new UserMapper();
     private final CatalogMapper catalogMapper = new CatalogMapper();
-    private final StoryMapper storyMapper = new StoryMapper();
+    private final StoryMapper storyMapper = new StoryMapper(catalogMapper);
 
     @Test
     void userMapper_mapsPrivateAndSummaryViewsWithoutPassword() {
@@ -62,6 +62,7 @@ class MapperTest {
                 .title("Song")
                 .artist("Artist")
                 .coverUrl("/cover.jpg")
+                .fileUrl("/files/audios/song.mp3")
                 .durationSec(125)
                 .trending(true)
                 .build();
@@ -70,7 +71,7 @@ class MapperTest {
         AudioResponse audioResponse = catalogMapper.toAudioResponse(audio);
 
         assertEquals(new TopicResponse(3L, "Travel", "plane", "#123456"), topicResponse);
-        assertEquals(new AudioResponse(4L, "Song", "Artist", "/cover.jpg", 125, true), audioResponse);
+        assertEquals(new AudioResponse(4L, "Song", "Artist", "/cover.jpg", "/files/audios/song.mp3", 125, true), audioResponse);
     }
 
     @Test
@@ -89,6 +90,6 @@ class MapperTest {
         StoryResponse response = storyMapper.toResponse(story, true);
 
         assertEquals(new StoryResponse(9L, "/story.mp4", MediaType.VIDEO, 12,
-                createdAt, expiresAt, true), response);
+                createdAt, expiresAt, true, null), response);
     }
 }

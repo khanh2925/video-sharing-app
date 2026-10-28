@@ -23,6 +23,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * UC11 tương tác: thích video, bình luận, thích bình luận.
+ * Mọi thao tác đều kiểm tra quyền xem video theo bảng 6.2 (VideoAccessPolicy):
+ * không xem được video thì cũng không đọc / viết bình luận, không thích được.
+ * Bộ đếm (likeCount, commentCount) cộng trừ thẳng trong DB bằng câu UPDATE, không set trên entity.
+ */
 @Service
 @RequiredArgsConstructor
 public class InteractionService {
@@ -34,33 +40,34 @@ public class InteractionService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final AppProperties appProperties;
+    private final VideoAccessPolicy videoAccessPolicy;
 
     @Transactional
     public void likeVideo(Long videoId) {
         Long userId = SecurityUtils.getCurrentUserId();
-        Video video = findPublishedVideo(videoId);
+        Video video = findInteractableVideo(videoId, userId);
         if (videoLikeRepository.existsByVideoIdAndUserId(videoId, userId)) {
             throw ApiException.conflict("Bạn đã thích video này");
         }
         User user = userRepository.getReferenceById(userId);
         videoLikeRepository.save(VideoLike.builder().video(video).user(user).build());
-        video.setLikeCount(video.getLikeCount() + 1);
+        videoRepository.addLikeCount(videoId, 1);
     }
 
     @Transactional
     public void unlikeVideo(Long videoId) {
         Long userId = SecurityUtils.getCurrentUserId();
-        Video video = findPublishedVideo(videoId);
+        findInteractableVideo(videoId, userId);
         VideoLike like = videoLikeRepository.findByVideoIdAndUserId(videoId, userId)
                 .orElseThrow(() -> ApiException.notFound("Bạn chưa thích video này"));
         videoLikeRepository.delete(like);
-        video.setLikeCount(Math.max(0, video.getLikeCount() - 1));
+        videoRepository.addLikeCount(videoId, -1);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<CommentResponse> getComments(Long videoId, int page) {
-        findPublishedVideo(videoId);
         Long userId = SecurityUtils.getCurrentUserIdOrNull();
+        findInteractableVideo(videoId, userId);
         int size = appProperties.paging().commentPageSize();
         return PageResponse.of(
                 commentRepository.findByVideoIdOrderByCreatedAtDesc(videoId, PageRequest.of(page, size)),
@@ -70,7 +77,7 @@ public class InteractionService {
     @Transactional
     public CommentResponse createComment(Long videoId, CommentCreateRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
-        Video video = findPublishedVideo(videoId);
+        Video video = findInteractableVideo(videoId, userId);
         if (!video.isAllowComments()) {
             throw ApiException.conflict("Video đã tắt bình luận");
         }
@@ -79,7 +86,7 @@ public class InteractionService {
                 .user(userRepository.getReferenceById(userId))
                 .video(video)
                 .build());
-        video.setCommentCount(video.getCommentCount() + 1);
+        videoRepository.addCommentCount(videoId, 1);
         return toResponse(comment, userId);
     }
 
@@ -90,16 +97,18 @@ public class InteractionService {
         if (!comment.getUser().getId().equals(userId)) {
             throw ApiException.forbidden("Bạn không có quyền xoá bình luận này");
         }
-        Video video = comment.getVideo();
+        // Giảm số bình luận TRƯỚC: câu xoá lượt thích bên dưới có clearAutomatically = true,
+        // chạy xong thì comment, video bị tách khỏi phiên Hibernate, đọc tiếp sẽ lỗi LazyInitializationException.
+        // getVideo().getId() chỉ lấy id từ proxy, không phải tải video.
+        videoRepository.addCommentCount(comment.getVideo().getId(), -1);
         commentLikeRepository.deleteAllByCommentId(commentId);
         commentRepository.delete(comment);
-        video.setCommentCount(Math.max(0, video.getCommentCount() - 1));
     }
 
     @Transactional
     public void likeComment(Long commentId) {
         Long userId = SecurityUtils.getCurrentUserId();
-        Comment comment = findComment(commentId);
+        Comment comment = findInteractableComment(commentId, userId);
         if (commentLikeRepository.existsByCommentIdAndUserId(commentId, userId)) {
             throw ApiException.conflict("Bạn đã thích bình luận này");
         }
@@ -107,26 +116,41 @@ public class InteractionService {
                 .comment(comment)
                 .user(userRepository.getReferenceById(userId))
                 .build());
-        comment.setLikeCount(comment.getLikeCount() + 1);
+        commentRepository.addLikeCount(commentId, 1);
     }
 
     @Transactional
     public void unlikeComment(Long commentId) {
         Long userId = SecurityUtils.getCurrentUserId();
-        Comment comment = findComment(commentId);
+        findInteractableComment(commentId, userId);
         CommentLike like = commentLikeRepository.findByCommentIdAndUserId(commentId, userId)
                 .orElseThrow(() -> ApiException.notFound("Bạn chưa thích bình luận này"));
         commentLikeRepository.delete(like);
-        comment.setLikeCount(Math.max(0, comment.getLikeCount() - 1));
+        commentRepository.addLikeCount(commentId, -1);
     }
 
-    private Video findPublishedVideo(Long videoId) {
-        Video video = videoRepository.findById(videoId)
-                .orElseThrow(() -> ApiException.notFound("Không tìm thấy video"));
-        if (video.getStatus() != VideoStatus.PUBLISHED) {
-            throw ApiException.notFound("Không tìm thấy video");
-        }
+    /**
+     * Video phải xem được theo bảng 6.2 (riêng tư, chỉ người theo dõi...) VÀ đã đăng:
+     * chủ video xem được bản nháp của mình nhưng không thích / bình luận trên bản nháp.
+     */
+    private Video findInteractableVideo(Long videoId, Long userId) {
+        Video video = videoAccessPolicy.findViewableVideo(videoId, userId);
+        checkPublished(video);
         return video;
+    }
+
+    /** Bình luận phải tồn tại và video chứa nó phải xem được (giống findInteractableVideo). */
+    private Comment findInteractableComment(Long commentId, Long userId) {
+        Comment comment = findComment(commentId);
+        videoAccessPolicy.checkViewable(comment.getVideo(), userId);
+        checkPublished(comment.getVideo());
+        return comment;
+    }
+
+    private static void checkPublished(Video video) {
+        if (video.getStatus() != VideoStatus.PUBLISHED) {
+            throw ApiException.notFound(VideoAccessPolicy.NOT_VIEWABLE);
+        }
     }
 
     private Comment findComment(Long commentId) {

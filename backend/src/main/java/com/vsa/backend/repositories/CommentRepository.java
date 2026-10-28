@@ -22,4 +22,10 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from Comment c where c.video.id = :videoId")
     int deleteAllByVideoId(@Param("videoId") Long videoId);
+
+    // Cộng / trừ lượt thích bình luận ngay trong DB (tránh mất lượt khi bấm cùng lúc), không xuống dưới 0
+    @Modifying(flushAutomatically = true)
+    @Query("update Comment c set c.likeCount = case when c.likeCount + :delta < 0 then 0 "
+            + "else c.likeCount + :delta end where c.id = :commentId")
+    int addLikeCount(@Param("commentId") Long commentId, @Param("delta") long delta);
 }
