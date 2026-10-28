@@ -2,12 +2,15 @@ package com.vsa.backend.repositories;
 
 import com.vsa.backend.entities.Video;
 import com.vsa.backend.enums.VideoStatus;
+import com.vsa.backend.enums.Visibility;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.util.Collection;
 
 // Video. JpaRepository có sẵn: findById, findAll(Pageable), save, delete, count...
 @Repository
@@ -30,4 +33,11 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
             """)
     long sumLikeCountByOwner(@Param("ownerId") Long ownerId,
                              @Param("status") VideoStatus status);
+
+    // Tab Videos ở hồ sơ: video của 1 người theo trạng thái, chỉ lấy các chế độ hiển thị trong danh sách, mới nhất trước
+    // ...VisibilityIn(...) → WHERE visibility IN (...)
+    Page<Video> findByOwnerIdAndStatusAndVisibilityInOrderByCreatedAtDesc(Long ownerId,
+                                                                         VideoStatus status,
+                                                                         Collection<Visibility> visibilities,
+                                                                         Pageable pageable);
 }
