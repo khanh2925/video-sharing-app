@@ -1,0 +1,893 @@
+{
+  "info": {
+    "_postman_id": "7eab59c4-3407-4df7-ad62-cfe15e6192b0",
+    "name": "Nguyễn Anh Long - UC06",
+    "description": "Kiểm thử API xem hồ sơ người dùng (UC06). Dữ liệu mẫu: admin/lan/minh/hoa/an, mật khẩu 123456. Chạy thư mục Thiết lập trước để lấy token. Mã TC trùng tab Long trong sheet Test API.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Thiết lập",
+      "item": [
+        {
+          "name": "SETUP - Login lan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"lan\",\n  \"password\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng nhập thành công', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set(\"lanToken\", pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "SETUP - Login hoa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"hoa\",\n  \"password\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng nhập thành công', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set(\"hoaToken\", pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "UC06 - Xem hồ sơ người dùng",
+      "item": [
+        {
+          "name": "LO-01 - Khách xem hồ sơ của minh",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "3"
+              ]
+            },
+            "description": "Khách: không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-01 - Khách xem hồ sơ của minh - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('Hồ sơ của minh', () => pm.expect(b.username).to.eql('minh'));",
+                  "pm.test('following = false, me = false', () => { pm.expect(b.following).to.eql(false); pm.expect(b.me).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "LO-01 - Khách xem hồ sơ của minh",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/3",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "3"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 3,\n  \"username\": \"minh\",\n  \"displayName\": \"Minh Trần\",\n  \"bio\": \"Nhà sáng tạo nội dung\",\n  \"avatarUrl\": null,\n  \"followingCount\": 1,\n  \"followerCount\": 2,\n  \"likeCount\": 3,\n  \"following\": false,\n  \"me\": false\n}"
+            }
+          ]
+        },
+        {
+          "name": "LO-02 - Người theo dõi (lan) xem hồ sơ của minh",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "3"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-02 - Người theo dõi (lan) xem hồ sơ của minh - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('following = true', () => pm.expect(b.following).to.eql(true));",
+                  "pm.test('me = false', () => pm.expect(b.me).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "LO-02 - Người theo dõi (lan) xem hồ sơ của minh",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/3",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "3"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 3,\n  \"username\": \"minh\",\n  \"displayName\": \"Minh Trần\",\n  \"bio\": \"Nhà sáng tạo nội dung\",\n  \"avatarUrl\": null,\n  \"followingCount\": 1,\n  \"followerCount\": 2,\n  \"likeCount\": 3,\n  \"following\": true,\n  \"me\": false\n}"
+            }
+          ]
+        },
+        {
+          "name": "LO-03 - Xem hồ sơ của chính mình (lan)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "2"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-03 - Xem hồ sơ của chính mình (lan) - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('me = true', () => pm.expect(b.me).to.eql(true));",
+                  "pm.test('following = false', () => pm.expect(b.following).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "LO-03 - Xem hồ sơ của chính mình (lan)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/2",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "2"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 2,\n  \"username\": \"lan\",\n  \"displayName\": \"Lan Nguyễn\",\n  \"bio\": \"Mê du lịch và mèo 🐱\",\n  \"avatarUrl\": null,\n  \"followingCount\": 2,\n  \"followerCount\": 2,\n  \"likeCount\": 2,\n  \"following\": false,\n  \"me\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "LO-04 - Xem hồ sơ không tồn tại",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "999"
+              ]
+            },
+            "description": "Khách: không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-04 - Xem hồ sơ không tồn tại - status 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Không tìm thấy người dùng id = 999'));"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "LO-04 - Xem hồ sơ không tồn tại",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "999"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 404,\n  \"message\": \"Không tìm thấy người dùng id = 999\",\n  \"timestamp\": \"2026-10-28T11:28:47.4812201\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "LO-05 - Khách xem tab Videos của minh",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/3/videos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "3",
+                "videos"
+              ]
+            },
+            "description": "Khách: không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-05 - Khách xem tab Videos của minh - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('Chỉ 2 video công khai', () => pm.expect(b.totalElements).to.eql(2));",
+                  "pm.test('Không có video 7 (FOLLOWERS)', () => pm.expect(b.content.map(v => v.id)).to.not.include(7));"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "LO-05 - Khách xem tab Videos của minh",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/3/videos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "3",
+                    "videos"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": 4,\n      \"title\": \"Podcast buổi sáng\",\n      \"description\": \"5 phút bắt đầu ngày mới tích cực\",\n      \"videoUrl\": \"/files/videos/video04.mp4\",\n      \"thumbnailUrl\": \"/files/thumbnails/video04.jpg\",\n      \"filter\": \"Natural\",\n      \"visibility\": \"PUBLIC\",\n      \"status\": \"PUBLISHED\",\n      \"allowComments\": true,\n      \"viewCount\": 5111,\n      \"likeCount\": 0,\n      \"commentCount\": 0,\n      \"liked\": false,\n      \"createdAt\": \"2026-10-28T09:17:07.716209\",\n      \"owner\": {\n        \"id\": 3,\n        \"username\": \"minh\",\n        \"displayName\": \"Minh Trần\",\n        \"avatarUrl\": null\n      },\n      \"topic\": {\n        \"id\": 2,\n        \"name\": \"Podcasts\",\n        \"icon\": \"mic\",\n        \"color\": \"#8338EC\"\n      },\n      \"audio\": {\n        \"id\": 4,\n        \"title\": \"Năng lượng\",\n        \"artist\": \"EDM Crew\",\n        \"coverUrl\": null,\n        \"durationSec\": 30,\n        \"trending\": true\n      },\n      \"hashtags\": [\n        \"podcast\"\n      ]\n    },\n    {\n      \"id\": 1,\n      \"title\": \"Du lịch Đà Lạt\",\n      \"description\": \"Săn mây đồi chè Cầu Đất 🌄\",\n      \"videoUrl\": \"/files/videos/video01.mp4\",\n      \"thumbnailUrl\": \"/files/thumbnails/video01.jpg\",\n      \"filter\": \"Vintage\",\n      \"visibility\": \"PUBLIC\",\n      \"status\": \"PUBLISHED\",\n      \"allowComments\": true,\n      \"viewCount\": 8000,\n      \"likeCount\": 3,\n      \"commentCount\": 3,\n      \"liked\": false,\n      \"createdAt\": \"2026-10-28T09:17:07.703651\",\n      \"owner\": {\n        \"id\": 3,\n        \"username\": \"minh\",\n        \"displayName\": \"Minh Trần\",\n        \"avatarUrl\": null\n      },\n      \"topic\": {\n        \"id\": 4,\n        \"name\": \"Travel\",\n        \"icon\": \"airplane\",\n        \"color\": \"#3D7BF7\"\n      },\n      \"audio\": {\n        \"id\": 1,\n        \"title\": \"Chill buổi sáng\",\n        \"artist\": \"Lofi VN\",\n        \"coverUrl\": null,\n        \"durationSec\": 30,\n        \"trending\": true\n      },\n      \"hashtags\": [\n        \"dalat\",\n        \"dulich\"\n      ]\n    }\n  ],\n  \"page\": 0,\n  \"size\": 20,\n  \"totalElements\": 2,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "LO-06 - Người theo dõi (lan) xem tab Videos của minh",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/3/videos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "3",
+                "videos"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-06 - Người theo dõi (lan) xem tab Videos của minh - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('Thấy 3 video, có video 7 (FOLLOWERS)', () => { pm.expect(b.totalElements).to.eql(3); pm.expect(b.content.map(v => v.id)).to.include(7); });",
+                  "pm.test('Video 1 liked = true', () => pm.expect(b.content.find(v => v.id === 1).liked).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "LO-06 - Người theo dõi (lan) xem tab Videos của minh",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/3/videos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "3",
+                    "videos"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": 7,\n      \"title\": \"Dự báo thời tiết\",\n      \"description\": \"Cuối tuần Sài Gòn có mưa không?\",\n      \"videoUrl\": \"/files/videos/video07.mp4\",\n      \"thumbnailUrl\": \"/files/thumbnails/video07.jpg\",\n      \"filter\": \"Natural\",\n      \"visibility\": \"FOLLOWERS\",\n      \"status\": \"PUBLISHED\",\n      \"allowComments\": true,\n      \"viewCount\": 2222,\n      \"likeCount\": 0,\n      \"commentCount\": 0,\n      \"liked\": false,\n      \"createdAt\": \"2026-10-28T09:17:07.735914\",\n      \"owner\": {\n        \"id\": 3,\n        \"username\": \"minh\",\n        \"displayName\": \"Minh Trần\",\n        \"avatarUrl\": null\n      },\n      \"topic\": {\n        \"id\": 6,\n        \"name\": \"Weather\",\n        \"icon\": \"cloud\",\n        \"color\": \"#48CAE4\"\n      },\n      \"audio\": {\n        \"id\": 2,\n        \"title\": \"Nhịp vui\",\n        \"artist\": \"Beat House\",\n        \"coverUrl\": null,\n        \"durationSec\": 45,\n        \"trending\": true\n      },\n      \"hashtags\": [\n        \"thoitiet\"\n      ]\n    },\n    {\n      \"id\": 4,\n      \"title\": \"Podcast buổi sáng\",\n      \"description\": \"5 phút bắt đầu ngày mới tích cực\",\n      \"videoUrl\": \"/files/videos/video04.mp4\",\n      \"thumbnailUrl\": \"/files/thumbnails/video04.jpg\",\n      \"filter\": \"Natural\",\n      \"visibility\": \"PUBLIC\",\n      \"status\": \"PUBLISHED\",\n      \"allowComments\": true,\n      \"viewCount\": 5111,\n      \"likeCount\": 0,\n      \"commentCount\": 0,\n      \"liked\": false,\n      \"createdAt\": \"2026-10-28T09:17:07.716209\",\n      \"owner\": {\n        \"id\": 3,\n        \"username\": \"minh\",\n        \"displayName\": \"Minh Trần\",\n        \"avatarUrl\": null\n      },\n      \"topic\": {\n        \"id\": 2,\n        \"name\": \"Podcasts\",\n        \"icon\": \"mic\",\n        \"color\": \"#8338EC\"\n      },\n      \"audio\": {\n        \"id\": 4,\n        \"title\": \"Năng lượng\",\n        \"artist\": \"EDM Crew\",\n        \"coverUrl\": null,\n        \"durationSec\": 30,\n        \"trending\": true\n      },\n      \"hashtags\": [\n        \"podcast\"\n      ]\n    },\n    {\n      \"id\": 1,\n      \"title\": \"Du lịch Đà Lạt\",\n      \"description\": \"Săn mây đồi chè Cầu Đất 🌄\",\n      \"videoUrl\": \"/files/videos/video01.mp4\",\n      \"thumbnailUrl\": \"/files/thumbnails/video01.jpg\",\n      \"filter\": \"Vintage\",\n      \"visibility\": \"PUBLIC\",\n      \"status\": \"PUBLISHED\",\n      \"allowComments\": true,\n      \"viewCount\": 8000,\n      \"likeCount\": 3,\n      \"commentCount\": 3,\n      \"liked\": true,\n      \"createdAt\": \"2026-10-28T09:17:07.703651\",\n      \"owner\": {\n        \"id\": 3,\n        \"username\": \"minh\",\n        \"displayName\": \"Minh Trần\",\n        \"avatarUrl\": null\n      },\n      \"topic\": {\n        \"id\": 4,\n        \"name\": \"Travel\",\n        \"icon\": \"airplane\",\n        \"color\": \"#3D7BF7\"\n      },\n      \"audio\": {\n        \"id\": 1,\n        \"title\": \"Chill buổi sáng\",\n        \"artist\": \"Lofi VN\",\n        \"coverUrl\": null,\n        \"durationSec\": 30,\n        \"trending\": true\n      },\n      \"hashtags\": [\n        \"dalat\",\n        \"dulich\"\n      ]\n    }\n  ],\n  \"page\": 0,\n  \"size\": 20,\n  \"totalElements\": 3,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "LO-07 - Người không theo dõi (hoa) xem tab Videos của minh",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hoaToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/3/videos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "3",
+                "videos"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login hoa trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-07 - Người không theo dõi (hoa) xem tab Videos của minh - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('Chỉ 2 video công khai', () => pm.expect(b.totalElements).to.eql(2));",
+                  "pm.test('Không có video 7', () => pm.expect(b.content.map(v => v.id)).to.not.include(7));"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "LO-07 - Người không theo dõi (hoa) xem tab Videos của minh",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{hoaToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/3/videos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "3",
+                    "videos"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": 4,\n      \"title\": \"Podcast buổi sáng\",\n      \"description\": \"5 phút bắt đầu ngày mới tích cực\",\n      \"videoUrl\": \"/files/videos/video04.mp4\",\n      \"thumbnailUrl\": \"/files/thumbnails/video04.jpg\",\n      \"filter\": \"Natural\",\n      \"visibility\": \"PUBLIC\",\n      \"status\": \"PUBLISHED\",\n      \"allowComments\": true,\n      \"viewCount\": 5111,\n      \"likeCount\": 0,\n      \"commentCount\": 0,\n      \"liked\": false,\n      \"createdAt\": \"2026-10-28T09:17:07.716209\",\n      \"owner\": {\n        \"id\": 3,\n        \"username\": \"minh\",\n        \"displayName\": \"Minh Trần\",\n        \"avatarUrl\": null\n      },\n      \"topic\": {\n        \"id\": 2,\n        \"name\": \"Podcasts\",\n        \"icon\": \"mic\",\n        \"color\": \"#8338EC\"\n      },\n      \"audio\": {\n        \"id\": 4,\n        \"title\": \"Năng lượng\",\n        \"artist\": \"EDM Crew\",\n        \"coverUrl\": null,\n        \"durationSec\": 30,\n        \"trending\": true\n      },\n      \"hashtags\": [\n        \"podcast\"\n      ]\n    },\n    {\n      \"id\": 1,\n      \"title\": \"Du lịch Đà Lạt\",\n      \"description\": \"Săn mây đồi chè Cầu Đất 🌄\",\n      \"videoUrl\": \"/files/videos/video01.mp4\",\n      \"thumbnailUrl\": \"/files/thumbnails/video01.jpg\",\n      \"filter\": \"Vintage\",\n      \"visibility\": \"PUBLIC\",\n      \"status\": \"PUBLISHED\",\n      \"allowComments\": true,\n      \"viewCount\": 8000,\n      \"likeCount\": 3,\n      \"commentCount\": 3,\n      \"liked\": true,\n      \"createdAt\": \"2026-10-28T09:17:07.703651\",\n      \"owner\": {\n        \"id\": 3,\n        \"username\": \"minh\",\n        \"displayName\": \"Minh Trần\",\n        \"avatarUrl\": null\n      },\n      \"topic\": {\n        \"id\": 4,\n        \"name\": \"Travel\",\n        \"icon\": \"airplane\",\n        \"color\": \"#3D7BF7\"\n      },\n      \"audio\": {\n        \"id\": 1,\n        \"title\": \"Chill buổi sáng\",\n        \"artist\": \"Lofi VN\",\n        \"coverUrl\": null,\n        \"durationSec\": 30,\n        \"trending\": true\n      },\n      \"hashtags\": [\n        \"dalat\",\n        \"dulich\"\n      ]\n    }\n  ],\n  \"page\": 0,\n  \"size\": 20,\n  \"totalElements\": 2,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "LO-08 - Chủ hồ sơ (hoa) xem tab Videos của mình",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hoaToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/4/videos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "4",
+                "videos"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login hoa trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-08 - Chủ hồ sơ (hoa) xem tab Videos của mình - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('1 video, không có bản nháp (video 8)', () => { pm.expect(b.totalElements).to.eql(1); pm.expect(b.content.map(v => v.id)).to.not.include(8); });"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "LO-08 - Chủ hồ sơ (hoa) xem tab Videos của mình",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{hoaToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/4/videos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "4",
+                    "videos"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": 3,\n      \"title\": \"Bóng đá chiều thứ bảy\",\n      \"description\": \"Pha ghi bàn đẹp nhất trận\",\n      \"videoUrl\": \"/files/videos/video03.mp4\",\n      \"thumbnailUrl\": \"/files/thumbnails/video03.jpg\",\n      \"filter\": \"Contrast\",\n      \"visibility\": \"PUBLIC\",\n      \"status\": \"PUBLISHED\",\n      \"allowComments\": true,\n      \"viewCount\": 6074,\n      \"likeCount\": 0,\n      \"commentCount\": 0,\n      \"liked\": false,\n      \"createdAt\": \"2026-10-28T09:17:07.713194\",\n      \"owner\": {\n        \"id\": 4,\n        \"username\": \"hoa\",\n        \"displayName\": \"Shop Hoa\",\n        \"avatarUrl\": null\n      },\n      \"topic\": {\n        \"id\": 1,\n        \"name\": \"Sports\",\n        \"icon\": \"basketball\",\n        \"color\": \"#F44B87\"\n      },\n      \"audio\": {\n        \"id\": 3,\n        \"title\": \"Mưa Sài Gòn\",\n        \"artist\": \"Acoustic Band\",\n        \"coverUrl\": null,\n        \"durationSec\": 60,\n        \"trending\": false\n      },\n      \"hashtags\": [\n        \"bongda\",\n        \"thethao\"\n      ]\n    }\n  ],\n  \"page\": 0,\n  \"size\": 20,\n  \"totalElements\": 1,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "LO-09 - Tab Videos của người không tồn tại",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/999/videos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "999",
+                "videos"
+              ]
+            },
+            "description": "Khách: không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-09 - Tab Videos của người không tồn tại - status 404\", function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "LO-09 - Tab Videos của người không tồn tại",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/999/videos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "999",
+                    "videos"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 404,\n  \"message\": \"Không tìm thấy người dùng id = 999\",\n  \"timestamp\": \"2026-10-28T11:32:57.5072403\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "LO-10 - Khách xem tab Liked của lan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/2/liked",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "2",
+                "liked"
+              ]
+            },
+            "description": "Khách: không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-10 - Khách xem tab Liked của lan - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('1 video (id 1)', () => { pm.expect(b.totalElements).to.eql(1); pm.expect(b.content[0].id).to.eql(1); });",
+                  "pm.test('Khách xem → liked = false', () => pm.expect(b.content[0].liked).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "LO-10 - Khách xem tab Liked của lan",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/2/liked",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "2",
+                    "liked"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": 1,\n      \"title\": \"Du lịch Đà Lạt\",\n      \"description\": \"Săn mây đồi chè Cầu Đất 🌄\",\n      \"videoUrl\": \"/files/videos/video01.mp4\",\n      \"thumbnailUrl\": \"/files/thumbnails/video01.jpg\",\n      \"filter\": \"Vintage\",\n      \"visibility\": \"PUBLIC\",\n      \"status\": \"PUBLISHED\",\n      \"allowComments\": true,\n      \"viewCount\": 8000,\n      \"likeCount\": 3,\n      \"commentCount\": 3,\n      \"liked\": false,\n      \"createdAt\": \"2026-10-28T09:17:07.703651\",\n      \"owner\": {\n        \"id\": 3,\n        \"username\": \"minh\",\n        \"displayName\": \"Minh Trần\",\n        \"avatarUrl\": null\n      },\n      \"topic\": {\n        \"id\": 4,\n        \"name\": \"Travel\",\n        \"icon\": \"airplane\",\n        \"color\": \"#3D7BF7\"\n      },\n      \"audio\": {\n        \"id\": 1,\n        \"title\": \"Chill buổi sáng\",\n        \"artist\": \"Lofi VN\",\n        \"coverUrl\": null,\n        \"durationSec\": 30,\n        \"trending\": true\n      },\n      \"hashtags\": [\n        \"dalat\",\n        \"dulich\"\n      ]\n    }\n  ],\n  \"page\": 0,\n  \"size\": 20,\n  \"totalElements\": 1,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "LO-11 - Tab Liked của người không tồn tại",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/999/liked",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "999",
+                "liked"
+              ]
+            },
+            "description": "Khách: không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-11 - Tab Liked của người không tồn tại - status 404\", function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "LO-11 - Tab Liked của người không tồn tại",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/999/liked",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "999",
+                    "liked"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 404,\n  \"message\": \"Không tìm thấy người dùng id = 999\",\n  \"timestamp\": \"2026-10-28T11:33:20.2680628\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "lanToken",
+      "value": ""
+    },
+    {
+      "key": "hoaToken",
+      "value": ""
+    }
+  ]
+}
