@@ -59,12 +59,12 @@ export type RootStackParamList = {
   // Cần đăng nhập (mở qua useRequireAuth)
   EditProfile: undefined;
   /**
-   * audio: do màn Music gửi về (navigate kèm merge: true)
+   * audio: do màn Music gửi về (popTo kèm merge: true)
    * durationSec: độ dài video lấy từ ImagePicker (nếu có), để không phải chờ trình phát báo
    */
   StoryCreate: { uri: string; mediaType: MediaType; audio?: Audio; durationSec?: number };
   MyStory: undefined;
-  /** filter, audio: do màn Filter / Music gửi về (navigate kèm merge: true, giống Lab 06 bài 1) */
+  /** filter, audio: do màn Filter / Music gửi về (popTo kèm merge: true, giống Lab 06 bài 1 nhưng dùng popTo) */
   Camera: { filter?: string; audio?: Audio } | undefined;
   Filter: { videoUri?: string; current?: string } | undefined;
   Music: { current?: number } | undefined;
