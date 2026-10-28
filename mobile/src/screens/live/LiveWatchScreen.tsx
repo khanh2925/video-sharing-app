@@ -15,14 +15,15 @@ import { AppText, Avatar, Button, ErrorView, Loading, Screen } from '../../compo
 import { colors, fonts, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '../../context/LoginPromptContext';
-import { liveApi, connectLive } from '../../api/lives';
-import { getAuthToken } from '../../api/client';
+import { liveApi, connectLive, LIVE_MESSAGE_MAX } from '../../api/lives';
+import { getAuthToken, getErrorMessage } from '../../api/client';
+import { userApi } from '../../api/catalog';
 import { useFetch } from '../../hooks/useFetch';
 import { formatCount } from '../../utils/format';
 import { mediaUrl } from '../../utils/media';
 import type { LiveMessage, LiveSocketEvent } from '../../types/models';
 import type { RootScreenProps } from '../../navigation/types';
-import { ChatBubble, FloatingHearts, LiveVideo, useFloatingHearts } from './LiveParts';
+import { ChatBubble, FloatingHearts, LiveNotice, LiveVideo, liveColors, NOT_CONNECTED_TEXT, useFloatingHearts, useLiveNotice } from './LiveParts';
 
 type Connection = ReturnType<typeof connectLive>;
 
@@ -39,10 +40,27 @@ export default function LiveWatchScreen({ navigation, route }: RootScreenProps<'
   const [myHearts, setMyHearts] = useState(0);
   const [draft, setDraft] = useState('');
   const [ended, setEnded] = useState(false);
-  // TODO (Long): gọi API theo dõi khi backend có
   const [followed, setFollowed] = useState(false);
   const { hearts, addHeart } = useFloatingHearts();
+  const { notice, showNotice } = useLiveNotice();
   const connRef = useRef<Connection | null>(null);
+
+  // Đã đăng nhập và không phải live của mình → hỏi hồ sơ người phát xem mình đã theo dõi chưa
+  const hostId = live?.host.id;
+  useEffect(() => {
+    if (!user || !hostId || hostId === user.id) {
+      setFollowed(false);
+      return;
+    }
+    let alive = true;
+    userApi
+      .profile(hostId)
+      .then((p) => alive && setFollowed(p.following))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [user?.id, hostId]);
 
   useEffect(() => {
     if (live) {
@@ -74,30 +92,51 @@ export default function LiveWatchScreen({ navigation, route }: RootScreenProps<'
       }
     };
 
-    const conn = connectLive(liveId, getAuthToken(), onEvent);
+    const conn = connectLive(liveId, getAuthToken(), onEvent, { onError: showNotice });
     connRef.current = conn;
     return () => {
       conn.close();
       connRef.current = null;
     };
-  }, [liveId, user?.id, addHeart]);
+  }, [liveId, user?.id, addHeart, showNotice]);
 
   const onHeart = () =>
     requireAuth(() => {
+      if (ended) return;
+      // Backend chỉ nhận 'heart' | 'like' | 'smile', không nhận emoji
+      if (!connRef.current?.react('heart')) {
+        showNotice(NOT_CONNECTED_TEXT);
+        return;
+      }
       setMyHearts((n) => n + 1);
       addHeart();
-      connRef.current?.react('❤️');
     });
 
   const onSend = () =>
     requireAuth(() => {
       const text = draft.trim();
-      if (!text) return;
-      connRef.current?.chat(text); // tin nhắn quay về qua sự kiện COMMENT
-      setDraft('');
+      if (!text || ended) return;
+      // Chưa kết nối xong → giữ nguyên chữ đã gõ để gửi lại
+      if (!connRef.current?.chat(text)) {
+        showNotice(NOT_CONNECTED_TEXT);
+        return;
+      }
+      setDraft(''); // tin nhắn quay về qua sự kiện COMMENT
     });
 
-  const onFollow = () => requireAuth(() => setFollowed((f) => !f));
+  // Theo dõi / bỏ theo dõi người phát: đổi nút ngay rồi gọi API, lỗi thì trả lại như cũ
+  const onFollow = () =>
+    requireAuth(async () => {
+      if (!live) return;
+      const was = followed;
+      setFollowed(!was);
+      try {
+        await (was ? userApi.unfollow(live.host.id) : userApi.follow(live.host.id));
+      } catch (e) {
+        setFollowed(was);
+        Alert.alert('Lỗi', getErrorMessage(e));
+      }
+    });
 
   if (loading) return <Loading dark />;
   if (error || !live) {
@@ -110,13 +149,13 @@ export default function LiveWatchScreen({ navigation, route }: RootScreenProps<'
 
   const isMine = user?.id === live.host.id;
   const chatData = [...messages].reverse().slice(0, 50);
-  const canSend = draft.trim().length > 0;
+  const canSend = draft.trim().length > 0 && !ended;
 
   return (
     <Screen dark edges={[]}>
       <LiveVideo uri={live.sourceVideoUrl} paused={ended} />
-      <LinearGradient colors={['rgba(0,0,0,0.55)', 'transparent']} style={styles.topShade} pointerEvents="none" />
-      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={styles.bottomShade} pointerEvents="none" />
+      <LinearGradient colors={[liveColors.topShade, 'transparent']} style={styles.topShade} pointerEvents="none" />
+      <LinearGradient colors={['transparent', liveColors.bottomShade]} style={styles.bottomShade} pointerEvents="none" />
 
       {/* Thanh trên: người phát + Theo dõi, LIVE, số người xem, nút đóng */}
       <View style={styles.topBar}>
@@ -174,7 +213,7 @@ export default function LiveWatchScreen({ navigation, route }: RootScreenProps<'
           />
           {/* Nút thả tim + chia sẻ */}
           <View style={styles.sideButtons}>
-            <Pressable onPress={onHeart} style={styles.heartBtn} accessibilityRole="button" accessibilityLabel={`Thả tim, đã thả ${myHearts}`}>
+            <Pressable onPress={onHeart} disabled={ended} style={[styles.heartBtn, ended && styles.disabled]} accessibilityRole="button" accessibilityLabel={`Thả tim, đã thả ${myHearts}`}>
               <Ionicons name="heart" size={24} color={colors.primary} />
               <AppText weight="semibold" size={11} color={colors.white}>{myHearts}</AppText>
             </Pressable>
@@ -183,6 +222,8 @@ export default function LiveWatchScreen({ navigation, route }: RootScreenProps<'
             </Pressable>
           </View>
         </View>
+
+        <LiveNotice text={notice} />
 
         {/* Sản phẩm đang ghim */}
         {!!live.productName && (
@@ -210,8 +251,8 @@ export default function LiveWatchScreen({ navigation, route }: RootScreenProps<'
             onChangeText={setDraft}
             onFocus={() => requireAuth()}
             placeholder="Nói gì đó…"
-            placeholderTextColor="rgba(255,255,255,0.75)"
-            maxLength={500}
+            placeholderTextColor={liveColors.placeholder}
+            maxLength={LIVE_MESSAGE_MAX}
             onSubmitEditing={onSend}
             returnKeyType="send"
             editable={!ended}
@@ -249,31 +290,31 @@ const styles = StyleSheet.create({
   topShade: { position: 'absolute', top: 0, left: 0, right: 0, height: 160 },
   bottomShade: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 420 },
   topBar: { position: 'absolute', top: 48, left: spacing.md, right: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  hostPill: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 6, height: 48, paddingHorizontal: 4, borderRadius: 24, backgroundColor: 'rgba(0,0,0,0.4)' },
+  hostPill: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 6, height: 48, paddingHorizontal: 4, borderRadius: 24, backgroundColor: liveColors.pill },
   hostLink: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   hostName: { flexShrink: 1 },
   followBtn: { height: 36, paddingHorizontal: spacing.md, borderRadius: 18, backgroundColor: colors.primary, justifyContent: 'center' },
-  followedBtn: { backgroundColor: 'rgba(255,255,255,0.25)' },
+  followedBtn: { backgroundColor: liveColors.followed },
   liveBadge: { marginLeft: 'auto', height: 26, paddingHorizontal: spacing.sm, borderRadius: 6, backgroundColor: colors.live, justifyContent: 'center' },
   viewerBadge: { height: 26, paddingHorizontal: spacing.sm, borderRadius: 6, backgroundColor: colors.overlay, flexDirection: 'row', alignItems: 'center', gap: 4 },
   closeBtn: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
-  titleTag: { position: 'absolute', top: 106, left: spacing.lg, maxWidth: '80%', height: 28, paddingHorizontal: 10, borderRadius: radius.sm, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center' },
+  titleTag: { position: 'absolute', top: 106, left: spacing.lg, maxWidth: '80%', height: 28, paddingHorizontal: 10, borderRadius: radius.sm, backgroundColor: liveColors.input, justifyContent: 'center' },
   bottomArea: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: 30, gap: spacing.lg },
   middleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.md },
   chat: { flex: 1, maxHeight: 200, flexGrow: 0 },
   sideButtons: { gap: 14, alignItems: 'center', marginRight: -4 },
-  heartBtn: { width: 52, height: 60, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', gap: 2 },
-  shareBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
+  heartBtn: { width: 52, height: 60, borderRadius: 16, backgroundColor: liveColors.pill, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  shareBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: liveColors.pill, alignItems: 'center', justifyContent: 'center' },
   productCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: 10, borderRadius: 16, backgroundColor: colors.white },
   productImg: { width: 64, height: 64, borderRadius: 10 },
   productImgEmpty: { backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
   productInfo: { flex: 1, gap: 1 },
   buyBtn: { height: 40, borderRadius: 10 },
   inputRow: { flexDirection: 'row', gap: 10 },
-  input: { flex: 1, height: 48, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(0,0,0,0.35)', paddingHorizontal: 18, color: colors.white, fontFamily: fonts.regular, fontSize: 14 },
+  input: { flex: 1, height: 48, borderRadius: 24, borderWidth: 1, borderColor: liveColors.inputBorder, backgroundColor: liveColors.input, paddingHorizontal: 18, color: colors.white, fontFamily: fonts.regular, fontSize: 14 },
   sendBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   disabled: { opacity: 0.5 },
-  endedOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(23,20,28,0.92)', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 32 },
+  endedOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: liveColors.summary, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 32 },
   endedSub: { opacity: 0.8 },
   endedBtn: { marginTop: spacing.sm, height: 50, paddingHorizontal: 28 },
 });

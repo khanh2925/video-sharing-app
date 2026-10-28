@@ -4,9 +4,10 @@
  *
  * Chuẩn bị buổi live: chọn video phát lặp (R12), nhập tiêu đề, ghim sản phẩm (không bắt buộc).
  * Bấm "Bắt đầu live" → tạo live trên backend → thay màn này bằng LiveHost.
+ * Mở màn mà còn 1 buổi live cũ đang phát (app bị tắt giữa chừng) → hỏi tiếp tục hay kết thúc.
  */
 import { useEffect, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, Button, EmptyView, ErrorView, Header, Loading, Screen, TextField } from '../../components';
 import { colors, radius, spacing } from '../../constants/theme';
@@ -33,9 +34,33 @@ export default function GoLiveScreen({ navigation }: RootScreenProps<'GoLive'>) 
   const [hasProduct, setHasProduct] = useState(false);
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
-  // TODO (Thanh): backend CreateLiveBody chưa có allowComments, hiện chỉ lưu ở app
-  const [allowComments, setAllowComments] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+
+  // Còn buổi live cũ của mình đang phát? → cho chọn tiếp tục hoặc kết thúc nó
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    liveApi
+      .active()
+      .then((list) => {
+        const mine = list.find((l) => l.host.id === user.id);
+        if (!alive || !mine) return;
+        Alert.alert('Bạn đang có buổi live', `"${mine.title}" vẫn đang phát.`, [
+          { text: 'Tiếp tục live', onPress: () => navigation.replace('LiveHost', { liveId: mine.id }) },
+          {
+            text: 'Kết thúc live cũ',
+            style: 'destructive',
+            onPress: () => {
+              liveApi.end(mine.id).catch((e) => Alert.alert('Không kết thúc được live', getErrorMessage(e)));
+            },
+          },
+        ]);
+      })
+      .catch(() => {}); // lỗi thì bỏ qua, vẫn tạo live mới được
+    return () => {
+      alive = false;
+    };
+  }, [user, navigation]);
 
   // Tải xong thì chọn sẵn video đầu tiên (giống design)
   useEffect(() => {
@@ -92,7 +117,13 @@ export default function GoLiveScreen({ navigation }: RootScreenProps<'GoLive'>) 
               accessibilityLabel={v.title}
               style={[styles.thumb, on && styles.thumbOn]}
             >
-              <Image source={{ uri: mediaUrl(v.thumbnailUrl) }} style={styles.thumbImg} />
+              {v.thumbnailUrl ? (
+                <Image source={{ uri: mediaUrl(v.thumbnailUrl) }} style={styles.thumbImg} />
+              ) : (
+                <View style={[styles.thumbImg, styles.thumbEmpty]}>
+                  <Ionicons name="videocam-outline" size={26} color={colors.muted} />
+                </View>
+              )}
               {on && (
                 <View style={styles.check}>
                   <Ionicons name="checkmark" size={14} color={colors.white} />
@@ -156,17 +187,6 @@ export default function GoLiveScreen({ navigation }: RootScreenProps<'GoLive'>) 
               <AppText size={14} color={colors.muted}>Ghim sản phẩm (không bắt buộc)</AppText>
             </Pressable>
           )}
-
-          <View style={styles.switchRow}>
-            <AppText weight="semibold" size={14}>Cho phép bình luận</AppText>
-            <Switch
-              value={allowComments}
-              onValueChange={setAllowComments}
-              trackColor={{ true: colors.primary, false: colors.border }}
-              thumbColor={colors.white}
-              accessibilityLabel="Cho phép bình luận"
-            />
-          </View>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -185,6 +205,7 @@ const styles = StyleSheet.create({
   thumb: { width: '31.5%', height: 150, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.surface, borderWidth: 3, borderColor: 'transparent' },
   thumbOn: { borderColor: colors.primary },
   thumbImg: { width: '100%', height: '100%' },
+  thumbEmpty: { alignItems: 'center', justifyContent: 'center' },
   check: { position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   thumbLabel: { position: 'absolute', left: 6, right: 6, bottom: 6, textShadowColor: colors.overlay, textShadowRadius: 2 },
   addProduct: { height: 52, borderRadius: radius.md, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
@@ -192,7 +213,6 @@ const styles = StyleSheet.create({
   productRow: { flexDirection: 'row', gap: 10 },
   priceCol: { width: 120 },
   removeBtn: { alignSelf: 'flex-start', height: 36, justifyContent: 'center' },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
   footer: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: 34 },
   startBtn: { backgroundColor: colors.live, borderColor: colors.live, height: 54 },
 });

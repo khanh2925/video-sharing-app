@@ -7,26 +7,28 @@
  * - Mỗi story chạy trong durationSec giây, có 1 thanh tiến độ riêng ở trên cùng.
  * - Chạm bên trái: story trước. Chạm bên phải: story sau. Hết nhóm này thì sang nhóm người kế tiếp.
  * - Story nào hiện lên thì báo backend "đã xem" (POST /stories/{id}/view).
+ * - Giữ ngón tay trên màn: tạm dừng (cả thanh tiến độ, video và nhạc).
+ * - Story có nhạc nền: phát nhạc, tắt tiếng gốc của video, hiện tên bài ở dưới.
  *
- * File này còn export StoryProgressBars, StoryMedia, useStoryProgress để MyStoryScreen dùng lại.
+ * File này còn export StoryProgressBars, StoryMedia, StoryMusicLabel, useStoryProgress để MyStoryScreen dùng lại.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Image, Pressable, StyleSheet, View } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { AppText, Avatar, Button, ErrorView, Loading, Screen } from '../../components';
+import { AppText, Avatar, Button, ErrorView, Header, Loading, Screen } from '../../components';
 import { colors, spacing } from '../../constants/theme';
 import { storyApi } from '../../api/stories';
 import { useFetch } from '../../hooks/useFetch';
+import { useBackgroundMusic } from '../../hooks/useBackgroundMusic';
 import { timeAgo } from '../../utils/format';
 import { mediaUrl } from '../../utils/media';
-import type { Story } from '../../types/models';
+import type { Audio, Story } from '../../types/models';
 import type { RootScreenProps } from '../../navigation/types';
-
-/** Màu thanh tiến độ chưa chạy tới (theme chưa có màu trắng mờ) */
-const TRACK = 'rgba(255,255,255,0.35)';
 
 export default function StoryViewScreen({ navigation, route }: RootScreenProps<'StoryView'>) {
   const { ownerId } = route.params;
@@ -43,6 +45,10 @@ export default function StoryViewScreen({ navigation, route }: RootScreenProps<'
   const [storyIndex, setStoryIndex] = useState(0);
   const [done, setDone] = useState(false);
   const [round, setRound] = useState(0); // bấm "Xem lại" thì tăng để thanh tiến độ chạy lại từ đầu
+  const [holding, setHolding] = useState(false); // đang giữ ngón tay trên màn
+  // Sang màn khác (vd Hồ sơ) thì dừng story
+  const isFocused = useIsFocused();
+  const paused = done || holding || !isFocused;
 
   // Tải xong: mở nhóm của ownerId, bắt đầu từ story đầu tiên chưa xem
   useEffect(() => {
@@ -87,7 +93,7 @@ export default function StoryViewScreen({ navigation, route }: RootScreenProps<'
     }
   };
 
-  const progress = useStoryProgress(story ? `${story.id}-${round}` : null, story?.durationSec ?? 0, done, goNext);
+  const progress = useStoryProgress(story ? `${story.id}-${round}` : null, story?.durationSec ?? 0, paused, goNext);
 
   if (loading) {
     return (
@@ -99,6 +105,7 @@ export default function StoryViewScreen({ navigation, route }: RootScreenProps<'
   if (error) {
     return (
       <Screen>
+        <Header title="Story" />
         <ErrorView message={error} onRetry={reload} />
       </Screen>
     );
@@ -116,21 +123,45 @@ export default function StoryViewScreen({ navigation, route }: RootScreenProps<'
 
   return (
     <Screen dark edges={[]}>
-      <StoryMedia story={story} paused={done} />
+      <StoryMedia story={story} paused={paused} />
       <LinearGradient colors={[colors.overlay, 'transparent']} style={styles.topShade} pointerEvents="none" />
 
       {/* Vùng chạm: trái 35% = lùi, phải 65% = tới */}
       <View style={[styles.tapRow, { top: insets.top + 100 }]}>
-        <Pressable style={styles.tapPrev} onPress={goPrev} accessibilityLabel="Story trước" />
-        <Pressable style={styles.tapNext} onPress={goNext} accessibilityLabel="Story tiếp theo" />
+        <Pressable
+          style={styles.tapPrev}
+          onPress={goPrev}
+          onLongPress={() => setHolding(true)}
+          onPressOut={() => setHolding(false)}
+          accessibilityLabel="Story trước"
+        />
+        <Pressable
+          style={styles.tapNext}
+          onPress={goNext}
+          onLongPress={() => setHolding(true)}
+          onPressOut={() => setHolding(false)}
+          accessibilityLabel="Story tiếp theo"
+        />
       </View>
+
+      {story.audio && <StoryMusicLabel audio={story.audio} style={[styles.music, { bottom: insets.bottom + spacing.xl }]} />}
 
       <View style={[styles.top, { top: insets.top + spacing.sm }]}>
         <StoryProgressBars count={group.stories.length} current={storyIndex} progress={progress} />
         <View style={styles.headerRow}>
           <Pressable
             style={styles.owner}
-            onPress={() => navigation.navigate('Profile', { userId: group.owner.id })}
+            onPress={() => {
+              // Đã có màn Hồ sơ của người này trong stack thì quay về đó, tránh chồng màn trùng
+              const userId = group.owner.id;
+              const exists = navigation.getState().routes.some(
+                (r) => r.name === 'Profile' && (r.params as { userId?: number } | undefined)?.userId === userId,
+              );
+              if (exists) navigation.popTo('Profile', { userId });
+              else navigation.navigate('Profile', { userId });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Hồ sơ ${group.owner.displayName}`}
           >
             <View style={styles.avatarBorder}>
               <Avatar uri={group.owner.avatarUrl} name={group.owner.displayName} size={32} />
@@ -153,6 +184,9 @@ export default function StoryViewScreen({ navigation, route }: RootScreenProps<'
           <Pressable
             style={styles.replayBtn}
             onPress={() => {
+              // Xem lại từ nhóm đã mở ban đầu, không phải từ nhóm cuối cùng
+              const gi = groups.findIndex((g) => g.owner.id === ownerId);
+              setGroupIndex(gi >= 0 ? gi : 0);
               setStoryIndex(0);
               setRound((r) => r + 1);
               setDone(false);
@@ -230,16 +264,36 @@ export function StoryProgressBars({ count, current, progress }: { count: number;
   );
 }
 
-/** Nội dung 1 story: ảnh hoặc video tràn màn */
+/**
+ * Nội dung 1 story: ảnh hoặc video tràn màn, kèm nhạc nền (nếu có).
+ * Có nhạc thì tắt tiếng gốc của video. paused = true thì dừng cả video và nhạc.
+ */
 export function StoryMedia({ story, paused }: { story: Story; paused: boolean }) {
+  // key = id: sang story khác thì tạo trình phát mới, nhạc phát lại từ đầu
+  return <StoryMediaInner key={story.id} story={story} paused={paused} />;
+}
+
+function StoryMediaInner({ story, paused }: { story: Story; paused: boolean }) {
+  const hasMusic = useBackgroundMusic(story.audio?.fileUrl, !paused);
   if (story.mediaType === 'VIDEO') {
-    // key = id: sang story video khác thì tạo trình phát mới
-    return <StoryVideo key={story.id} uri={mediaUrl(story.mediaUrl) ?? ''} paused={paused} />;
+    return <StoryVideo uri={mediaUrl(story.mediaUrl) ?? ''} paused={paused} muted={hasMusic} />;
   }
   return <Image source={{ uri: mediaUrl(story.mediaUrl) }} style={StyleSheet.absoluteFill} resizeMode="cover" />;
 }
 
-function StoryVideo({ uri, paused }: { uri: string; paused: boolean }) {
+/** Nhãn nhạc kiểu TikTok: icon nốt nhạc + "tên bài · ca sĩ" */
+export function StoryMusicLabel({ audio, style }: { audio: Audio; style?: StyleProp<ViewStyle> }) {
+  return (
+    <View style={[styles.musicLabel, style]} pointerEvents="none" accessibilityLabel={`Nhạc: ${audio.title}, ${audio.artist}`}>
+      <Ionicons name="musical-notes" size={14} color={colors.white} />
+      <AppText weight="semibold" size={13} color={colors.white} numberOfLines={1} style={styles.musicText}>
+        {`${audio.title} · ${audio.artist}`}
+      </AppText>
+    </View>
+  );
+}
+
+function StoryVideo({ uri, paused, muted }: { uri: string; paused: boolean; muted: boolean }) {
   const player = useVideoPlayer(uri, (p) => {
     p.loop = false;
     p.play();
@@ -248,6 +302,9 @@ function StoryVideo({ uri, paused }: { uri: string; paused: boolean }) {
     if (paused) player.pause();
     else player.play();
   }, [paused, player]);
+  useEffect(() => {
+    player.muted = muted;
+  }, [muted, player]);
   return <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} />;
 }
 
@@ -260,7 +317,7 @@ const styles = StyleSheet.create({
   tapNext: { flex: 1 },
   top: { position: 'absolute', left: spacing.md, right: spacing.md, gap: spacing.md },
   bars: { flexDirection: 'row', gap: spacing.xs },
-  bar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: TRACK, overflow: 'hidden' },
+  bar: { flex: 1, height: 3, borderRadius: 2, backgroundColor: colors.whiteTrack, overflow: 'hidden' },
   barFull: { height: '100%', width: '100%', backgroundColor: colors.white },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   owner: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -272,5 +329,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: spacing.lg, padding: 32,
   },
   doneBtn: { paddingHorizontal: spacing.xxl },
+  music: { position: 'absolute', left: spacing.lg },
+  musicLabel: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '80%',
+    height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: colors.overlay,
+  },
+  musicText: { flexShrink: 1 },
   replayBtn: { height: 44, paddingHorizontal: spacing.lg, justifyContent: 'center' },
 });

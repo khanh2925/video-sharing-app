@@ -20,6 +20,14 @@ public class VideoMapper {
     private final CatalogMapper catalogMapper;
 
     public VideoResponse toResponse(Video video, boolean liked) {
+        return toResponse(video, liked, video.getViewCount(), video.getLikeCount(), video.getCommentCount());
+    }
+
+    /**
+     * Giống hàm trên nhưng truyền bộ đếm từ ngoài vào. Dùng khi bộ đếm vừa được cộng thẳng trong DB
+     * (vd VideoService.recordView) mà entity trong bộ nhớ vẫn giữ số cũ.
+     */
+    public VideoResponse toResponse(Video video, boolean liked, long viewCount, long likeCount, long commentCount) {
         return new VideoResponse(
                 video.getId(),
                 video.getTitle(),
@@ -30,9 +38,9 @@ public class VideoMapper {
                 video.getVisibility(),
                 video.getStatus(),
                 video.isAllowComments(),
-                video.getViewCount(),
-                video.getLikeCount(),
-                video.getCommentCount(),
+                viewCount,
+                likeCount,
+                commentCount,
                 liked,
                 video.getCreatedAt(),
                 userMapper.toSummary(video.getOwner()),

@@ -59,6 +59,7 @@ export default function RegisterScreen({ navigation }: RootScreenProps<'Register
   const onNext = async () => {
     if (!valid) return;
     if (step < 3) {
+      setServerError(null); // sang bước sau thì ẩn lỗi cũ
       setStep((s) => (s + 1) as Step);
       return;
     }
@@ -72,9 +73,16 @@ export default function RegisterScreen({ navigation }: RootScreenProps<'Register
         username: username.trim(),
         displayName: displayName.trim(),
       });
-      navigation.popTo('MainTabs'); // đóng cả Login lẫn Register nếu đang chồng nhau
+      // Chỉ đóng các màn Đăng nhập / Đăng ký ở trên cùng, quay về đúng màn đang xem trước đó
+      const routes = navigation.getState().routes;
+      let n = 0;
+      while (n < routes.length - 1 && ['Login', 'Register'].includes(routes[routes.length - 1 - n].name)) n++;
+      navigation.pop(Math.max(1, n));
     } catch (e) {
-      setServerError(getErrorMessage(e)); // vd "Email đã được sử dụng"
+      const message = getErrorMessage(e);
+      setServerError(message);
+      // Lỗi về email (vd "Email đã được sử dụng") → quay về bước 1 để sửa email; lỗi tên đăng nhập thì ở lại bước 3
+      if (/email/i.test(message)) setStep(1);
     } finally {
       setSubmitting(false);
     }

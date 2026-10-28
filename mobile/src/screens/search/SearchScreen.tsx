@@ -5,26 +5,28 @@
  * - Ô tìm kiếm + 4 tab: Video · Tài khoản · Live · Âm thanh (GET /api/search?type=...).
  * - Chưa gõ gì: tab Video hiện video "Thịnh hành" (backend tự trả video nhiều lượt xem nhất).
  * - "Có thể bạn quan tâm": hashtag gợi ý từ GET /api/search/suggestions, bấm vào thì tìm theo hashtag.
- * - Màn khác mở tab này kèm từ khoá: navigation.navigate('MainTabs', { screen: 'Search', params: { q: '#meo' } })
+ * - Màn khác mở tab này kèm từ khoá: navigation.popTo('MainTabs', { screen: 'Search', params: { q: '#meo', nonce: Date.now() } })
+ *   Mở sẵn tab khác: params: { q: 'Tên bài hát', tab: 'audio', nonce: Date.now() }
  */
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText, Avatar, Button, Chip, EmptyView, ErrorView, Loading, Screen, SegmentedTabs, UserRow } from '../../components';
 import { colors, fonts, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '../../context/LoginPromptContext';
-import { searchApi } from '../../api/catalog';
+import { searchApi, userApi } from '../../api/catalog';
+import { getErrorMessage } from '../../api/client';
 import { useFetch } from '../../hooks/useFetch';
 import { usePagedList } from '../../hooks/usePagedList';
-import { formatCount } from '../../utils/format';
+import { followLabel, formatCount } from '../../utils/format';
 import { mediaUrl } from '../../utils/media';
-import type { Audio, LiveStream, SearchType, UserSummary, Video } from '../../types/models';
-import type { TabScreenProps } from '../../navigation/types';
+import type { Audio, FollowUser, LiveStream, SearchType, Video } from '../../types/models';
+import type { SearchTab, TabScreenProps } from '../../navigation/types';
 
-type TabKey = 'video' | 'user' | 'live' | 'audio';
-type SearchItem = Video | UserSummary | LiveStream | Audio;
+type TabKey = SearchTab;
+type SearchItem = Video | FollowUser | LiveStream | Audio;
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'video', label: 'Video' },
@@ -44,17 +46,16 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
   const requireAuth = useRequireAuth();
   const [q, setQ] = useState(route.params?.q ?? '');
   const [debouncedQ, setDebouncedQ] = useState(q);
-  const [tab, setTab] = useState<TabKey>('video');
-  // TODO (Long): gọi API theo dõi khi backend có. Tạm giữ trạng thái theo dõi trong máy.
-  const [following, setFollowing] = useState<Record<number, boolean>>({});
+  const [tab, setTab] = useState<TabKey>(route.params?.tab ?? 'video');
 
-  // Màn khác mở tab Tìm kiếm kèm từ khoá (bấm hashtag ở màn Xem video)
+  // Màn khác mở tab Tìm kiếm kèm từ khoá / tab (bấm hashtag ở Xem video, "Tất cả live" ở Trang chủ...).
+  // nonce đổi mỗi lần mở → cùng từ khoá cũ nhưng ô tìm kiếm đã bị sửa thì vẫn đặt lại
   useEffect(() => {
-    if (route.params?.q !== undefined) {
-      setQ(route.params.q);
-      setTab('video');
-    }
-  }, [route.params?.q]);
+    const p = route.params;
+    if (!p) return;
+    if (p.q !== undefined) setQ(p.q);
+    if (p.q !== undefined || p.tab) setTab(p.tab ?? 'video');
+  }, [route.params?.q, route.params?.tab, route.params?.nonce]);
 
   // Gõ xong 400ms mới gọi API, tránh gọi liên tục mỗi lần gõ 1 chữ
   useEffect(() => {
@@ -64,37 +65,74 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
 
   // "#meo" → tìm "meo"
   const keyword = debouncedQ.trim().replace(/^#/, '');
+
+  // Danh sách đang hiện thuộc tab + từ khoá nào. Đổi tab thì list.items vẫn là kết quả của tab cũ
+  // cho tới khi tải xong → phải chờ, không thì vẽ Video bằng LiveCard sẽ lỗi.
+  const queryKey = `${tab}|${keyword}`;
+  const latestKey = useRef(queryKey);
+  latestKey.current = queryKey;
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+
   const list = usePagedList<SearchItem>(
-    (page, size) => searchApi.search<SearchItem>(keyword, TYPE_OF[tab], page, size),
-    [keyword, tab],
+    async (page, size) => {
+      const reqKey = queryKey;
+      // Kết quả (hoặc lỗi) về muộn của tab / từ khoá cũ → bỏ qua: trả về promise không bao giờ xong
+      // để khỏi ghi đè danh sách của tab mới
+      const stale = () => reqKey !== latestKey.current;
+      try {
+        const res = await searchApi.search<SearchItem>(keyword, TYPE_OF[tab], page, size);
+        if (stale()) return new Promise<never>(() => {});
+        setLoadedKey(reqKey);
+        return res;
+      } catch (e) {
+        if (stale()) return new Promise<never>(() => {});
+        throw e;
+      }
+    },
+    [queryKey],
     tab === 'video' ? VIDEO_PAGE_SIZE : 20,
   );
+  const listReady = loadedKey === queryKey;
   const tags = useFetch(() => searchApi.suggestions(''), []);
 
-  const toggleFollow = (id: number) =>
-    requireAuth(() => setFollowing((prev) => ({ ...prev, [id]: !prev[id] })));
+  // Đổi cờ following của 1 tài khoản trong danh sách kết quả
+  const setFollowFlag = (id: number, following: boolean) =>
+    list.setItems((prev) => prev.map((x) => (x.id === id ? { ...(x as FollowUser), following } : x)));
+
+  // Theo dõi / bỏ theo dõi: đổi nút ngay rồi gọi API, lỗi thì trả lại như cũ
+  const toggleFollow = (u: FollowUser) =>
+    requireAuth(async () => {
+      const was = u.following;
+      setFollowFlag(u.id, !was);
+      try {
+        await (was ? userApi.unfollow(u.id) : userApi.follow(u.id));
+      } catch (e) {
+        setFollowFlag(u.id, was);
+        Alert.alert('Lỗi', getErrorMessage(e));
+      }
+    });
 
   // ----- Từng loại kết quả -----
   const renderItem = ({ item }: { item: SearchItem }) => {
     switch (tab) {
       case 'video': {
         const v = item as Video;
-        return <VideoCard video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id })} />;
+        return <VideoCard video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id, source: { kind: 'search', q: keyword } })} />;
       }
       case 'user': {
-        const u = item as UserSummary;
-        const on = !!following[u.id];
+        const u = item as FollowUser;
+        const on = u.following;
         return (
           <UserRow
             user={u}
             onPress={() => navigation.navigate('Profile', { userId: u.id })}
             right={
-              user?.id === u.id ? null : (
+              u.me || user?.id === u.id ? null : (
                 <Button
-                  title={on ? 'Đang theo dõi' : 'Theo dõi'}
+                  title={followLabel(u)}
                   size="sm"
                   variant={on ? 'secondary' : 'primary'}
-                  onPress={() => toggleFollow(u.id)}
+                  onPress={() => toggleFollow(u)}
                   style={styles.followBtn}
                 />
               )
@@ -104,7 +142,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
       }
       case 'live': {
         const l = item as LiveStream;
-        return <LiveCard live={l} onPress={() => navigation.navigate('LiveWatch', { liveId: l.id })} />;
+        return <LiveCard live={l} onPress={() => requireAuth(() => navigation.navigate('LiveWatch', { liveId: l.id }))} />; // UC14 cần đăng nhập
       }
       case 'audio': {
         const m = item as Audio;
@@ -192,14 +230,14 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
         <SegmentedTabs variant="pill" tabs={TABS} value={tab} onChange={setTab} />
       </View>
 
-      {list.loading ? (
+      {list.loading || (!listReady && !list.error) ? (
         <Loading />
       ) : list.error ? (
         <ErrorView message={list.error} onRetry={list.reload} />
       ) : (
         <FlatList
           key={isGrid ? 'grid' : 'list'} // đổi số cột thì FlatList phải tạo lại
-          data={list.items}
+          data={listReady ? list.items : []}
           numColumns={isGrid ? 2 : 1}
           keyExtractor={(item) => `${tab}-${item.id}`}
           renderItem={renderItem}
@@ -269,7 +307,7 @@ function LiveCard({ live, onPress }: { live: LiveStream; onPress: () => void }) 
       </View>
       <LinearGradient colors={['transparent', colors.overlay]} style={styles.liveInfo}>
         <AppText weight="semibold" size={13} color={colors.white} numberOfLines={1}>{live.title}</AppText>
-        <AppText size={11} color={colors.white} numberOfLines={1}>{live.host.displayName}</AppText>
+        <AppText size={11} color={colors.white} numberOfLines={1}>{live.host?.displayName}</AppText>
       </LinearGradient>
     </Pressable>
   );

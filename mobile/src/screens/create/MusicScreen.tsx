@@ -4,7 +4,9 @@
  *
  * Mở dạng transparentModal phía trên Camera (hoặc PostVideo).
  * Danh sách nhạc lấy từ GET /api/audios, lọc theo tab và ô tìm kiếm ngay trên máy.
- * Chọn bài → navigate về màn trước kèm { audio }, merge: true (giống Lab 06 bài 1).
+ * Chọn bài → popTo về màn trước kèm { audio }, merge: true (giống Lab 06 bài 1).
+ * Lưu ý React Navigation 7: navigate() tới màn đã có trong stack sẽ MỞ THÊM bản mới, nên phải dùng popTo().
+ * Chạm vào ảnh bìa / tên bài để nghe thử (mỗi lần 1 bài, chạm lại để dừng, rời màn thì tắt).
  */
 import { useMemo, useState } from 'react';
 import { FlatList, Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -13,11 +15,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, EmptyView, ErrorView, Loading, SegmentedTabs } from '../../components';
 import { catalogApi } from '../../api/catalog';
 import { useFetch } from '../../hooks/useFetch';
+import { useBackgroundMusic } from '../../hooks/useBackgroundMusic';
 import { colors, fonts, radius, spacing } from '../../constants/theme';
 import { formatDuration } from '../../utils/format';
 import { mediaUrl } from '../../utils/media';
 import type { Audio } from '../../types/models';
-import type { RootScreenProps } from '../../navigation/types';
+import type { RootScreenProps, RootStackParamList } from '../../navigation/types';
 
 type TabKey = 'foryou' | 'trend' | 'saved';
 
@@ -27,6 +30,11 @@ export default function MusicScreen({ navigation, route }: RootScreenProps<'Musi
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<TabKey>('foryou');
   const { data, loading, error, reload } = useFetch(() => catalogApi.audios(), []);
+
+  // Bài đang nghe thử (null = không phát). Rời màn thì hook tự giải phóng trình phát
+  const [previewing, setPreviewing] = useState<Audio | null>(null);
+  useBackgroundMusic(previewing?.fileUrl, !!previewing);
+  const togglePreview = (audio: Audio) => setPreviewing((cur) => (cur?.id === audio.id ? null : audio));
 
   // Lọc theo tab rồi theo từ khoá (tên bài hoặc ca sĩ)
   const songs = useMemo(() => {
@@ -40,10 +48,14 @@ export default function MusicScreen({ navigation, route }: RootScreenProps<'Musi
   const sendBack = (audio: Audio | undefined) => {
     const state = navigation.getState();
     const previous = state.routes[state.index - 1]?.name;
+    setPreviewing(null);
     if (previous === 'PostVideo') {
-      navigation.navigate({ name: 'PostVideo', params: { audio }, merge: true });
+      navigation.popTo('PostVideo', { audio }, { merge: true });
+    } else if (previous === 'StoryCreate') {
+      // merge: true nên uri, mediaType của StoryCreate vẫn giữ nguyên
+      navigation.popTo('StoryCreate', { audio } as RootStackParamList['StoryCreate'], { merge: true });
     } else {
-      navigation.navigate({ name: 'Camera', params: { audio }, merge: true });
+      navigation.popTo('Camera', { audio }, { merge: true });
     }
   };
 
@@ -64,22 +76,33 @@ export default function MusicScreen({ navigation, route }: RootScreenProps<'Musi
         }
         renderItem={({ item }) => {
           const chosen = item.id === currentId;
+          const playing = item.id === previewing?.id;
           return (
             <View style={[styles.row, chosen && styles.rowChosen]}>
-              <View style={styles.cover}>
-                {item.coverUrl ? (
-                  <Image source={{ uri: mediaUrl(item.coverUrl) }} style={StyleSheet.absoluteFill} />
-                ) : null}
-                <View style={styles.coverShade}>
-                  <Ionicons name="musical-notes" size={18} color={colors.white} />
+              {/* Chạm ảnh bìa / tên bài: nghe thử, chạm lại để dừng */}
+              <Pressable
+                onPress={() => togglePreview(item)}
+                style={styles.previewArea}
+                accessibilityRole="button"
+                accessibilityLabel={playing ? `Dừng nghe thử ${item.title}` : `Nghe thử ${item.title}`}
+              >
+                <View style={styles.cover}>
+                  {item.coverUrl ? (
+                    <Image source={{ uri: mediaUrl(item.coverUrl) }} style={StyleSheet.absoluteFill} />
+                  ) : null}
+                  <View style={styles.coverShade}>
+                    <Ionicons name={playing ? 'pause' : 'play'} size={20} color={colors.white} />
+                  </View>
                 </View>
-              </View>
-              <View style={styles.texts}>
-                <AppText weight="semibold" size={14} numberOfLines={1}>{item.title}</AppText>
-                <AppText size={12} color={colors.muted} numberOfLines={1}>
-                  {`${item.artist} · ${formatDuration(item.durationSec)}`}
-                </AppText>
-              </View>
+                <View style={styles.texts}>
+                  <AppText weight="semibold" size={14} numberOfLines={1} color={playing ? colors.primaryText : colors.text}>
+                    {item.title}
+                  </AppText>
+                  <AppText size={12} color={colors.muted} numberOfLines={1}>
+                    {playing ? 'Đang nghe thử…' : `${item.artist} · ${formatDuration(item.durationSec)}`}
+                  </AppText>
+                </View>
+              </Pressable>
               {/* Bấm "Đã chọn" lần nữa thì bỏ nhạc */}
               <Pressable
                 onPress={() => sendBack(chosen ? undefined : item)}
@@ -188,6 +211,7 @@ const styles = StyleSheet.create({
   rowChosen: { backgroundColor: colors.primarySoft },
   cover: { width: 52, height: 52, borderRadius: 10, overflow: 'hidden', backgroundColor: colors.primary },
   coverShade: { ...StyleSheet.absoluteFill, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center' },
+  previewArea: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minWidth: 0 },
   texts: { flex: 1, gap: 2, minWidth: 0 },
   useBtn: {
     height: 36,

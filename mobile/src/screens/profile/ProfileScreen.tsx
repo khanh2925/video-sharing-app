@@ -4,6 +4,7 @@
  *
  * Hồ sơ của người khác: avatar (có vòng xanh nếu đang có story), số liệu, Theo dõi / Nhắn tin,
  * nút mở "Gợi ý cho bạn", 2 tab "Video" / "Đã thích". Khách xem được, bấm Theo dõi thì hiện bảng đăng nhập.
+ * Theo dõi / bỏ theo dõi: đổi nút ngay rồi gọi API (optimistic), lỗi thì trả lại như cũ.
  */
 import { useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -27,21 +28,15 @@ import { useFetch } from '../../hooks/useFetch';
 import { usePagedList } from '../../hooks/usePagedList';
 import { userApi } from '../../api/catalog';
 import { storyApi } from '../../api/stories';
+import { getErrorMessage } from '../../api/client';
 import { formatCount } from '../../utils/format';
 import type { RootScreenProps } from '../../navigation/types';
-import type { UserProfile, UserSummary } from '../../types/models';
+import type { FollowUser, UserProfile } from '../../types/models';
 
 type Tab = 'videos' | 'liked';
 
 const GAP = 2;
 const COLUMNS = 3;
-
-// TODO (Long): thay bằng API khi backend có (gợi ý tài khoản để theo dõi)
-const SAMPLE_SUGGESTIONS: (UserSummary & { followerCount: number })[] = [
-  { id: -1, username: 'shophoa', displayName: 'Shop Hoa', avatarUrl: null, followerCount: 12800 },
-  { id: -2, username: 'minhtran', displayName: 'Minh Trần', avatarUrl: null, followerCount: 5320 },
-  { id: -3, username: 'corgi.club', displayName: 'Corgi Club', avatarUrl: null, followerCount: 22400 },
-];
 
 const soon = () => Alert.alert('Thông báo', 'Tính năng sẽ có ở phiên bản sau');
 
@@ -54,11 +49,10 @@ export default function ProfileScreen({ navigation, route }: RootScreenProps<'Pr
 
   const [tab, setTab] = useState<Tab>('videos');
   const [suggestOpen, setSuggestOpen] = useState(true);
-  // TODO (Long): thay bằng API khi backend có (follow / unfollow). Hiện chỉ đổi trên máy.
-  const [followOverride, setFollowOverride] = useState<boolean | null>(null);
-  const [suggestFollowed, setSuggestFollowed] = useState<Record<number, boolean>>({});
 
   const profile = useFetch(() => userApi.profile(userId), [userId, user?.id]);
+  // Gợi ý tài khoản để theo dõi (API cần đăng nhập, khách thì để trống)
+  const suggestions = useFetch(() => (user ? userApi.suggestions(10) : Promise.resolve([] as FollowUser[])), [user?.id]);
   // Story của người này (chỉ có khi đã đăng nhập vì API story cần token)
   const stories = useFetch(() => (user ? storyApi.feed() : Promise.resolve([])), [user?.id]);
   const list = usePagedList(
@@ -87,12 +81,40 @@ export default function ProfileScreen({ navigation, route }: RootScreenProps<'Pr
   const p: UserProfile = profile.data;
   const storyGroup = (stories.data ?? []).find((g) => g.owner.id === p.id);
 
-  // Trạng thái theo dõi: lấy từ backend, bấm nút thì đổi tạm trên máy
-  const followed = followOverride ?? p.following;
-  const followerCount = p.followerCount + (followOverride === null ? 0 : (followOverride ? 1 : 0) - (p.following ? 1 : 0));
+  const followed = p.following;
+  const followerCount = p.followerCount;
+  // Bỏ chính người đang xem hồ sơ ra khỏi gợi ý
+  const suggestList = (suggestions.data ?? []).filter((u) => u.id !== p.id);
 
-  const toggleFollow = () => requireAuth(() => setFollowOverride(!followed));
-  const toggleSuggest = (id: number) => requireAuth(() => setSuggestFollowed((s) => ({ ...s, [id]: !s[id] })));
+  // Theo dõi / bỏ theo dõi người này, cập nhật luôn số người theo dõi
+  const toggleFollow = () =>
+    requireAuth(async () => {
+      const was = p.following;
+      const patch = (following: boolean, followerCount: number) =>
+        profile.setData((prev) => (prev ? { ...prev, following, followerCount } : prev));
+      patch(!was, p.followerCount + (was ? -1 : 1));
+      try {
+        await (was ? userApi.unfollow(p.id) : userApi.follow(p.id));
+      } catch (e) {
+        patch(was, p.followerCount);
+        Alert.alert('Lỗi', getErrorMessage(e));
+      }
+    });
+
+  // Theo dõi / bỏ theo dõi một tài khoản trong "Gợi ý cho bạn"
+  const toggleSuggest = (u: FollowUser) =>
+    requireAuth(async () => {
+      const was = u.following;
+      const patch = (following: boolean) =>
+        suggestions.setData((prev) => prev?.map((x) => (x.id === u.id ? { ...x, following } : x)) ?? prev);
+      patch(!was);
+      try {
+        await (was ? userApi.unfollow(u.id) : userApi.follow(u.id));
+      } catch (e) {
+        patch(was);
+        Alert.alert('Lỗi', getErrorMessage(e));
+      }
+    });
 
   const header = (
     <View>
@@ -103,6 +125,7 @@ export default function ProfileScreen({ navigation, route }: RootScreenProps<'Pr
           size={104}
           ring={storyGroup ? (storyGroup.allViewed ? 'seen' : 'unseen') : 'none'}
           onPress={storyGroup ? () => navigation.navigate('StoryView', { ownerId: p.id }) : undefined}
+          accessibilityLabel={storyGroup ? `Xem tin của ${p.displayName}` : undefined}
         />
         <View style={styles.center}>
           <AppText weight="bold" size={18} align="center">{p.displayName}</AppText>
@@ -141,12 +164,12 @@ export default function ProfileScreen({ navigation, route }: RootScreenProps<'Pr
       </View>
 
       {/* Gợi ý cho bạn: thẻ ngang */}
-      {!p.me && suggestOpen && (
+      {!p.me && suggestOpen && suggestList.length > 0 && (
         <View style={styles.suggest}>
           <View style={styles.suggestHeader}>
             <AppText weight="bold" size={14}>Gợi ý cho bạn</AppText>
             <Pressable
-              onPress={() => requireAuth(() => navigation.navigate('MainTabs', { screen: 'Friends' }))}
+              onPress={() => requireAuth(() => navigation.popTo('MainTabs', { screen: 'Friends' }))}
               hitSlop={8}
               accessibilityRole="link"
             >
@@ -154,18 +177,24 @@ export default function ProfileScreen({ navigation, route }: RootScreenProps<'Pr
             </Pressable>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestRow}>
-            {SAMPLE_SUGGESTIONS.map((u) => {
-              const on = !!suggestFollowed[u.id];
+            {suggestList.map((u) => {
+              const on = u.following;
               return (
                 <View key={u.id} style={styles.suggestCard}>
-                  <Avatar uri={u.avatarUrl} name={u.displayName} size={60} />
+                  <Avatar
+                    uri={u.avatarUrl}
+                    name={u.displayName}
+                    size={60}
+                    onPress={() => navigation.push('Profile', { userId: u.id })}
+                    accessibilityLabel={`Hồ sơ ${u.displayName}`}
+                  />
                   <AppText weight="semibold" size={13} numberOfLines={1}>{u.displayName}</AppText>
                   <AppText size={11} color={colors.muted}>{`${formatCount(u.followerCount)} theo dõi`}</AppText>
                   <Button
                     title={on ? 'Đang theo dõi' : 'Theo dõi'}
                     size="sm"
                     variant={on ? 'secondary' : 'primary'}
-                    onPress={() => toggleSuggest(u.id)}
+                    onPress={() => toggleSuggest(u)}
                     style={styles.suggestBtn}
                   />
                 </View>
@@ -198,7 +227,7 @@ export default function ProfileScreen({ navigation, route }: RootScreenProps<'Pr
         columnWrapperStyle={{ gap: GAP }}
         contentContainerStyle={styles.gridContent}
         renderItem={({ item }) => (
-          <VideoThumb video={item} width={cellWidth} onPress={() => navigation.navigate('Watch', { videoId: item.id })} />
+          <VideoThumb video={item} width={cellWidth} onPress={() => navigation.navigate('Watch', { videoId: item.id, source: { kind: tab === 'videos' ? 'user' : 'liked', userId } })} />
         )}
         ListHeaderComponent={header}
         ListEmptyComponent={
@@ -217,6 +246,7 @@ export default function ProfileScreen({ navigation, route }: RootScreenProps<'Pr
         refreshing={list.refreshing}
         onRefresh={() => {
           profile.reload();
+          suggestions.reload();
           list.refresh();
         }}
         onEndReached={list.loadMore}

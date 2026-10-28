@@ -11,12 +11,14 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { useIsFocused } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { AppText, Button, Chip, ComingSoonBadge, EmptyView, Header, Screen, SegmentedTabs, TextField } from '../../components';
 import { videoApi } from '../../api/videos';
 import { catalogApi } from '../../api/catalog';
 import { getErrorMessage } from '../../api/client';
 import { useFetch } from '../../hooks/useFetch';
+import { useBackgroundMusic } from '../../hooks/useBackgroundMusic';
 import { colors, fonts, radius, spacing } from '../../constants/theme';
 import { formatDuration, visibilityLabel } from '../../utils/format';
 import { fileFromUri } from '../../utils/media';
@@ -27,6 +29,9 @@ import { FilterOverlay } from './FilterScreen';
 const TITLE_MAX = 150;
 const DESC_MAX = 2000;
 const VISIBILITY_TABS = (Object.keys(visibilityLabel) as Visibility[]).map((key) => ({ key, label: visibilityLabel[key] }));
+
+/** Chuẩn hoá hashtag: bỏ dấu #, bỏ khoảng trắng, viết thường */
+const normalizeTag = (raw: string) => raw.trim().replace(/^#+/, '').replace(/\s+/g, '').toLowerCase();
 
 export default function PostVideoScreen({ navigation, route }: RootScreenProps<'PostVideo'>) {
   const videoUri = route.params?.videoUri;
@@ -54,14 +59,27 @@ export default function PostVideoScreen({ navigation, route }: RootScreenProps<'
     p.muted = true;
     p.play();
   });
+  // Nghe thử nhạc đã chọn khi đang ở màn này (mở Music / Filter, rời màn thì dừng)
+  const isFocused = useIsFocused();
+  useBackgroundMusic(audio?.fileUrl, isFocused && !uploading);
+
   useEffect(() => {
     const sub = player.addListener('sourceLoad', (e) => setDuration(e.duration));
     return () => sub.remove();
   }, [player]);
 
+  // Đang hiện ảnh bìa (video bị che) hoặc rời màn thì dừng video xem trước cho đỡ tốn pin
+  useEffect(() => {
+    if (coverUri || !isFocused) player.pause();
+    else player.play();
+  }, [coverUri, isFocused, player]);
+
   // Đăng xong / bấm "Bỏ video" thì cho rời màn, không hỏi nữa
   const allowLeaveRef = useRef(false);
   const submitRef = useRef<(draft: boolean) => void>(() => {});
+  // Listener beforeRemove đọc ref này để biết đang tải lên hay không
+  const uploadingRef = useRef(false);
+  uploadingRef.current = !!uploading;
 
   // Rời màn khi chưa đăng → hỏi (bắt cả nút back, vuốt, nút back Android)
   useEffect(() => {
@@ -69,6 +87,8 @@ export default function PostVideoScreen({ navigation, route }: RootScreenProps<'
     return navigation.addListener('beforeRemove', (e) => {
       if (allowLeaveRef.current) return;
       e.preventDefault();
+      // Đang tải lên thì chặn rời màn, không hỏi gì (tải xong màn tự chuyển)
+      if (uploadingRef.current) return;
       Alert.alert('Thoát mà chưa đăng?', undefined, [
         { text: 'Lưu nháp', onPress: () => submitRef.current(true) },
         {
@@ -86,15 +106,17 @@ export default function PostVideoScreen({ navigation, route }: RootScreenProps<'
 
   const titleError = triedSubmit && !title.trim() ? 'Nhập tiêu đề để đăng' : null;
 
-  // Thêm hashtag: bỏ dấu #, viết thường, không trùng
+  // Thêm hashtag: bỏ dấu #, viết thường, không trùng. Trả về danh sách mới để submit dùng luôn
   const addTag = () => {
-    const tag = tagDraft.trim().replace(/^#+/, '').replace(/\s+/g, '').toLowerCase();
-    if (tag && !tags.includes(tag)) setTags([...tags, tag]);
+    const tag = normalizeTag(tagDraft);
+    const next = tag && !tags.includes(tag) ? [...tags, tag] : tags;
+    if (next !== tags) setTags(next);
     setTagDraft('');
+    return next;
   };
 
   const pickCover = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [9, 16], quality: 0.8 });
+    const result = await ImagePicker.launchImageLibraryAsync({ preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible, mediaTypes: ['images'], allowsEditing: true, aspect: [9, 16], quality: 0.8 });
     if (!result.canceled) setCoverUri(result.assets[0].uri);
   };
 
@@ -104,6 +126,8 @@ export default function PostVideoScreen({ navigation, route }: RootScreenProps<'
   const submit = async (draft: boolean) => {
     if (!videoUri || uploading) return;
     setTriedSubmit(true);
+    // Chữ hashtag đang gõ dở (chưa nhấn Enter) cũng được thêm vào
+    const finalTags = tagDraft.trim() ? addTag() : tags;
     if (!title.trim()) return;
     setUploading(draft ? 'draft' : 'post');
     try {
@@ -112,7 +136,7 @@ export default function PostVideoScreen({ navigation, route }: RootScreenProps<'
         thumbnail: coverUri ? fileFromUri(coverUri) : undefined,
         title: title.trim(),
         description: description.trim() || undefined,
-        hashtags: tags.length ? tags.join(' ') : undefined,
+        hashtags: finalTags.length ? finalTags.join(' ') : undefined,
         topicId,
         audioId: audio?.id,
         filter,
@@ -213,7 +237,7 @@ export default function PostVideoScreen({ navigation, route }: RootScreenProps<'
               <TextInput
                 value={tagDraft}
                 onChangeText={setTagDraft}
-                onSubmitEditing={addTag}
+                onSubmitEditing={() => addTag()}
                 submitBehavior="submit"
                 placeholder="Thêm, nhấn Enter…"
                 placeholderTextColor={colors.placeholder}

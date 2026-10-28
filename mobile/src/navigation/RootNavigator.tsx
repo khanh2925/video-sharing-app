@@ -3,7 +3,11 @@
  * - Mở app luôn vào MainTabs, khách xem được Trang chủ, Tìm kiếm, video, hồ sơ.
  * - Login / Register là màn modal trượt từ dưới lên, mở từ bảng "Đăng nhập để tiếp tục".
  * - Màn cần đăng nhập vẫn khai báo ở đây; chỗ mở chúng phải bọc trong useRequireAuth().
+ * - Đang đăng nhập mà bị đăng xuất (bấm Đăng xuất, hoặc token hết hạn → 401) thì đưa về MainTabs,
+ *   tránh kẹt lại ở màn cần đăng nhập (Đăng video, Video nháp...).
  */
+import { useContext, useEffect, useRef } from 'react';
+import { NavigationContainerRefContext } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { LoginPromptProvider } from '../context/LoginPromptContext';
@@ -33,7 +37,17 @@ import LiveWatchScreen from '../screens/live/LiveWatchScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-  const { isBootstrapping } = useAuth();
+  const { user, isBootstrapping } = useAuth();
+  const rootNav = useContext(NavigationContainerRefContext);
+
+  // user từ có → null: xoá hết các màn đang mở, về lại MainTabs
+  const wasLoggedIn = useRef(false);
+  useEffect(() => {
+    if (wasLoggedIn.current && !user && rootNav?.isReady()) {
+      rootNav.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+    }
+    wasLoggedIn.current = !!user;
+  }, [user, rootNav]);
 
   if (isBootstrapping) {
     return <Loading />;

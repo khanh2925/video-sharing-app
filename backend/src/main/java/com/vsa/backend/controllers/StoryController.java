@@ -28,8 +28,9 @@ public class StoryController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public StoryResponse create(@RequestPart("file") MultipartFile file,
-                                @RequestParam(required = false) Integer durationSec) {
-        return storyService.create(file, durationSec);
+                                @RequestParam(required = false) Integer durationSec,
+                                @RequestParam(required = false) Long audioId) {
+        return storyService.create(file, durationSec, audioId);
     }
 
     @DeleteMapping("/{id}")

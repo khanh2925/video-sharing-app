@@ -9,12 +9,12 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { AppText, Avatar, Button, EmptyView, ErrorView, Loading, Screen } from '../../components';
+import { AppText, Avatar, Button, EmptyView, ErrorView, Header, Loading, Screen } from '../../components';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { storyApi } from '../../api/stories';
@@ -23,7 +23,7 @@ import { useFetch } from '../../hooks/useFetch';
 import { timeAgo } from '../../utils/format';
 import type { Story } from '../../types/models';
 import type { RootScreenProps } from '../../navigation/types';
-import { StoryMedia, StoryProgressBars, useStoryProgress } from './StoryViewScreen';
+import { StoryMedia, StoryMusicLabel, StoryProgressBars, useStoryProgress } from './StoryViewScreen';
 
 export default function MyStoryScreen({ navigation }: RootScreenProps<'MyStory'>) {
   const { user } = useAuth();
@@ -34,6 +34,10 @@ export default function MyStoryScreen({ navigation }: RootScreenProps<'MyStory'>
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false); // dừng khi đang hỏi xác nhận / đang chọn ảnh
   const [deleting, setDeleting] = useState(false);
+  const [holding, setHolding] = useState(false); // đang giữ ngón tay trên màn
+  // Sang màn Đăng story thì dừng tin này (cả nhạc), quay lại thì chạy tiếp
+  const isFocused = useIsFocused();
+  const stopped = paused || holding || !isFocused;
 
   // Lấy nhóm story của mình
   useEffect(() => {
@@ -60,16 +64,21 @@ export default function MyStoryScreen({ navigation }: RootScreenProps<'MyStory'>
   };
   const goPrev = () => setIndex(Math.max(0, index - 1));
 
-  const progress = useStoryProgress(story ? String(story.id) : null, story?.durationSec ?? 0, paused, goNext);
+  const progress = useStoryProgress(story ? String(story.id) : null, story?.durationSec ?? 0, stopped, goNext);
 
   // ----- Thêm tin: chọn ảnh/video rồi sang màn Đăng story -----
   const onAdd = async () => {
     setPaused(true);
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.8 });
+    const result = await ImagePicker.launchImageLibraryAsync({ preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible, mediaTypes: ['images', 'videos'], quality: 0.8 });
     setPaused(false);
     if (result.canceled) return;
     const asset = result.assets[0];
-    navigation.navigate('StoryCreate', { uri: asset.uri, mediaType: asset.type === 'video' ? 'VIDEO' : 'IMAGE' });
+    navigation.navigate('StoryCreate', {
+      uri: asset.uri,
+      mediaType: asset.type === 'video' ? 'VIDEO' : 'IMAGE',
+      // ImagePicker trả duration theo mili giây (có thể không có)
+      durationSec: asset.duration ? Math.max(1, Math.round(asset.duration / 1000)) : undefined,
+    });
   };
 
   // ----- Xoá tin đang xem (hỏi xác nhận) -----
@@ -113,6 +122,7 @@ export default function MyStoryScreen({ navigation }: RootScreenProps<'MyStory'>
   if (error) {
     return (
       <Screen>
+        <Header title="Tin của bạn" />
         <ErrorView message={error} onRetry={reload} />
       </Screen>
     );
@@ -136,15 +146,29 @@ export default function MyStoryScreen({ navigation }: RootScreenProps<'MyStory'>
 
   return (
     <Screen dark edges={[]}>
-      <StoryMedia story={story} paused={paused} />
+      <StoryMedia story={story} paused={stopped} />
       <LinearGradient colors={[colors.overlay, 'transparent']} style={styles.topShade} pointerEvents="none" />
       <LinearGradient colors={['transparent', colors.overlay]} style={styles.bottomShade} pointerEvents="none" />
 
       {/* Vùng chạm: trái = lùi, phải = tới */}
       <View style={[styles.tapRow, { top: insets.top + 100, bottom: insets.bottom + 100 }]}>
-        <Pressable style={styles.tapPrev} onPress={goPrev} accessibilityLabel="Tin trước" />
-        <Pressable style={styles.tapNext} onPress={goNext} accessibilityLabel="Tin tiếp theo" />
+        <Pressable
+          style={styles.tapPrev}
+          onPress={goPrev}
+          onLongPress={() => setHolding(true)}
+          onPressOut={() => setHolding(false)}
+          accessibilityLabel="Tin trước"
+        />
+        <Pressable
+          style={styles.tapNext}
+          onPress={goNext}
+          onLongPress={() => setHolding(true)}
+          onPressOut={() => setHolding(false)}
+          accessibilityLabel="Tin tiếp theo"
+        />
       </View>
+
+      {story.audio && <StoryMusicLabel audio={story.audio} style={[styles.music, { bottom: insets.bottom + 90 }]} />}
 
       <View style={[styles.top, { top: insets.top + spacing.sm }]}>
         <StoryProgressBars count={stories.length} current={index} progress={progress} />
@@ -188,6 +212,7 @@ const styles = StyleSheet.create({
   avatarBorder: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   time: { opacity: 0.85 },
   closeBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  music: { position: 'absolute', left: spacing.lg },
   bottom: { position: 'absolute', left: spacing.lg, right: spacing.lg, flexDirection: 'row', justifyContent: 'space-between' },
   pillBtn: {
     height: 44, paddingHorizontal: spacing.lg, borderRadius: radius.xl, backgroundColor: colors.overlay,

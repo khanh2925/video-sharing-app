@@ -4,7 +4,8 @@
  *
  * - Đã đăng nhập: avatar, số liệu, nút Sửa hồ sơ, 2 tab "Video của tôi" / "Đã thích".
  *   Ô đầu tiên của tab "Video của tôi" là ô mờ "Bản nháp: N" → mở màn Video nháp.
- *   Menu ☰ chỉ có "Đăng xuất" (hỏi xác nhận).
+ *   Menu ☰: "Video nháp", "Phát livestream", "Đăng xuất" (hỏi xác nhận, xong về Trang chủ).
+ *   Quay lại tab này thì tải lại số liệu, ô "Bản nháp" và lưới video.
  * - Khách: hiện màn "Đăng ký tài khoản" (R3).
  */
 import { useCallback, useRef, useState } from 'react';
@@ -96,8 +97,10 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
     12,
   );
 
-  // Quay lại tab Hồ sơ (sau khi đăng/sửa/xoá video, sửa hồ sơ) thì tải lại
-  const firstFocus = useRef(true);
+  // Quay lại tab Hồ sơ (sau khi đăng/sửa/xoá video, xoá nháp, sửa hồ sơ) thì tải lại.
+  // Chỉ bỏ qua lần focus đầu nếu lúc tạo màn đã đang mở tab này (vừa tải xong rồi).
+  // Màn được tạo khi đang ở tab khác (vd đăng nhập ở Trang chủ) thì lần đầu mở tab vẫn tải lại.
+  const firstFocus = useRef(navigation.isFocused());
   useFocusEffect(
     useCallback(() => {
       if (firstFocus.current) {
@@ -117,14 +120,27 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
     list.refresh();
   };
 
-  // Menu → Đăng xuất → hộp xác nhận
+  // Menu → mở màn khác: đóng menu trước rồi mới chuyển màn
+  const openFromMenu = (go: () => void) => {
+    setMenuOpen(false);
+    go();
+  };
+
+  // Menu → Đăng xuất → hộp xác nhận → về Trang chủ
   const askLogout = () => {
     setMenuOpen(false);
     // Đợi bảng menu đóng hẳn rồi mới hiện Alert (iOS không hiện Alert khi Modal đang đóng)
     setTimeout(() => {
       Alert.alert('Đăng xuất?', undefined, [
         { text: 'Huỷ', style: 'cancel' },
-        { text: 'Đăng xuất', style: 'destructive', onPress: () => logout() },
+        {
+          text: 'Đăng xuất',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            navigation.navigate('Home');
+          },
+        },
       ]);
     }, 350);
   };
@@ -197,7 +213,7 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
           video={v}
           width={cellWidth}
           // Video của mình → màn quản lý video; video đã thích → màn xem
-          onPress={() => (tab === 'mine' ? navigation.navigate('MyVideo', { videoId: v.id }) : navigation.navigate('Watch', { videoId: v.id }))}
+          onPress={() => (tab === 'mine' ? navigation.navigate('MyVideo', { videoId: v.id }) : navigation.navigate('Watch', { videoId: v.id, source: { kind: 'liked', userId: user.id } }))}
         />
         {tab === 'mine' && v.visibility === 'PRIVATE' && (
           <View style={styles.lock} accessibilityLabel="Chỉ mình tôi">
@@ -244,8 +260,17 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
         onEndReachedThreshold={0.5}
       />
 
-      {/* Menu ☰: chỉ có Đăng xuất */}
-      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} heightPercent={22}>
+      {/* Menu ☰: Video nháp · Phát livestream · Đăng xuất */}
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} heightPercent={34}>
+        <Pressable onPress={() => openFromMenu(() => navigation.navigate('Drafts'))} style={styles.menuItem} accessibilityRole="button">
+          <Ionicons name="document-outline" size={22} color={colors.text} />
+          <AppText weight="semibold">Video nháp</AppText>
+          {draftCount > 0 && <AppText size={13} color={colors.muted}>{draftCount}</AppText>}
+        </Pressable>
+        <Pressable onPress={() => openFromMenu(() => navigation.navigate('GoLive'))} style={styles.menuItem} accessibilityRole="button">
+          <Ionicons name="radio-outline" size={22} color={colors.text} />
+          <AppText weight="semibold">Phát livestream</AppText>
+        </Pressable>
         <Pressable onPress={askLogout} style={styles.menuItem} accessibilityRole="button">
           <Ionicons name="log-out-outline" size={22} color={colors.danger} />
           <AppText weight="semibold" color={colors.danger}>Đăng xuất</AppText>

@@ -1,8 +1,9 @@
 /**
- * API danh mục và tìm kiếm: chủ đề, nhạc (UC09), tìm kiếm (UC04), hồ sơ người dùng (UC06).
+ * API danh mục và tìm kiếm: chủ đề, nhạc (UC09), tìm kiếm (UC04),
+ * hồ sơ người dùng (UC06), sửa thông tin cá nhân (UC07), theo dõi (UC12).
  */
-import { api } from './client';
-import type { Audio, PageResponse, SearchResponse, SearchType, Topic, UserProfile, Video } from '../types/models';
+import { api, postMultipart } from './client';
+import type { Audio, AuthUser, FollowUser, PageResponse, SearchResponse, SearchType, Topic, UserProfile, Video } from '../types/models';
 
 export const catalogApi = {
   topics: () => api.get<Topic[]>('/topics').then((r) => r.data),
@@ -22,7 +23,20 @@ export const userApi = {
     api.get<PageResponse<Video>>(`/users/${id}/videos`, { params: { page, size } }).then((r) => r.data),
   liked: (id: number, page = 0, size = 12) =>
     api.get<PageResponse<Video>>(`/users/${id}/liked`, { params: { page, size } }).then((r) => r.data),
-  // TODO (Long, UC07 + UC12): backend chưa có API sửa hồ sơ, theo dõi / bỏ theo dõi, danh sách bạn bè.
-  // Khi có thì thêm hàm ở đây, ví dụ:
-  //   follow: (id: number) => api.post(`/users/${id}/follow`),
+  followers: (id: number, page = 0, size = 20) =>
+    api.get<PageResponse<FollowUser>>(`/users/${id}/followers`, { params: { page, size } }).then((r) => r.data),
+  following: (id: number, page = 0, size = 20) =>
+    api.get<PageResponse<FollowUser>>(`/users/${id}/following`, { params: { page, size } }).then((r) => r.data),
+  /** Cần đăng nhập */
+  suggestions: (size = 10) => api.get<FollowUser[]>('/users/suggestions', { params: { size } }).then((r) => r.data),
+  follow: (id: number) => api.post(`/users/${id}/follow`),
+  unfollow: (id: number) => api.delete(`/users/${id}/follow`),
+
+  // UC07: sửa thông tin của chính mình, trả về AuthUser mới → gọi updateUser() của useAuth()
+  updateMe: (body: { displayName: string; bio: string }) => api.put<AuthUser>('/users/me', body).then((r) => r.data),
+  updateAvatar: (file: Blob) => {
+    const form = new FormData();
+    form.append('file', file);
+    return postMultipart<AuthUser>('/users/me/avatar', form);
+  },
 };

@@ -55,7 +55,8 @@ api.interceptors.response.use(
  */
 export function postMultipart<T>(url: string, form: FormData) {
   return api
-    .post<T>(url, form, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 })
+    // Video lớn qua mạng chậm có thể mất vài phút → cho tối đa 5 phút
+    .post<T>(url, form, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 300000 })
     .then((res) => res.data);
 }
 

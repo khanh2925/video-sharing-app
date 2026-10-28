@@ -28,12 +28,22 @@ import type { RootScreenProps } from '../../navigation/types';
 const MAX_LENGTH = 500;
 
 export default function CommentsScreen({ navigation, route }: RootScreenProps<'Comments'>) {
-  const { videoId } = route.params;
+  const { videoId, allowComments = true } = route.params;
   const { user } = useAuth();
   const requireAuth = useRequireAuth();
   const insets = useSafeAreaInsets();
 
-  const list = usePagedList((page) => videoApi.comments(videoId, page), [videoId]);
+  // user?.id trong deps: đăng nhập xong thì tải lại để cờ "đã thích" đúng với tài khoản
+  const list = usePagedList((page) => videoApi.comments(videoId, page), [videoId, user?.id]);
+
+  // Mở hồ sơ: đã có màn Hồ sơ của người này trong stack thì quay về, tránh chồng màn trùng
+  const openProfile = (userId: number) => {
+    const exists = navigation.getState().routes.some(
+      (r) => r.name === 'Profile' && (r.params as { userId?: number } | undefined)?.userId === userId,
+    );
+    if (exists) navigation.popTo('Profile', { userId });
+    else navigation.navigate('Profile', { userId });
+  };
   // Tổng số bình luận = số backend trả + số mình vừa thêm/xoá ở màn này
   const [delta, setDelta] = useState(0);
   const total = list.totalElements + delta;
@@ -114,7 +124,8 @@ export default function CommentsScreen({ navigation, route }: RootScreenProps<'C
           uri={item.user.avatarUrl}
           name={item.user.displayName}
           size={36}
-          onPress={() => navigation.navigate('Profile', { userId: item.user.id })}
+          onPress={() => openProfile(item.user.id)}
+          accessibilityLabel={`Hồ sơ ${item.user.displayName}`}
         />
         <View style={styles.rowBody}>
           <AppText weight="semibold" size={13}>{item.user.displayName}</AppText>
@@ -179,42 +190,49 @@ export default function CommentsScreen({ navigation, route }: RootScreenProps<'C
           />
         )}
 
-        {/* Ô viết bình luận */}
-        <View style={[styles.inputRow, { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.sm }]}>
-          {user ? (
-            <Avatar uri={user.avatarUrl} name={user.displayName} size={36} />
-          ) : (
-            <View style={styles.guestAvatar}>
-              <Ionicons name="person" size={18} color={colors.primaryText} />
-            </View>
-          )}
-          {user ? (
-            <TextInput
-              value={draft}
-              onChangeText={setDraft}
-              placeholder="Viết bình luận…"
-              placeholderTextColor={colors.placeholder}
-              accessibilityLabel="Viết bình luận"
-              maxLength={MAX_LENGTH}
-              returnKeyType="send"
-              onSubmitEditing={onSend}
-              style={styles.input}
-            />
-          ) : (
-            // Khách: bấm vào ô thì hiện bảng đăng nhập
-            <Pressable style={[styles.input, styles.inputGuest]} onPress={() => requireAuth()}>
-              <AppText size={14} color={colors.placeholder}>Viết bình luận…</AppText>
+        {/* Ô viết bình luận (tác giả tắt bình luận thì chỉ hiện dòng thông báo) */}
+        {!allowComments ? (
+          <View style={[styles.inputRow, styles.disabledRow, { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.sm }]}>
+            <Ionicons name="lock-closed-outline" size={16} color={colors.muted} />
+            <AppText size={14} color={colors.muted}>Tác giả đã tắt bình luận</AppText>
+          </View>
+        ) : (
+          <View style={[styles.inputRow, { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.sm }]}>
+            {user ? (
+              <Avatar uri={user.avatarUrl} name={user.displayName} size={36} />
+            ) : (
+              <View style={styles.guestAvatar}>
+                <Ionicons name="person" size={18} color={colors.primaryText} />
+              </View>
+            )}
+            {user ? (
+              <TextInput
+                value={draft}
+                onChangeText={setDraft}
+                placeholder="Viết bình luận…"
+                placeholderTextColor={colors.placeholder}
+                accessibilityLabel="Viết bình luận"
+                maxLength={MAX_LENGTH}
+                returnKeyType="send"
+                onSubmitEditing={onSend}
+                style={styles.input}
+              />
+            ) : (
+              // Khách: bấm vào ô thì hiện bảng đăng nhập
+              <Pressable style={[styles.input, styles.inputGuest]} onPress={() => requireAuth()}>
+                <AppText size={14} color={colors.placeholder}>Viết bình luận…</AppText>
+              </Pressable>
+            )}
+            <Pressable
+              style={[styles.sendBtn, { opacity: canSend ? 1 : 0.45 }]}
+              onPress={onSend}
+              disabled={!canSend}
+              accessibilityLabel="Gửi"
+            >
+              {sending ? <ActivityIndicator color={colors.white} /> : <Ionicons name="send" size={18} color={colors.white} />}
             </Pressable>
-          )}
-          <Pressable
-            style={[styles.sendBtn, { opacity: canSend ? 1 : 0.45 }]}
-            onPress={onSend}
-            disabled={!canSend}
-            accessibilityLabel="Gửi"
-          >
-            {sending ? <ActivityIndicator color={colors.white} /> : <Ionicons name="send" size={18} color={colors.white} />}
-          </Pressable>
-        </View>
+          </View>
+        )}
 
         {!!toast && (
           <View style={styles.toast} pointerEvents="none">
@@ -244,6 +262,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: spacing.md, paddingHorizontal: spacing.lg,
     borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.background,
   },
+  disabledRow: { justifyContent: 'center', minHeight: 56 },
   guestAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
   input: {
     flex: 1, minWidth: 0, height: 44, borderRadius: radius.xl, backgroundColor: colors.surface, paddingHorizontal: spacing.lg,

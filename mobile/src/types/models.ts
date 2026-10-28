@@ -41,6 +41,8 @@ export interface Audio {
   title: string;
   artist: string;
   coverUrl: string | null;
+  /** file nhạc "/files/audios/audio01.mp3", phát bằng useBackgroundMusic() */
+  fileUrl: string | null;
   durationSec: number;
   trending: boolean;
 }
@@ -74,6 +76,8 @@ export interface Story {
   createdAt: string;
   expiresAt: string;
   viewed: boolean;
+  /** nhạc nền chọn khi đăng story, null nếu không có */
+  audio: Audio | null;
 }
 
 /** Story gom theo từng người (GET /api/stories/feed). */
@@ -165,4 +169,16 @@ export interface LiveSocketEvent {
   viewerCount: number | null;
   message: LiveMessage | null;
   live: LiveStream | null;
+}
+
+/**
+ * FollowUserResponse — một người trong danh sách theo dõi / gợi ý / tìm kiếm tài khoản (UC12).
+ * Cờ tính theo người đang xem: following + followsMe → "Bạn bè"; chỉ following → "Đang theo dõi";
+ * chỉ followsMe → "Theo dõi lại"; không cờ nào → "Theo dõi". me = chính mình (ẩn nút).
+ */
+export interface FollowUser extends UserSummary {
+  followerCount: number;
+  following: boolean;
+  followsMe: boolean;
+  me: boolean;
 }

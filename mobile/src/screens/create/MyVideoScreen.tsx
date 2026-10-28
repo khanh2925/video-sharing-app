@@ -10,16 +10,24 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, BottomSheet, ErrorView, Loading, Screen } from '../../components';
 import { videoApi } from '../../api/videos';
 import { getErrorMessage } from '../../api/client';
 import { useFetch } from '../../hooks/useFetch';
+import { useBackgroundMusic } from '../../hooks/useBackgroundMusic';
 import { colors, radius, spacing } from '../../constants/theme';
 import { formatCount, timeAgo, visibilityLabel } from '../../utils/format';
 import { mediaUrl } from '../../utils/media';
 import type { RootScreenProps } from '../../navigation/types';
 import { FilterOverlay } from './FilterScreen';
+
+/** Màu mờ trên nền video (theme chưa có token cho màu trong suốt) */
+const PLAY_ICON_COLOR = 'rgba(255,255,255,0.85)';
+const BOTTOM_SHADE_COLOR = 'rgba(0,0,0,0.72)';
+/** Đợi bảng menu đóng hẳn rồi mới hiện Alert (iOS không hiện Alert khi Modal đang đóng) */
+const SHEET_CLOSE_DELAY = 300;
 
 export default function MyVideoScreen({ navigation, route }: RootScreenProps<'MyVideo'>) {
   const { videoId } = route.params;
@@ -47,8 +55,23 @@ export default function MyVideoScreen({ navigation, route }: RootScreenProps<'My
     });
   }, [navigation, videoId, setData]);
 
-  // Rời màn thì dừng phát
+  // Rời màn thì dừng phát, quay lại thì phát tiếp (nếu chưa bấm tạm dừng)
   useEffect(() => navigation.addListener('blur', () => player.pause()), [navigation, player]);
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  useEffect(
+    () => navigation.addListener('focus', () => {
+      if (!pausedRef.current) player.play();
+    }),
+    [navigation, player],
+  );
+
+  // Nhạc nền chạy theo video; có nhạc thì tắt tiếng gốc của video
+  const isFocused = useIsFocused();
+  const hasMusic = useBackgroundMusic(video?.audio?.fileUrl, isFocused && !paused && !deleting);
+  useEffect(() => {
+    player.muted = hasMusic;
+  }, [player, hasMusic]);
 
   const togglePlay = () => {
     if (player.playing) {
@@ -67,6 +90,10 @@ export default function MyVideoScreen({ navigation, route }: RootScreenProps<'My
 
   const askDelete = () => {
     setMenuOpen(false);
+    setTimeout(showDeleteAlert, SHEET_CLOSE_DELAY);
+  };
+
+  const showDeleteAlert = () => {
     Alert.alert('Xoá video này?', 'Lượt thích và bình luận cũng bị xoá.', [
       { text: 'Huỷ', style: 'cancel' },
       {
@@ -121,11 +148,11 @@ export default function MyVideoScreen({ navigation, route }: RootScreenProps<'My
         </Pressable>
         {paused && (
           <View style={styles.pauseIcon} pointerEvents="none">
-            <Ionicons name="play" size={64} color="rgba(255,255,255,0.85)" />
+            <Ionicons name="play" size={64} color={PLAY_ICON_COLOR} />
           </View>
         )}
-        <LinearGradient colors={['rgba(0,0,0,0.45)', 'transparent']} style={styles.topShade} pointerEvents="none" />
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={styles.bottomShade} pointerEvents="none" />
+        <LinearGradient colors={[colors.overlay, 'transparent']} style={styles.topShade} pointerEvents="none" />
+        <LinearGradient colors={['transparent', BOTTOM_SHADE_COLOR]} style={styles.bottomShade} pointerEvents="none" />
 
         {/* Thanh trên: quay lại + menu ⋯ */}
         <View style={[styles.topBar, { top: insets.top + spacing.sm }]}>
@@ -160,6 +187,14 @@ export default function MyVideoScreen({ navigation, route }: RootScreenProps<'My
             </View>
           )}
           <AppText weight="bold" size={17} color={colors.white} numberOfLines={2}>{video.title}</AppText>
+          {video.audio && (
+            <View style={styles.musicRow}>
+              <Ionicons name="musical-notes" size={14} color={colors.white} />
+              <AppText size={13} color={colors.white} numberOfLines={1} style={styles.musicText}>
+                {`${video.audio.title} · ${video.audio.artist}`}
+              </AppText>
+            </View>
+          )}
           <View style={styles.metaRow}>
             <AppText size={13} color={colors.white}>{`${formatCount(video.viewCount)} lượt xem`}</AppText>
             <AppText size={13} color={colors.white}>{visibilityLabel[video.visibility]}</AppText>
@@ -193,6 +228,8 @@ const styles = StyleSheet.create({
   stat: { minWidth: 44, alignItems: 'center', gap: 2 },
   caption: { position: 'absolute', left: spacing.lg, right: 84, gap: spacing.sm },
   draftBadge: { alignSelf: 'flex-start', backgroundColor: colors.primary, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
+  musicRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  musicText: { flexShrink: 1 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, opacity: 0.9 },
   menuItem: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 56, paddingHorizontal: spacing.md, borderRadius: radius.md },
 });

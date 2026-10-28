@@ -1,5 +1,7 @@
 package com.vsa.backend.services;
 
+import com.vsa.backend.dtos.request.UpdateProfileRequest;
+import com.vsa.backend.dtos.response.AuthUserResponse;
 import com.vsa.backend.dtos.response.PageResponse;
 import com.vsa.backend.dtos.response.UserProfileResponse;
 import com.vsa.backend.dtos.response.VideoResponse;
@@ -21,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Set;
@@ -28,7 +31,8 @@ import java.util.Set;
 /**
  * Nghiệp vụ hồ sơ người dùng.
  *  UC06 Xem hồ sơ người dùng       – getProfile, getUserVideos (tab Videos), getLikedVideos (tab Liked)
- *  UC07 Quản lý thông tin cá nhân  – (làm tiếp)
+ *  UC07 Quản lý thông tin cá nhân  – updateMyProfile (tên, tiểu sử), updateMyAvatar (ảnh đại diện)
+ *  UC12 Theo dõi                    – xem FollowService
  */
 @Service
 @RequiredArgsConstructor
@@ -40,6 +44,7 @@ public class UserService {
     private final VideoLikeRepository videoLikeRepository;
     private final UserMapper userMapper;
     private final VideoMapper videoMapper;
+    private final FileStorageService fileStorageService;
 
     // ===== UC06 – Xem hồ sơ người dùng =====
 
@@ -91,7 +96,35 @@ public class UserService {
         return PageResponse.of(videos, video -> videoMapper.toResponse(video, likedIds.contains(video.getId())));
     }
 
+    // ===== UC07 – Quản lý thông tin cá nhân =====
+
+    /** Sửa tên hiển thị, tiểu sử của chính mình. Trả về thông tin mới để app cập nhật ngay. */
+    @Transactional
+    public AuthUserResponse updateMyProfile(UpdateProfileRequest request) {
+        User user = currentUser();
+        user.setDisplayName(request.displayName().trim());
+        String bio = request.bio() == null ? null : request.bio().trim();
+        user.setBio(bio == null || bio.isEmpty() ? null : bio);     // chuỗi rỗng → xoá tiểu sử
+        return userMapper.toAuthUserResponse(user);                  // @Transactional tự lưu thay đổi
+    }
+
+    /** Đổi ảnh đại diện: lưu ảnh mới vào uploads/avatars rồi mới xoá ảnh cũ. */
+    @Transactional
+    public AuthUserResponse updateMyAvatar(MultipartFile file) {
+        User user = currentUser();
+        String oldUrl = user.getAvatarUrl();
+        user.setAvatarUrl(fileStorageService.saveImage(file, FileStorageService.AVATAR_DIR));  // tự kiểm tra định dạng, dung lượng
+        fileStorageService.delete(oldUrl);
+        return userMapper.toAuthUserResponse(user);
+    }
+
     // ===== Hàm phụ =====
+
+    private User currentUser() {
+        Long id = SecurityUtils.getCurrentUserId();
+        return userRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy người dùng id = " + id));
+    }
 
     private void checkUserExists(Long id) {
         if (!userRepository.existsById(id)) {

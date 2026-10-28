@@ -2,8 +2,8 @@ package com.vsa.backend.controllers;
 
 import com.vsa.backend.dtos.response.SearchResponse;
 import com.vsa.backend.services.SearchService;
+import com.vsa.backend.utils.PageUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,7 +23,7 @@ public class SearchController {
                                  @RequestParam(defaultValue = "videos") String type,
                                  @RequestParam(defaultValue = "0") int page,
                                  @RequestParam(defaultValue = "20") int size) {
-        return searchService.search(q, type, PageRequest.of(page, size));
+        return searchService.search(q, type, PageUtils.of(page, size));
     }
 
     @GetMapping("/suggestions")

@@ -5,6 +5,7 @@
  * - Phát lặp video nguồn (R12), nhãn LIVE + thời gian đã phát + số người xem.
  * - Chat và tim nhận qua WebSocket STOMP (connectLive), người phát cũng chat được.
  * - "Kết thúc" hoặc bấm quay lại đều hỏi xác nhận → gọi API kết thúc → hiện bảng tổng kết.
+ * - Đã kết thúc mà bấm quay lại (Android) thì về Hồ sơ, không quay về màn Quay video.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -13,13 +14,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { usePreventRemove } from '@react-navigation/native';
 import { AppText, Button, ErrorView, Loading, Screen } from '../../components';
 import { colors, fonts, radius, spacing } from '../../constants/theme';
-import { liveApi, connectLive } from '../../api/lives';
+import { liveApi, connectLive, LIVE_MESSAGE_MAX } from '../../api/lives';
 import { getAuthToken, getErrorMessage } from '../../api/client';
 import { useFetch } from '../../hooks/useFetch';
 import { formatCount, formatDuration } from '../../utils/format';
 import type { LiveMessage, LiveSocketEvent } from '../../types/models';
 import type { RootScreenProps } from '../../navigation/types';
-import { ChatBubble, FloatingHearts, LiveVideo, useFloatingHearts } from './LiveParts';
+import { ChatBubble, FloatingHearts, LiveNotice, LiveVideo, liveColors, NOT_CONNECTED_TEXT, useFloatingHearts, useLiveNotice } from './LiveParts';
 
 type Connection = ReturnType<typeof connectLive>;
 
@@ -35,7 +36,9 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
   const [draft, setDraft] = useState('');
   const [ended, setEnded] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [leaving, setLeaving] = useState(false); // true = cho phép rời màn (về hồ sơ)
   const { hearts, addHeart } = useFloatingHearts();
+  const { notice, showNotice } = useLiveNotice();
   const connRef = useRef<Connection | null>(null);
 
   const commentCount = messages.filter((m) => m.type === 'COMMENT').length;
@@ -45,6 +48,7 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
     if (live) {
       setViewers(live.viewerCount);
       setPeakViewers(live.viewerCount);
+      if (live.status === 'ENDED') setEnded(true);
     }
   }, [live]);
 
@@ -89,13 +93,14 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
       }
     };
 
-    const conn = connectLive(liveId, getAuthToken(), onEvent);
+    // join: false → người phát không bị tính là 1 người xem
+    const conn = connectLive(liveId, getAuthToken(), onEvent, { join: false, onError: showNotice });
     connRef.current = conn;
     return () => {
       conn.close();
       connRef.current = null;
     };
-  }, [liveId, addHeart]);
+  }, [liveId, addHeart, showNotice]);
 
   const endLive = async () => {
     setEnding(true);
@@ -116,22 +121,34 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
     ]);
   };
 
-  // Chặn nút quay lại / vuốt lùi của Android khi đang live: hỏi xác nhận trước
-  usePreventRemove(!!live && !ended, () => confirmEnd());
+  // Về hồ sơ: bật cờ leaving để usePreventRemove thôi chặn, rồi mới popTo (xem effect dưới)
+  const goProfile = () => setLeaving(true);
+  useEffect(() => {
+    if (leaving) navigation.popTo('MainTabs', { screen: 'MyProfile' });
+  }, [leaving, navigation]);
+
+  // Chặn nút quay lại của Android: đang live thì hỏi xác nhận, đã kết thúc thì về hồ sơ
+  usePreventRemove(!!live && !leaving, () => (ended ? goProfile() : confirmEnd()));
 
   const sendChat = () => {
     const text = draft.trim();
     if (!text) return;
-    connRef.current?.chat(text); // tin nhắn sẽ quay về qua sự kiện COMMENT
-    setDraft('');
+    // Chưa kết nối xong → giữ nguyên chữ đã gõ để gửi lại
+    if (!connRef.current?.chat(text)) {
+      showNotice(NOT_CONNECTED_TEXT);
+      return;
+    }
+    setDraft(''); // tin nhắn sẽ quay về qua sự kiện COMMENT
   };
-
-  const goProfile = () => navigation.navigate('MainTabs', { screen: 'MyProfile' });
 
   if (loading) return <Loading dark />;
   if (error || !live) {
     return (
       <Screen>
+        {/* Màn này tắt vuốt lùi nên phải có nút đóng */}
+        <Pressable onPress={() => navigation.goBack()} style={styles.errorClose} accessibilityRole="button" accessibilityLabel="Đóng">
+          <Ionicons name="close" size={26} color={colors.text} />
+        </Pressable>
         <ErrorView message={error ?? 'Không tìm thấy buổi live'} onRetry={reload} />
       </Screen>
     );
@@ -143,8 +160,8 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
   return (
     <Screen dark edges={[]}>
       <LiveVideo uri={live.sourceVideoUrl} paused={ended} />
-      <LinearGradient colors={['rgba(0,0,0,0.55)', 'transparent']} style={styles.topShade} pointerEvents="none" />
-      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={styles.bottomShade} pointerEvents="none" />
+      <LinearGradient colors={[liveColors.topShade, 'transparent']} style={styles.topShade} pointerEvents="none" />
+      <LinearGradient colors={['transparent', liveColors.bottomShade]} style={styles.bottomShade} pointerEvents="none" />
 
       {/* Thanh trên: LIVE + thời gian, số người xem, nút Kết thúc */}
       <View style={styles.topBar}>
@@ -178,6 +195,8 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
           accessibilityLabel="Bình luận trực tiếp"
         />
 
+        <LiveNotice text={notice} />
+
         <View style={styles.statsPill}>
           <Ionicons name="heart" size={16} color={colors.primary} />
           <AppText size={13} color={colors.white}>{`${formatCount(heartCount)} tim · ${formatCount(commentCount)} bình luận`}</AppText>
@@ -189,17 +208,18 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
             value={draft}
             onChangeText={setDraft}
             placeholder="Trò chuyện với người xem…"
-            placeholderTextColor="rgba(255,255,255,0.75)"
-            maxLength={500}
+            placeholderTextColor={liveColors.placeholder}
+            maxLength={LIVE_MESSAGE_MAX}
             onSubmitEditing={sendChat}
             returnKeyType="send"
+            editable={!ended}
             style={styles.input}
             accessibilityLabel="Bình luận"
           />
           <Pressable
             onPress={sendChat}
-            disabled={!draft.trim()}
-            style={[styles.sendBtn, !draft.trim() && styles.disabled]}
+            disabled={!draft.trim() || ended}
+            style={[styles.sendBtn, (!draft.trim() || ended) && styles.disabled]}
             accessibilityRole="button"
             accessibilityLabel="Gửi"
           >
@@ -240,6 +260,7 @@ function Stat({ value, label }: { value: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  errorClose: { width: 48, height: 48, marginLeft: spacing.sm, alignItems: 'center', justifyContent: 'center' },
   topShade: { position: 'absolute', top: 0, left: 0, right: 0, height: 160 },
   bottomShade: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 360 },
   topBar: { position: 'absolute', top: 48, left: spacing.lg, right: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -247,16 +268,16 @@ const styles = StyleSheet.create({
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.white },
   viewerBadge: { height: 28, paddingHorizontal: 10, borderRadius: 6, backgroundColor: colors.overlay, flexDirection: 'row', alignItems: 'center', gap: 4 },
   endBtn: { marginLeft: 'auto', height: 40, paddingHorizontal: spacing.lg, borderRadius: 20, backgroundColor: colors.white, justifyContent: 'center' },
-  titleTag: { position: 'absolute', top: 96, left: spacing.lg, maxWidth: '80%', height: 28, paddingHorizontal: 10, borderRadius: radius.sm, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center' },
+  titleTag: { position: 'absolute', top: 96, left: spacing.lg, maxWidth: '80%', height: 28, paddingHorizontal: 10, borderRadius: radius.sm, backgroundColor: liveColors.input, justifyContent: 'center' },
   bottomArea: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: 34, gap: 10 },
   chat: { maxHeight: 220, flexGrow: 0 },
-  statsPill: { alignSelf: 'flex-start', height: 32, borderRadius: 16, paddingHorizontal: 12, backgroundColor: 'rgba(0,0,0,0.4)', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statsPill: { alignSelf: 'flex-start', height: 32, borderRadius: 16, paddingHorizontal: 12, backgroundColor: liveColors.pill, flexDirection: 'row', alignItems: 'center', gap: 6 },
   inputRow: { flexDirection: 'row', gap: 10 },
-  input: { flex: 1, height: 48, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(0,0,0,0.35)', paddingHorizontal: 18, color: colors.white, fontFamily: fonts.regular, fontSize: 14 },
+  input: { flex: 1, height: 48, borderRadius: 24, borderWidth: 1, borderColor: liveColors.inputBorder, backgroundColor: liveColors.input, paddingHorizontal: 18, color: colors.white, fontFamily: fonts.regular, fontSize: 14 },
   sendBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   disabled: { opacity: 0.5 },
-  endingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
-  summary: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(23,20,28,0.92)', alignItems: 'center', justifyContent: 'center', gap: 18, padding: 32 },
+  endingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: liveColors.dim },
+  summary: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: liveColors.summary, alignItems: 'center', justifyContent: 'center', gap: 18, padding: 32 },
   statsRow: { flexDirection: 'row', gap: spacing.sm },
   stat: { width: 90 },
   statLabel: { opacity: 0.8, marginTop: 2 },

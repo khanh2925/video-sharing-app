@@ -5,7 +5,8 @@
  * Mở dạng transparentModal phía trên Camera (hoặc PostVideo), nên phần trên vẫn thấy camera.
  * Bộ lọc chỉ là 1 cái tên lưu kèm video (backend tối đa 30 ký tự); xem trước bằng lớp màu mờ phủ lên,
  * không xử lý ảnh thật.
- * Trả kết quả về màn trước bằng navigate + merge: true (giống Lab 06 bài 1).
+ * Trả kết quả về màn trước bằng popTo + merge: true (giống Lab 06 bài 1).
+ * Lưu ý React Navigation 7: navigate() tới màn đã có trong stack sẽ MỞ THÊM bản mới, nên phải dùng popTo().
  */
 import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
@@ -66,9 +67,9 @@ export default function FilterScreen({ navigation, route }: RootScreenProps<'Fil
     const state = navigation.getState();
     const previous = state.routes[state.index - 1]?.name;
     if (previous === 'PostVideo') {
-      navigation.navigate({ name: 'PostVideo', params: { filter: selected }, merge: true });
+      navigation.popTo('PostVideo', { filter: selected }, { merge: true });
     } else {
-      navigation.navigate({ name: 'Camera', params: { filter: selected }, merge: true });
+      navigation.popTo('Camera', { filter: selected }, { merge: true });
     }
   };
 

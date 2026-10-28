@@ -13,6 +13,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { AppText, Avatar, Button, Header, Screen, TextField } from '../../components';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { userApi } from '../../api/catalog';
+import { getErrorMessage } from '../../api/client';
+import { fileFromUri } from '../../utils/media';
 import type { RootScreenProps } from '../../navigation/types';
 
 export default function EditProfileScreen({ navigation }: RootScreenProps<'EditProfile'>) {
@@ -21,6 +24,7 @@ export default function EditProfileScreen({ navigation }: RootScreenProps<'EditP
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatarUrl ?? null);
+  const [avatarMime, setAvatarMime] = useState<string | null>(null); // kiểu ảnh vừa chọn, gửi kèm khi upload
   const [tried, setTried] = useState(false); // đã bấm Lưu ít nhất 1 lần → mới hiện lỗi
   const [saving, setSaving] = useState(false);
 
@@ -50,12 +54,17 @@ export default function EditProfileScreen({ navigation }: RootScreenProps<'EditP
   // Chọn ảnh đại diện mới trong thư viện ảnh (cắt vuông)
   const pickAvatar = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
+      // iPhone lưu ảnh dạng HEIC, backend chỉ nhận jpg/png/webp → nhờ iOS đổi sang JPEG
+      preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
-    if (!result.canceled) setAvatarUri(result.assets[0].uri);
+    if (!result.canceled) {
+      setAvatarUri(result.assets[0].uri);
+      setAvatarMime(result.assets[0].mimeType ?? null);
+    }
   };
 
   const onSave = async () => {
@@ -63,11 +72,18 @@ export default function EditProfileScreen({ navigation }: RootScreenProps<'EditP
     if (!nameOk) return;
     setSaving(true);
     try {
-      // TODO (Long): thay bằng API khi backend có (PUT /api/users/me + upload avatar multipart).
-      // Hiện chỉ cập nhật user trong AuthContext, tắt app mở lại sẽ mất.
-      updateUser({ ...user, displayName: displayName.trim(), bio: bio.trim() || null, avatarUrl: avatarUri });
+      // 1. Lưu tên + tiểu sử (bio rỗng = xoá tiểu sử)
+      let updated = await userApi.updateMe({ displayName: displayName.trim(), bio: bio.trim() });
+      updateUser(updated);
+      // 2. Có chọn ảnh mới thì upload ảnh đại diện
+      if (avatarUri && avatarUri !== (user.avatarUrl ?? null)) {
+        updated = await userApi.updateAvatar(fileFromUri(avatarUri, avatarMime));
+        updateUser(updated);
+      }
       skipConfirm.current = true;
       navigation.goBack();
+    } catch (e) {
+      Alert.alert('Không lưu được', getErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -104,7 +120,7 @@ export default function EditProfileScreen({ navigation }: RootScreenProps<'EditP
               autoComplete="name"
               error={nameError}
             />
-            <TextField label="Tiểu sử" maxLength={160} value={bio} onChangeText={setBio} multiline numberOfLines={3} />
+            <TextField label="Tiểu sử" maxLength={200} value={bio} onChangeText={setBio} multiline numberOfLines={3} />
 
             {/* Thông tin chỉ xem */}
             <View style={styles.infoBox}>

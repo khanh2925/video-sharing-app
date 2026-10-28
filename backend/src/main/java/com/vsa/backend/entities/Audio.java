@@ -25,6 +25,9 @@ public class Audio {
 
     private String coverUrl;
 
+    // file nhạc "/files/audios/audio01.mp3" để app phát khi chọn nhạc, xem video, xem story
+    private String fileUrl;
+
     private int durationSec;
 
     // hiện ở tab "Trending" khi chọn nhạc

@@ -24,6 +24,9 @@ export const colors = {
   white: '#FFFFFF',
   black: '#000000',
   overlay: 'rgba(0,0,0,0.45)', // nền tối mờ trên video
+  whiteSoft: 'rgba(255,255,255,0.16)',  // ô nhập / nút mờ trên nền video
+  whiteTrack: 'rgba(255,255,255,0.3)',  // nền thanh tiến độ trên video
+  whiteGlass: 'rgba(255,255,255,0.5)',  // viền, chữ mờ trên nền video
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 } as const;

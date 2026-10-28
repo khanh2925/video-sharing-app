@@ -8,13 +8,13 @@
  * - Bộ lọc và nhạc chọn ở màn Filter / Music, gửi về qua route.params (navigate + merge).
  * - Quay xong hoặc chọn xong → sang PostVideo { videoUri, filter, audio }.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigationState, usePreventRemove } from '@react-navigation/native';
+import { useFocusEffect, useNavigationState, usePreventRemove } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, Button, Loading, Screen } from '../../components';
 import { colors, radius, spacing } from '../../constants/theme';
@@ -26,6 +26,19 @@ const TIMERS = [0, 3, 10];
 const TIMER_LABELS = ['Hẹn giờ', '3 giây', '10 giây'];
 /** Màu vàng khi bật flash, lấy theo design (theme chưa có màu này) */
 const FLASH_ON_COLOR = colors.flash;
+
+/** Thời lượng quay tối đa (giây), quay tới đây camera tự dừng */
+const VIDEO_MAX_DURATION_SEC = 60;
+/**
+ * Dung lượng tối đa khi chọn video trong máy (MB). Backend có VIDEO_MAX_SIZE_MB chỉnh được
+ * trong system_settings (R17), số ở đây chỉ để chặn sớm cho đỡ tải lên vô ích.
+ */
+const VIDEO_MAX_MB = 100;
+
+/** Màu mờ trên nền camera (theme chưa có token cho màu trong suốt) */
+const SHADE_COLOR = 'rgba(0,0,0,0.6)';        // dải tối phía dưới
+const TEXT_SHADOW_COLOR = 'rgba(0,0,0,0.5)';  // bóng chữ / icon
+const RECORD_RING_COLOR = 'rgba(255,255,255,0.85)'; // viền nút quay
 
 /** 12 → "00:12" */
 function clock(sec: number) {
@@ -57,6 +70,13 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
   const discardRef = useRef(false);
   const elapsedRef = useRef(0);
   elapsedRef.current = elapsed;
+
+  // Quay lại màn này (sau khi đăng / bỏ video ở PostVideo) thì quên video cũ, tránh "Tiếp" mở lại video đã xử lý
+  useFocusEffect(
+    useCallback(() => {
+      setLastUri(null);
+    }, []),
+  );
 
   // Chỉ bật camera khi màn trên cùng là Camera hoặc 2 bảng trong suốt Filter / Music
   const topRoute = useNavigationState((state) => state.routes[state.index]?.name);
@@ -104,12 +124,16 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
   };
 
   const startRecording = async () => {
-    if (!cameraRef.current || !ready) return;
+    if (!cameraRef.current || !ready) {
+      // Hẹn giờ đếm xong mà camera chưa mở xong
+      Alert.alert('Camera chưa sẵn sàng', 'Đợi camera mở xong rồi bấm quay lại');
+      return;
+    }
     discardRef.current = false;
     setRecording(true);
     try {
-      // Promise trả về khi gọi stopRecording()
-      const result = await cameraRef.current.recordAsync();
+      // Promise trả về khi gọi stopRecording() hoặc quay đủ maxDuration giây
+      const result = await cameraRef.current.recordAsync({ maxDuration: VIDEO_MAX_DURATION_SEC });
       if (result?.uri && !discardRef.current) {
         setLastUri(result.uri);
         goToPost(result.uri);
@@ -146,16 +170,25 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
   };
 
   const pickVideo = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 1 });
+    const result = await ImagePicker.launchImageLibraryAsync({ preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible, mediaTypes: ['videos'], quality: 1 });
     if (result.canceled) return;
-    const uri = result.assets[0].uri;
-    setLastUri(uri);
-    goToPost(uri);
+    const asset = result.assets[0];
+    // fileSize (byte) và duration (mili giây) có thể không có trên vài máy → bỏ qua kiểm tra
+    if (asset.fileSize && asset.fileSize > VIDEO_MAX_MB * 1024 * 1024) {
+      Alert.alert('Video quá lớn', `Chọn video dưới ${VIDEO_MAX_MB} MB`);
+      return;
+    }
+    if (asset.duration && asset.duration > VIDEO_MAX_DURATION_SEC * 1000) {
+      Alert.alert('Video quá dài', `Chọn video không quá ${VIDEO_MAX_DURATION_SEC} giây`);
+      return;
+    }
+    setLastUri(asset.uri);
+    goToPost(asset.uri);
   };
 
   // Chế độ Story: chọn ảnh hoặc video rồi sang màn Đăng story
   const pickStory = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.9 });
+    const result = await ImagePicker.launchImageLibraryAsync({ preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible, mediaTypes: ['images', 'videos'], quality: 0.9 });
     if (result.canceled) return;
     const asset = result.assets[0];
     navigation.navigate('StoryCreate', { uri: asset.uri, mediaType: asset.type === 'video' ? 'VIDEO' : 'IMAGE' });
@@ -218,7 +251,7 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
           onMountError={(e) => Alert.alert('Không mở được camera', e.message)}
         />
         <FilterOverlay name={filter} />
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)']} style={styles.bottomShade} pointerEvents="none" />
+        <LinearGradient colors={['transparent', SHADE_COLOR]} style={styles.bottomShade} pointerEvents="none" />
 
         {/* Thanh trên: Đóng + chọn nhạc */}
         <View style={[styles.topBar, { top: insets.top + spacing.sm }]}>
@@ -379,7 +412,7 @@ const styles = StyleSheet.create({
   tools: { position: 'absolute', right: 10, gap: 10, alignItems: 'center' },
   tool: { width: 60, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 3 },
   disabled: { opacity: 0.5 },
-  shadow: { textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 2, textShadowOffset: { width: 0, height: 1 } },
+  shadow: { textShadowColor: TEXT_SHADOW_COLOR, textShadowRadius: 2, textShadowOffset: { width: 0, height: 1 } },
   countdown: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   bottom: { position: 'absolute', left: 0, right: 0, alignItems: 'center', gap: 18 },
   recBadge: { height: 28, paddingHorizontal: 12, borderRadius: 14, backgroundColor: colors.live, flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -403,7 +436,7 @@ const styles = StyleSheet.create({
     height: 84,
     borderRadius: 42,
     borderWidth: 5,
-    borderColor: 'rgba(255,255,255,0.85)',
+    borderColor: RECORD_RING_COLOR,
     alignItems: 'center',
     justifyContent: 'center',
   },

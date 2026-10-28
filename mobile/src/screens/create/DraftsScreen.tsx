@@ -23,8 +23,6 @@ export default function DraftsScreen({ navigation }: RootScreenProps<'Drafts'>) 
   const [busyId, setBusyId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // Đã xoá/đăng bớt bao nhiêu bản so với tổng lúc tải (để số đếm trên Header đúng)
-  const [removedCount, setRemovedCount] = useState(0);
 
   // Quay lại từ màn Sửa thì tải lại cho cập nhật (bỏ qua lần focus đầu tiên)
   const firstFocus = useRef(true);
@@ -34,7 +32,6 @@ export default function DraftsScreen({ navigation }: RootScreenProps<'Drafts'>) 
         firstFocus.current = false;
         return;
       }
-      setRemovedCount(0);
       list.refresh();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -49,9 +46,11 @@ export default function DraftsScreen({ navigation }: RootScreenProps<'Drafts'>) 
     toastTimer.current = setTimeout(() => setToast(null), 2200);
   };
 
+  // Bỏ dòng khỏi danh sách ngay cho nhanh, rồi tải lại từ trang đầu:
+  // xoá bớt thì các trang phía sau bị dồn lên, tải tiếp theo số trang cũ sẽ sót bản nháp
   const dropItem = (id: number) => {
     list.setItems((prev) => prev.filter((v) => v.id !== id));
-    setRemovedCount((n) => n + 1);
+    list.refresh();
   };
 
   const confirmPublish = (video: Video) => {
@@ -106,10 +105,7 @@ export default function DraftsScreen({ navigation }: RootScreenProps<'Drafts'>) 
         keyExtractor={(v) => String(v.id)}
         contentContainerStyle={list.items.length ? styles.list : styles.flexGrow}
         refreshing={list.refreshing}
-        onRefresh={() => {
-          setRemovedCount(0);
-          list.refresh();
-        }}
+        onRefresh={list.refresh}
         onEndReached={list.loadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={list.loadingMore ? <ActivityIndicator color={colors.primary} style={styles.footer} /> : undefined}
@@ -134,7 +130,7 @@ export default function DraftsScreen({ navigation }: RootScreenProps<'Drafts'>) 
 
   return (
     <Screen>
-      <Header title="Video nháp" count={list.loading ? undefined : Math.max(0, list.totalElements - removedCount)} />
+      <Header title="Video nháp" count={list.loading ? undefined : list.totalElements} />
       {renderBody()}
       {toast && (
         <View style={styles.toast} accessibilityLiveRegion="polite" pointerEvents="none">

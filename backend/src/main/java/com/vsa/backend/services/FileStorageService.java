@@ -32,6 +32,7 @@ public class FileStorageService {
     public static final String AVATAR_DIR = "avatars";
     public static final String STORY_DIR = "stories";
     public static final String PRODUCT_DIR = "products";
+    public static final String AUDIO_DIR = "audios";
 
     private final Path rootDir;
     private final AppProperties.UploadSettings uploadSettings;

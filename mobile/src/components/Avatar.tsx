@@ -3,6 +3,7 @@
  *   <Avatar uri={user.avatarUrl} name={user.displayName} size={52} />
  *   <Avatar ... ring="unseen" />  → vòng xanh (story chưa xem)
  *   <Avatar ... ring="seen" />    → vòng xám (đã xem hết)
+ *   <Avatar ... onPress={...} accessibilityLabel="Hồ sơ Quốc Khánh" />  → bấm được thì nên có nhãn cho trình đọc màn hình
  * uri là đường dẫn backend trả về ("/files/..."), component tự ghép địa chỉ máy chủ.
  */
 import { Image, Pressable, StyleSheet, View } from 'react-native';
@@ -16,6 +17,8 @@ interface Props {
   size?: number;
   ring?: 'none' | 'unseen' | 'seen';
   onPress?: () => void;
+  /** Nhãn đọc cho trình đọc màn hình khi avatar bấm được */
+  accessibilityLabel?: string;
 }
 
 /** "Quốc Khánh" → "QK", "lan" → "L": chữ đầu của từ đầu và từ cuối */
@@ -27,7 +30,7 @@ function initials(name: string) {
   return (first + last).toUpperCase();
 }
 
-export function Avatar({ uri, name = '?', size = 44, ring = 'none', onPress }: Props) {
+export function Avatar({ uri, name = '?', size = 44, ring = 'none', onPress, accessibilityLabel }: Props) {
   const url = mediaUrl(uri);
   const ringWidth = ring === 'none' ? 0 : 3;
   const inner = size - ringWidth * 2 - (ring === 'none' ? 0 : 4);
@@ -46,6 +49,8 @@ export function Avatar({ uri, name = '?', size = 44, ring = 'none', onPress }: P
     <Pressable
       onPress={onPress}
       disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={onPress ? (accessibilityLabel ?? name) : accessibilityLabel}
       style={[
         styles.wrap,
         { width: size, height: size, borderRadius: size / 2 },

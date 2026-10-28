@@ -23,7 +23,7 @@ import { storyApi } from '../../api/stories';
 import { liveApi } from '../../api/lives';
 import { formatCount } from '../../utils/format';
 import { mediaUrl } from '../../utils/media';
-import type { TabScreenProps } from '../../navigation/types';
+import type { SearchTab, TabScreenProps } from '../../navigation/types';
 import type { Audio, LiveStream, StoryGroup, Topic, Video } from '../../types/models';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -56,7 +56,8 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   // Mỗi khối gọi 1 API riêng, khối nào lỗi thì chỉ khối đó trống
   const trending = useFetch(() => videoApi.trending(0, 10), []);
   const topics = useFetch(() => catalogApi.topics(), []);
-  const lives = useFetch(() => liveApi.active(), []);
+  // Xem live cần đăng nhập (UC14): khách thì không gọi API, khối "Đang live" ẩn đi
+  const lives = useFetch(() => (user ? liveApi.active() : Promise.resolve([])), [user?.id]);
   const audios = useFetch(() => catalogApi.audios(), []);
   // Story cần đăng nhập: khách thì trả mảng rỗng, không gọi API
   const stories = useFetch<StoryGroup[]>(() => (user ? storyApi.feed() : Promise.resolve([])), [user?.id]);
@@ -84,13 +85,19 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   // Đăng tin: chọn ảnh/video trong máy rồi mở màn StoryCreate
   const createStory = () =>
     requireAuth(async () => {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.8 });
+      const result = await ImagePicker.launchImageLibraryAsync({ preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible, mediaTypes: ['images', 'videos'], quality: 0.8 });
       if (result.canceled) return;
       const asset = result.assets[0];
-      navigation.navigate('StoryCreate', { uri: asset.uri, mediaType: asset.type === 'video' ? 'VIDEO' : 'IMAGE' });
+      navigation.navigate('StoryCreate', {
+        uri: asset.uri,
+        mediaType: asset.type === 'video' ? 'VIDEO' : 'IMAGE',
+        // ImagePicker trả duration theo mili giây (có thể không có)
+        durationSec: asset.duration ? Math.max(1, Math.round(asset.duration / 1000)) : undefined,
+      });
     });
 
-  const goSearch = (q?: string) => navigation.navigate('Search', q ? { q } : undefined);
+  // nonce: mở lại cùng từ khoá vẫn tìm lại (dù ô tìm kiếm đã bị sửa)
+  const goSearch = (q = '', tab: SearchTab = 'video') => navigation.navigate('Search', { q, tab, nonce: Date.now() });
 
   const trendingVideos = trending.data?.content ?? [];
   const liveList = lives.data ?? [];
@@ -144,7 +151,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hRow}>
             {trendingVideos.map((v) => (
-              <TrendingCard key={v.id} video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id })} />
+              <TrendingCard key={v.id} video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id, source: { kind: 'trending' } })} />
             ))}
           </ScrollView>
         )}
@@ -155,7 +162,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
             <SectionHeader title="Chủ đề" />
             <View style={styles.topicGrid}>
               {topics.data!.map((t) => (
-                <TopicTile key={t.id} topic={t} onPress={() => goSearch(TOPIC_LABELS[t.name] ?? t.name)} />
+                <TopicTile key={t.id} topic={t} onPress={() => navigation.navigate('Watch', { source: { kind: 'topic', topicId: t.id } })} />
               ))}
             </View>
           </>
@@ -164,10 +171,10 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
         {/* Đang live (ẩn khi không có ai live) */}
         {liveList.length > 0 && (
           <>
-            <SectionHeader title="Đang live" linkLabel="Tất cả live" onLink={() => goSearch()} />
+            <SectionHeader title="Đang live" linkLabel="Tất cả live" onLink={() => goSearch('', 'live')} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hRow}>
               {liveList.map((l) => (
-                <LiveCard key={l.id} live={l} onPress={() => navigation.navigate('LiveWatch', { liveId: l.id })} />
+                <LiveCard key={l.id} live={l} onPress={() => requireAuth(() => navigation.navigate('LiveWatch', { liveId: l.id }))} />
               ))}
             </ScrollView>
           </>
@@ -176,10 +183,10 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
         {/* Âm thanh nổi bật */}
         {hotAudios.length > 0 && (
           <>
-            <SectionHeader title="Âm thanh nổi bật" linkLabel="Tất cả âm thanh" onLink={() => goSearch()} />
+            <SectionHeader title="Âm thanh nổi bật" linkLabel="Tất cả âm thanh" onLink={() => goSearch('', 'audio')} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.hRow, styles.audioRow]}>
               {hotAudios.map((a) => (
-                <AudioCard key={a.id} audio={a} onPress={() => goSearch(a.title)} />
+                <AudioCard key={a.id} audio={a} onPress={() => goSearch(a.title, 'audio')} />
               ))}
             </ScrollView>
           </>
@@ -370,7 +377,7 @@ const styles = StyleSheet.create({
   note: { paddingHorizontal: spacing.xl },
 
   storyRow: { gap: 14, paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: 18 },
-  storyItem: { width: 64, alignItems: 'center', gap: 6 },
+  storyItem: { width: 72, alignItems: 'center', gap: 6 }, // 72: đủ chỗ cho chữ "Tin của bạn"
   dashedBubble: {
     width: 60,
     height: 60,

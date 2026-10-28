@@ -12,7 +12,8 @@
  *     ListFooterComponent={list.loadingMore ? <ActivityIndicator /> : null}
  *   />
  * Lỗi lần đầu: list.error → hiện <ErrorView message={list.error} onRetry={list.reload} />
- * Xoá 1 dòng sau khi gọi API xoá: list.setItems(prev => prev.filter(x => x.id !== id))
+ * Xoá 1 dòng sau khi gọi API xoá: list.setItems(prev => prev.filter(x => x.id !== id)) rồi gọi list.refresh()
+ *   (xoá bớt thì các trang sau bị dồn lên, chỉ setItems rồi loadMore sẽ bỏ sót phần tử)
  */
 import { DependencyList, useCallback, useEffect, useRef, useState } from 'react';
 import { getErrorMessage } from '../api/client';

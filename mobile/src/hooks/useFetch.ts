@@ -17,15 +17,20 @@ export function useFetch<T>(fetcher: () => Promise<T>, deps: DependencyList) {
   const fetcherRef = useRef(fetcher);
   fetcherRef.current = fetcher;
 
+  // Mỗi lần gọi có 1 số thứ tự; kết quả về muộn của lần gọi cũ (deps đã đổi) thì bỏ qua
+  const requestIdRef = useRef(0);
+
   const reload = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
     try {
-      setData(await fetcherRef.current());
+      const result = await fetcherRef.current();
+      if (requestId === requestIdRef.current) setData(result);
     } catch (e) {
-      setError(getErrorMessage(e));
+      if (requestId === requestIdRef.current) setError(getErrorMessage(e));
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, []);
 

@@ -35,3 +35,12 @@ export const visibilityLabel = {
   FOLLOWERS: 'Người theo dõi',
   PRIVATE: 'Chỉ mình tôi',
 } as const;
+
+/**
+ * Nhãn nút theo dõi (UC12): theo dõi qua lại → "Bạn bè"; chỉ mình theo dõi họ → "Đang theo dõi";
+ * chỉ họ theo dõi mình → "Theo dõi lại"; chưa ai theo dõi ai → "Theo dõi".
+ */
+export function followLabel(u: { following: boolean; followsMe: boolean }): string {
+  if (u.following) return u.followsMe ? 'Bạn bè' : 'Đang theo dõi';
+  return u.followsMe ? 'Theo dõi lại' : 'Theo dõi';
+}

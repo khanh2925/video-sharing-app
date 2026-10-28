@@ -34,6 +34,9 @@ export interface UpdateVideoBody {
 export const videoApi = {
   trending: (page = 0, size = 10) =>
     api.get<PageResponse<Video>>('/videos/trending', { params: { page, size } }).then((r) => r.data),
+  /** Feed "Đang theo dõi": video của người mình theo dõi, mới nhất trước. Cần đăng nhập. */
+  following: (page = 0, size = 10) =>
+    api.get<PageResponse<Video>>('/videos/following', { params: { page, size } }).then((r) => r.data),
   byTopic: (topicId: number, page = 0, size = 20) =>
     api.get<PageResponse<Video>>('/videos', { params: { topicId, page, size } }).then((r) => r.data),
   getById: (id: number) => api.get<Video>(`/videos/${id}`).then((r) => r.data),

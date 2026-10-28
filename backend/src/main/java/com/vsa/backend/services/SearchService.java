@@ -2,13 +2,13 @@ package com.vsa.backend.services;
 
 import com.vsa.backend.dtos.response.SearchResponse;
 import com.vsa.backend.entities.LiveStream;
+import com.vsa.backend.entities.User;
 import com.vsa.backend.entities.Video;
 import com.vsa.backend.enums.LiveStatus;
 import com.vsa.backend.enums.VideoStatus;
 import com.vsa.backend.enums.Visibility;
 import com.vsa.backend.exceptions.ApiException;
 import com.vsa.backend.mappers.CatalogMapper;
-import com.vsa.backend.mappers.UserMapper;
 import com.vsa.backend.mappers.VideoMapper;
 import com.vsa.backend.repositories.AudioRepository;
 import com.vsa.backend.repositories.HashtagRepository;
@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.function.Function;
 
 @Service
@@ -39,9 +40,9 @@ public class SearchService {
     private final AudioRepository audioRepository;
     private final HashtagRepository hashtagRepository;
     private final VideoMapper videoMapper;
-    private final UserMapper userMapper;
     private final CatalogMapper catalogMapper;
     private final LiveStreamService liveStreamService;
+    private final FollowService followService;
 
     @Transactional(readOnly = true)
     public SearchResponse search(String rawQuery, String rawType, Pageable pageable) {
@@ -50,9 +51,7 @@ public class SearchService {
 
         return switch (type) {
             case "videos", "trending" -> searchVideos(query, type, pageable);
-            case "accounts" -> map(type,
-                    userRepository.findByUsernameContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(
-                            query, query, pageable), userMapper::toSummary);
+            case "accounts" -> searchAccounts(query, type, pageable);
             case "streaming", "lives" -> searchLives(query, "streaming", pageable);
             case "audio" -> map(type,
                     audioRepository.findByTitleContainingIgnoreCaseOrArtistContainingIgnoreCase(
@@ -75,9 +74,13 @@ public class SearchService {
         Page<Video> page = query.isBlank()
                 ? videoRepository.findByStatusAndVisibilityOrderByViewCountDesc(
                         VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable)
-                : videoRepository.searchPublic(query, VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable);
-        return map(type, page, video -> videoMapper.toResponse(video,
-                currentUserId != null && videoLikeRepository.existsByVideoIdAndUserId(video.getId(), currentUserId)));
+                : videoRepository.searchPublic(escapeLike(query), VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable);
+        // Cờ "đã thích" lấy 1 lần cho cả trang (tránh N+1); khách hoặc trang rỗng thì khỏi hỏi DB
+        Set<Long> likedIds = currentUserId == null || page.isEmpty()
+                ? Set.of()
+                : videoLikeRepository.findLikedVideoIds(currentUserId,
+                        page.getContent().stream().map(Video::getId).toList());
+        return map(type, page, video -> videoMapper.toResponse(video, likedIds.contains(video.getId())));
     }
 
     private SearchResponse searchLives(String query, String type, Pageable pageable) {
@@ -89,6 +92,22 @@ public class SearchService {
         int end = Math.min(start + pageable.getPageSize(), filtered.size());
         Page<LiveStream> page = new PageImpl<>(filtered.subList(start, end), pageable, filtered.size());
         return map(type, page, liveStreamService::toResponse);
+    }
+
+    // Kết quả tài khoản kèm số người theo dõi và cờ đang theo dõi (UC12) để app hiện đúng nút.
+    // Chỉ người dùng thường chưa bị khoá (không lộ tài khoản quản trị, tài khoản bị khoá)
+    private SearchResponse searchAccounts(String query, String type, Pageable pageable) {
+        Page<User> users = userRepository.searchAccounts(escapeLike(query), pageable);
+        return new SearchResponse(type, followService.toFollowUsers(users.getContent()),
+                users.getNumber(), users.getSize(), users.getTotalElements(), users.getTotalPages(), users.isLast());
+    }
+
+    /**
+     * Thoát ký tự đặc biệt của LIKE để tìm đúng chữ người dùng gõ: "50%" không còn khớp mọi thứ,
+     * "a_b" không khớp "axb". Ký tự thoát là '!' (khớp với "escape '!'" trong câu truy vấn).
+     */
+    static String escapeLike(String query) {
+        return query.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     private <T, R> SearchResponse map(String type, Page<T> page, Function<T, R> mapper) {

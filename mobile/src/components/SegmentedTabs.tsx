@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   underlineActive: { borderBottomColor: colors.primary },
   segmentWrap: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.md, padding: 4, gap: 4 },
   segment: { height: 38, borderRadius: 9 },
-  segmentActive: { backgroundColor: colors.white, shadowColor: '#17141C', shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
+  segmentActive: { backgroundColor: colors.white, shadowColor: colors.text, shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 2 },
   pillRow: { gap: 8 },
   pill: { height: 34, paddingHorizontal: 14, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   pillActive: { backgroundColor: colors.primary },

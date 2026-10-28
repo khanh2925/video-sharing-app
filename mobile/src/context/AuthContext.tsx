@@ -5,10 +5,12 @@
  *   const { user, login, register, logout, updateUser } = useAuth();
  *
  * - Token lưu trong expo-secure-store → tắt app mở lại vẫn còn đăng nhập.
- * - Mở app: có token cũ thì gọi /auth/me để lấy lại user; token hỏng thì xoá.
+ * - Mở app: có token cũ thì gọi /auth/me để lấy lại user; chỉ xoá token khi backend trả 401 (token hỏng).
+ *   Lỗi mạng (máy chủ chưa bật, mất wifi) thì giữ token, lần mở app sau thử lại.
  * - user khác null là đã đăng nhập → RootNavigator tự chuyển sang MainTabs.
  */
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { authApi, LoginBody, RegisterBody } from '../api/auth';
 import { setAuthToken, setOnUnauthorized } from '../api/client';
@@ -44,15 +46,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOnUnauthorized(() => {
       logout();
     });
+    const isUnauthorized = (e: unknown) => axios.isAxiosError(e) && e.response?.status === 401;
+
     (async () => {
       try {
         const token = await SecureStore.getItemAsync(TOKEN_KEY);
-        if (token) {
-          setAuthToken(token);
+        if (!token) return;
+        setAuthToken(token);
+        try {
+          setUser(await authApi.me());
+        } catch (e) {
+          if (isUnauthorized(e)) throw e;
+          // Lỗi mạng: thử lại 1 lần nữa
           setUser(await authApi.me());
         }
-      } catch {
-        await logout();
+      } catch (e) {
+        if (isUnauthorized(e)) {
+          // Token hết hạn / tài khoản bị khoá → xoá hẳn (interceptor cũng đã gọi logout)
+          await logout();
+        } else {
+          // Vẫn lỗi mạng: vào chế độ khách nhưng GIỮ token trong máy để lần mở app sau thử lại
+          setAuthToken(null);
+        }
       } finally {
         setIsBootstrapping(false);
       }
