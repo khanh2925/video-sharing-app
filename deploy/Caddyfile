@@ -1,0 +1,7 @@
+# DOMAIN có giá trị (vd 140-238-1-2.sslip.io) → Caddy tự xin chứng chỉ HTTPS.
+# DOMAIN để trống → chạy HTTP thường ở cổng 80.
+{$DOMAIN::80} {
+	# Không giới hạn dung lượng upload ở đây; backend tự chặn theo VIDEO_MAX_SIZE_MB.
+	# WebSocket (/ws/**) và HTTP Range (tua video) được chuyển tiếp tự động.
+	reverse_proxy backend:8080
+}
