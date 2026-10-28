@@ -8,6 +8,8 @@ import com.vsa.backend.services.VideoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +29,32 @@ import org.springframework.web.multipart.MultipartFile;
 public class VideoController {
 
     private final VideoService videoService;
+
+    @GetMapping("/trending")
+    public PageResponse<VideoResponse> getTrending(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return videoService.getTrending(PageRequest.of(page, size));
+    }
+
+    @GetMapping
+    public PageResponse<VideoResponse> getByTopic(
+            @RequestParam Long topicId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return videoService.getByTopic(topicId,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+    }
+
+    @GetMapping("/{id}")
+    public VideoResponse getById(@PathVariable Long id) {
+        return videoService.getById(id);
+    }
+
+    @PostMapping("/{id}/view")
+    public VideoResponse recordView(@PathVariable Long id) {
+        return videoService.recordView(id);
+    }
 
     // @ModelAttribute: gom các trường form-data (title, hashtags...) vào record CreateVideoRequest
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

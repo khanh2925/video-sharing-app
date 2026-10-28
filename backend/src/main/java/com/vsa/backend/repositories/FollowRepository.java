@@ -12,6 +12,8 @@ import java.util.List;
 @Repository
 public interface FollowRepository extends JpaRepository<Follow, Long> {
 
+    boolean existsByFollowerIdAndFollowingId(Long followerId, Long followingId);
+
     // Thêm hàm truy vấn khi cần, đặt tên theo quy tắc Spring Data:
     // findBy<TenThuocTinh>, existsBy..., countBy..., ...OrderBy<TenThuocTinh>Desc
 
