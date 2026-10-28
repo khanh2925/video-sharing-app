@@ -25,9 +25,11 @@ Run lint and typecheck before declaring any task done.
 
 ## Navigation & Routing
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
+- This project uses **React Navigation** (native-stack + bottom-tabs), NOT Expo Router — it matches the course material (Buổi 4, Buổi 8, Lab 06).
+- All routes and params are declared in `src/navigation/types.ts`; screens are registered in `src/navigation/RootNavigator.tsx` and `src/navigation/MainTabs.tsx`.
+- Screens live in `src/screens/<feature>/<Name>Screen.tsx`. Shared UI is in `src/components` — reuse it instead of re-styling.
+- Colors, fonts, spacing come from `src/constants/theme.ts`; API calls go through `src/api/client.ts`.
+- Install packages with `EXPO_OFFLINE=1 npx expo install <pkg>` when api.expo.dev is unreachable.
 
 ## Building with EAS
 
