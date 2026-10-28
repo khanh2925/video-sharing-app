@@ -1,6 +1,7 @@
 package com.vsa.backend.mappers;
 
 import com.vsa.backend.dtos.response.AuthUserResponse;
+import com.vsa.backend.dtos.response.UserProfileResponse;
 import com.vsa.backend.dtos.response.UserSummaryResponse;
 import com.vsa.backend.entities.User;
 import org.springframework.stereotype.Component;
@@ -31,5 +32,24 @@ public class UserMapper {
                 user.getUsername(),
                 user.getDisplayName(),
                 user.getAvatarUrl());
+    }
+
+    /**
+     * UC06. Hồ sơ công khai. Các con số và cờ following / me tính ở UserService
+     * (vì phụ thuộc người đang xem), mapper chỉ ghép lại.
+     */
+    public UserProfileResponse toProfileResponse(User user, long followingCount, long followerCount,
+                                                 long likeCount, boolean following, boolean me) {
+        return new UserProfileResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getDisplayName(),
+                user.getBio(),
+                user.getAvatarUrl(),
+                followingCount,
+                followerCount,
+                likeCount,
+                following,
+                me);
     }
 }

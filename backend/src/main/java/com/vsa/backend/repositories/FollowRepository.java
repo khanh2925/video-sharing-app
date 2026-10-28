@@ -12,12 +12,18 @@ import java.util.List;
 @Repository
 public interface FollowRepository extends JpaRepository<Follow, Long> {
 
-    boolean existsByFollowerIdAndFollowingId(Long followerId, Long followingId);
-
     // Thêm hàm truy vấn khi cần, đặt tên theo quy tắc Spring Data:
     // findBy<TenThuocTinh>, existsBy..., countBy..., ...OrderBy<TenThuocTinh>Desc
 
     // id những người mà followerId đang theo dõi (UC18 dùng để lấy story)
     @Query("select f.following.id from Follow f where f.follower.id = :followerId")
     List<Long> findFollowingIds(@Param("followerId") Long followerId);
+
+    // ===== UC06 – Xem hồ sơ người dùng =====
+    // Viết đúng TÊN HÀM là Spring tự sinh câu SQL, không cần @Query
+    long countByFollowerId(Long followerId);                                  // số người mà followerId đang theo dõi (Following)
+
+    long countByFollowingId(Long followingId);                                // số người đang theo dõi followingId (Followers)
+
+    boolean existsByFollowerIdAndFollowingId(Long followerId, Long followingId);   // followerId có đang theo dõi followingId không
 }

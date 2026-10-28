@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+
 // Video. JpaRepository có sẵn: findById, findAll(Pageable), save, delete, count...
 @Repository
 public interface VideoRepository extends JpaRepository<Video, Long> {
@@ -36,4 +38,23 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
                              @Param("status") VideoStatus status,
                              @Param("visibility") Visibility visibility,
                              Pageable pageable);
+
+    // ===== UC06 – Xem hồ sơ người dùng =====
+    // Tổng lượt thích trên các video của một người (ô "Likes" ở hồ sơ).
+    // COALESCE: người chưa có video nào thì SUM trả NULL → đổi thành 0
+    @Query("""
+            SELECT COALESCE(SUM(v.likeCount), 0L)
+            FROM Video v
+            WHERE v.owner.id = :ownerId
+              AND v.status = :status
+            """)
+    long sumLikeCountByOwner(@Param("ownerId") Long ownerId,
+                             @Param("status") VideoStatus status);
+
+    // Tab Videos ở hồ sơ: video của 1 người theo trạng thái, chỉ lấy các chế độ hiển thị trong danh sách, mới nhất trước
+    // ...VisibilityIn(...) → WHERE visibility IN (...)
+    Page<Video> findByOwnerIdAndStatusAndVisibilityInOrderByCreatedAtDesc(Long ownerId,
+                                                                         VideoStatus status,
+                                                                         Collection<Visibility> visibilities,
+                                                                         Pageable pageable);
 }
