@@ -14,6 +14,7 @@ public record StoryResponse(
         int durationSec,
         LocalDateTime createdAt,
         LocalDateTime expiresAt,
-        boolean viewed
+        boolean viewed,
+        AudioResponse audio      // nhạc nền, null nếu không chọn nhạc
 ) {
 }

@@ -16,6 +16,6 @@ public class CatalogMapper {
 
     public AudioResponse toAudioResponse(Audio audio) {
         return new AudioResponse(audio.getId(), audio.getTitle(), audio.getArtist(),
-                audio.getCoverUrl(), audio.getDurationSec(), audio.isTrending());
+                audio.getCoverUrl(), audio.getFileUrl(), audio.getDurationSec(), audio.isTrending());
     }
 }

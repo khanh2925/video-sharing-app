@@ -45,6 +45,11 @@ public class Story {
     @JoinColumn(name = "owner_id")
     private User owner;
 
+    // nhạc nền (không bắt buộc), phát khi xem story
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "audio_id")
+    private Audio audio;
+
     // mappedBy: khoá ngoại nằm ở bảng story_views; xoá story thì xoá luôn lượt xem
     @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

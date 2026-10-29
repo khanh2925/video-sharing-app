@@ -64,6 +64,8 @@ public class SecurityConfig {
                         .authenticated()
                         // Còn lại: GET công khai, mọi thứ khác cần đăng nhập
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
+                        // Tăng lượt xem: khách xem video cũng được tính (VideoService.recordView xử lý khách)
+                        .requestMatchers(HttpMethod.POST, "/api/videos/*/view").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

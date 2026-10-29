@@ -27,7 +27,7 @@ import java.util.stream.Stream;
  * Tài khoản mẫu (mật khẩu đều là 123456):
  *   admin (ADMIN), lan, minh, hoa, an (USER)
  *
- * Video lấy từ thư mục seed-media/videos (xem seed-media/README.md).
+ * Video lấy từ thư mục seed-media/videos, nhạc từ seed-media/audios (xem seed-media/README.md).
  * Muốn nạp lại từ đầu: xoá database rồi chạy lại backend.
  * Chỉ Khánh sửa file này; ai cần thêm dữ liệu mẫu thì báo nhóm trưởng.
  */
@@ -60,6 +60,7 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) {
         if (userRepository.count() > 0) {
             log.info("Đã có dữ liệu, bỏ qua DataSeeder");
+            attachAudioFiles();   // DB tạo trước khi có file nhạc thì bổ sung, không cần xoá DB
             return;
         }
         log.info("Database trống, bắt đầu nạp dữ liệu mẫu...");
@@ -91,6 +92,7 @@ public class DataSeeder implements CommandLineRunner {
                 Audio.builder().title("Mưa Sài Gòn").artist("Acoustic Band").durationSec(60).build(),
                 Audio.builder().title("Năng lượng").artist("EDM Crew").durationSec(30).trending(true).build(),
                 Audio.builder().title("Piano nhẹ").artist("Instrumental").durationSec(90).build()));
+        attachAudioFiles();
 
         // ---------- Video ----------
         // {tiêu đề, mô tả, chủ đề, bộ lọc, hashtag}
@@ -231,6 +233,35 @@ public class DataSeeder implements CommandLineRunner {
     private void comment(User user, Video video, String content) {
         commentRepository.save(Comment.builder().user(user).video(video).content(content).build());
         video.setCommentCount(video.getCommentCount() + 1);
+    }
+
+    // Tên bài nhạc mẫu → file trong seed-media/audios. Ghép theo TÊN, không theo thứ tự id,
+    // để DB có thêm / bớt bài (vd người dùng tự thêm) thì vẫn gắn đúng file.
+    private static final Map<String, String> AUDIO_FILES = Map.of(
+            "Chill buổi sáng", "audio01.mp3",
+            "Nhịp vui", "audio02.mp3",
+            "Mưa Sài Gòn", "audio03.mp3",
+            "Năng lượng", "audio04.mp3",
+            "Piano nhẹ", "audio05.mp3");
+
+    /**
+     * Gắn file nhạc seed-media/audios/audio01.mp3, audio02.mp3... cho các bài mẫu chưa có file (theo AUDIO_FILES).
+     * Chạy cả khi DB đã có dữ liệu, nên ai pull code mới về cũng có nhạc mà không phải xoá DB.
+     */
+    private void attachAudioFiles() {
+        for (Audio audio : audioRepository.findAll()) {
+            String fileName = AUDIO_FILES.get(audio.getTitle());
+            if (fileName == null || audio.getFileUrl() != null) {
+                continue;   // không phải bài mẫu, hoặc đã có file
+            }
+            Path file = Path.of(appProperties.seedMediaDir(), "audios", fileName);
+            if (!Files.exists(file)) {
+                continue;
+            }
+            audio.setFileUrl(fileStorageService.copyExistingFile(file, FileStorageService.AUDIO_DIR));
+            audioRepository.save(audio);
+            log.info("Đã gắn file nhạc {} cho bài \"{}\"", file.getFileName(), audio.getTitle());
+        }
     }
 
     private List<Path> findSampleVideos() {

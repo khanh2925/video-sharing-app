@@ -17,7 +17,6 @@ import com.vsa.backend.repositories.AudioRepository;
 import com.vsa.backend.repositories.CommentLikeRepository;
 import com.vsa.backend.repositories.CommentRepository;
 import com.vsa.backend.repositories.HashtagRepository;
-import com.vsa.backend.repositories.FollowRepository;
 import com.vsa.backend.repositories.TopicRepository;
 import com.vsa.backend.repositories.UserRepository;
 import com.vsa.backend.repositories.VideoLikeRepository;
@@ -25,6 +24,7 @@ import com.vsa.backend.repositories.VideoRepository;
 import com.vsa.backend.utils.AppConstants;
 import com.vsa.backend.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,22 +49,31 @@ public class VideoService {
     private final TopicRepository topicRepository;
     private final AudioRepository audioRepository;
     private final HashtagRepository hashtagRepository;
-    private final FollowRepository followRepository;
     private final VideoLikeRepository videoLikeRepository;
     private final CommentRepository commentRepository;
     private final CommentLikeRepository commentLikeRepository;
     private final FileStorageService fileStorageService;
     private final VideoMapper videoMapper;
+    private final VideoAccessPolicy videoAccessPolicy;
 
     // ===================== UC05: xem video =====================
 
     @Transactional(readOnly = true)
     public PageResponse<VideoResponse> getTrending(Pageable pageable) {
         Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();
-        return PageResponse.of(
-                videoRepository.findByStatusAndVisibilityOrderByViewCountDesc(
-                        VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable),
-                video -> videoMapper.toResponse(video, isLiked(video.getId(), currentUserId)));
+        return toPage(videoRepository.findByStatusAndVisibilityOrderByViewCountDesc(
+                VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable), currentUserId);
+    }
+
+    /**
+     * Feed "Đang theo dõi" (UC05): video của người mình theo dõi, mới nhất trước.
+     * Mình đang theo dõi họ nên thấy cả video chế độ "Người theo dõi" (bảng 6.2). Khách → 401.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<VideoResponse> getFollowingFeed(Pageable pageable) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        return toPage(videoRepository.findFollowingFeed(currentUserId, VideoStatus.PUBLISHED,
+                List.of(Visibility.PUBLIC, Visibility.FOLLOWERS), pageable), currentUserId);
     }
 
     @Transactional(readOnly = true)
@@ -73,25 +82,27 @@ public class VideoService {
             throw ApiException.notFound("Không tìm thấy chủ đề");
         }
         Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();
-        return PageResponse.of(
-                videoRepository.findByTopicIdAndStatusAndVisibilityOrderByCreatedAtDesc(
-                        topicId, VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable),
-                video -> videoMapper.toResponse(video, isLiked(video.getId(), currentUserId)));
+        return toPage(videoRepository.findByTopicIdAndStatusAndVisibilityOrderByCreatedAtDesc(
+                topicId, VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable), currentUserId);
     }
 
     @Transactional(readOnly = true)
     public VideoResponse getById(Long videoId) {
         Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();
-        Video video = findViewableVideo(videoId, currentUserId);
+        Video video = videoAccessPolicy.findViewableVideo(videoId, currentUserId);
         return videoMapper.toResponse(video, isLiked(videoId, currentUserId));
     }
 
+    /** Khách cũng tăng được lượt xem (SecurityConfig mở POST /api/videos/{id}/view). */
     @Transactional
     public VideoResponse recordView(Long videoId) {
         Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();
-        Video video = findViewableVideo(videoId, currentUserId);
-        video.setViewCount(video.getViewCount() + 1);
-        return videoMapper.toResponse(video, isLiked(videoId, currentUserId));
+        Video video = videoAccessPolicy.findViewableVideo(videoId, currentUserId);
+        // Cộng thẳng trong DB (nhiều người xem cùng lúc không mất lượt), KHÔNG setViewCount trên entity.
+        // Số trả về = số vừa đọc + 1 (đủ đúng để app hiển thị).
+        videoRepository.incrementViewCount(videoId);
+        return videoMapper.toResponse(video, isLiked(videoId, currentUserId),
+                video.getViewCount() + 1, video.getLikeCount(), video.getCommentCount());
     }
 
     // ===================== UC08 + UC09: đăng video =====================
@@ -220,38 +231,25 @@ public class VideoService {
         return video;
     }
 
-    /** Áp dụng bảng quyền xem ở mục 6.2 của tài liệu nghiệp vụ. */
-    private Video findViewableVideo(Long videoId, Long currentUserId) {
-        Video video = videoRepository.findById(videoId)
-                .orElseThrow(() -> ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem"));
-
-        if (video.getStatus() == VideoStatus.HIDDEN) {
-            throw ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem");
-        }
-
-        boolean owner = currentUserId != null && video.getOwner().getId().equals(currentUserId);
-        if (video.getStatus() == VideoStatus.DRAFT && !owner) {
-            throw ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem");
-        }
-        if (video.getStatus() != VideoStatus.PUBLISHED && !owner) {
-            throw ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem");
-        }
-
-        if (video.getVisibility() == Visibility.PRIVATE && !owner) {
-            throw ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem");
-        }
-        if (video.getVisibility() == Visibility.FOLLOWERS && !owner) {
-            boolean following = currentUserId != null
-                    && followRepository.existsByFollowerIdAndFollowingId(currentUserId, video.getOwner().getId());
-            if (!following) {
-                throw ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem");
-            }
-        }
-        return video;
-    }
-
     private boolean isLiked(Long videoId, Long currentUserId) {
         return currentUserId != null && videoLikeRepository.existsByVideoIdAndUserId(videoId, currentUserId);
+    }
+
+    /**
+     * Đổi một trang Video sang VideoResponse. Cờ "đã thích" lấy bằng 1 câu truy vấn cho cả trang
+     * (findLikedVideoIds), không hỏi DB từng video (tránh lỗi N+1).
+     */
+    private PageResponse<VideoResponse> toPage(Page<Video> videos, Long currentUserId) {
+        Set<Long> likedIds = likedVideoIds(currentUserId, videos.getContent());
+        return PageResponse.of(videos, video -> videoMapper.toResponse(video, likedIds.contains(video.getId())));
+    }
+
+    // Khách hoặc trang rỗng thì khỏi hỏi DB
+    private Set<Long> likedVideoIds(Long currentUserId, List<Video> videos) {
+        if (currentUserId == null || videos.isEmpty()) {
+            return Set.of();
+        }
+        return videoLikeRepository.findLikedVideoIds(currentUserId, videos.stream().map(Video::getId).toList());
     }
 
     /**

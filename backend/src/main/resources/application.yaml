@@ -10,6 +10,11 @@ spring:
       ddl-auto: update        # Hibernate tự tạo / sửa bảng theo các lớp @Entity
     show-sql: true
     open-in-view: false
+    properties:
+      hibernate:
+        # Đọc owner, topic, audio, hashtags (LAZY) của cả trang video bằng vài câu IN (...)
+        # thay vì mỗi video một câu (lỗi N+1)
+        default_batch_fetch_size: 50
   servlet:
     multipart:
       # "Trần cứng" để chặn file quá lớn trước khi vào code.
