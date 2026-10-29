@@ -975,57 +975,7 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-12 - Sửa tên hiển thị và tiểu sử",
-              "originalRequest": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"displayName\": \"Lan Nguyễn\",\n  \"bio\": \"Mê du lịch, mèo và cà phê\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/me",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "me"
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"id\": 2,\n  \"username\": \"lan\",\n  \"displayName\": \"Lan Nguyễn\",\n  \"email\": \"lan@vsa.local\",\n  \"bio\": \"Mê du lịch, mèo và cà phê\",\n  \"avatarUrl\": null,\n  \"role\": \"USER\",\n  \"createdAt\": \"2026-10-29T08:42:01.365379\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-13 - Tên hiển thị để trống",
@@ -1077,57 +1027,7 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-13 - Tên hiển thị để trống",
-              "originalRequest": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"displayName\": \"   \",\n  \"bio\": \"abc\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/me",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "me"
-                  ]
-                }
-              },
-              "status": "Bad Request",
-              "code": 400,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 400,\n  \"message\": \"Vui lòng nhập tên hiển thị\",\n  \"timestamp\": \"2026-10-29T08:51:00.5802664\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-14 - Tiểu sử quá 200 ký tự",
@@ -1179,57 +1079,7 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-14 - Tiểu sử quá 200 ký tự",
-              "originalRequest": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"displayName\": \"Lan Nguyễn\",\n  \"bio\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/me",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "me"
-                  ]
-                }
-              },
-              "status": "Bad Request",
-              "code": 400,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 400,\n  \"message\": \"Tiểu sử tối đa 200 ký tự\",\n  \"timestamp\": \"2026-10-29T08:51:00.6689946\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-15 - Sửa hồ sơ khi chưa đăng nhập",
@@ -1276,52 +1126,7 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-15 - Sửa hồ sơ khi chưa đăng nhập",
-              "originalRequest": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"displayName\": \"Lan\",\n  \"bio\": null\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/me",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "me"
-                  ]
-                }
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 401,\n  \"message\": \"Bạn cần đăng nhập\",\n  \"timestamp\": \"2026-10-29T08:51:00.747489200\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-16 - Đổi ảnh đại diện bằng ảnh jpg",
@@ -1370,54 +1175,7 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-16 - Đổi ảnh đại diện bằng ảnh jpg",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    {
-                      "key": "file",
-                      "type": "file",
-                      "src": "backend/seed-media/thumbnails/video01.jpg"
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/me/avatar",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "me",
-                    "avatar"
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"id\": 2,\n  \"username\": \"lan\",\n  \"displayName\": \"Lan Nguyễn\",\n  \"email\": \"lan@vsa.local\",\n  \"bio\": \"Mê du lịch, mèo và cà phê\",\n  \"avatarUrl\": \"/files/avatars/a3df28ee-e188-4f80-8579-dd616afb9041.jpg\",\n  \"role\": \"USER\",\n  \"createdAt\": \"2026-10-29T08:42:01.365379\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-17 - Ảnh đại diện sai định dạng (mp4)",
@@ -1466,54 +1224,7 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-17 - Ảnh đại diện sai định dạng (mp4)",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    {
-                      "key": "file",
-                      "type": "file",
-                      "src": "backend/seed-media/videos/video01.mp4"
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/me/avatar",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "me",
-                    "avatar"
-                  ]
-                }
-              },
-              "status": "Bad Request",
-              "code": 400,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 400,\n  \"message\": \"Chỉ nhận file jpg, jpeg, png, webp\",\n  \"timestamp\": \"2026-10-29T08:51:01.0377653\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-18 - Đổi ảnh đại diện không gửi file",
@@ -1557,61 +1268,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"LO-18 - Đổi ảnh đại diện không gửi file - status 400\", function () { pm.response.to.have.status(400); });",
-                  "pm.test('Báo thiếu dữ liệu', () => pm.expect(pm.response.json().message).to.include('Thiếu dữ liệu bắt buộc'));"
+                  "pm.test(\"Báo thiếu trường file\", () => pm.expect(pm.response.json().message).to.eql('Thiếu dữ liệu bắt buộc: file'));"
                 ]
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-18 - Đổi ảnh đại diện không gửi file",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    {
-                      "key": "note",
-                      "value": "khong co file",
-                      "type": "text"
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/me/avatar",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "me",
-                    "avatar"
-                  ]
-                }
-              },
-              "status": "Bad Request",
-              "code": 400,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 400,\n  \"message\": \"Thiếu dữ liệu bắt buộc: Required part 'file' is not present.\",\n  \"timestamp\": \"2026-10-29T08:51:01.1481908\"\n}"
-            }
-          ]
+          "response": []
         }
-      ]
+      ],
+      "description": "Code UC07, UC12 dùng bản của Khánh (nhánh ui-demo). Long viết và chạy test."
     },
     {
       "name": "UC12 - Theo dõi người dùng",
@@ -1648,48 +1313,13 @@
                 "exec": [
                   "pm.test(\"LO-19 - Gợi ý tài khoản cho lan - status 200\", function () { pm.response.to.have.status(200); });",
                   "const b = pm.response.json();",
-                  "pm.test('Chỉ gợi ý an (lan đã theo dõi minh, hoa; không gợi ý admin, chính mình)', () => pm.expect(b.map(u => u.username)).to.eql(['an']));"
+                  "pm.test(\"Chỉ gợi ý an (lan đã theo dõi minh, hoa; không gợi ý admin, chính mình)\", () => pm.expect(b.map(u => u.username)).to.eql(['an']));",
+                  "pm.test(\"an đang theo dõi lan → followsMe = true (nút Theo dõi lại), followerCount = 0\", () => { pm.expect(b[0].followsMe).to.eql(true); pm.expect(b[0].following).to.eql(false); pm.expect(b[0].followerCount).to.eql(0); });"
                 ]
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-19 - Gợi ý tài khoản cho lan",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/suggestions",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "suggestions"
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "[\n  {\n    \"id\": 5,\n    \"username\": \"an\",\n    \"displayName\": \"An Phạm\",\n    \"avatarUrl\": null,\n    \"following\": false,\n    \"me\": false\n  }\n]"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-20 - Gợi ý tài khoản khi chưa đăng nhập",
@@ -1721,37 +1351,7 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-20 - Gợi ý tài khoản khi chưa đăng nhập",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/suggestions",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "suggestions"
-                  ]
-                }
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 401,\n  \"message\": \"Bạn cần đăng nhập\",\n  \"timestamp\": \"2026-10-29T08:51:01.382482\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-21 - lan theo dõi an",
@@ -1789,42 +1389,10 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-21 - lan theo dõi an",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/5/follow",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "5",
-                    "follow"
-                  ]
-                }
-              },
-              "status": "No Content",
-              "code": 204,
-              "_postman_previewlanguage": "text",
-              "header": [],
-              "cookie": [],
-              "body": ""
-            }
-          ]
+          "response": []
         },
         {
-          "name": "LO-22 - Theo dõi lại người đã theo dõi",
+          "name": "LO-22 - Theo dõi lại người đã theo dõi (không báo lỗi)",
           "request": {
             "method": "POST",
             "header": [
@@ -1846,7 +1414,7 @@
                 "follow"
               ]
             },
-            "description": "Cần chạy SETUP - Login lan trước."
+            "description": "Cần chạy SETUP - Login lan trước. Bấm theo dõi 2 lần vẫn trả 204, không tạo thêm bản ghi (LO-26 kiểm tra còn đúng 3 người)."
           },
           "event": [
             {
@@ -1854,50 +1422,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"LO-22 - Theo dõi lại người đã theo dõi - status 409\", function () { pm.response.to.have.status(409); });",
-                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn đã theo dõi người này'));"
+                  "pm.test(\"LO-22 - Theo dõi lại người đã theo dõi (không báo lỗi) - status 204\", function () { pm.response.to.have.status(204); });"
                 ]
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-22 - Theo dõi lại người đã theo dõi",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/5/follow",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "5",
-                    "follow"
-                  ]
-                }
-              },
-              "status": "Conflict",
-              "code": 409,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 409,\n  \"message\": \"Bạn đã theo dõi người này\",\n  \"timestamp\": \"2026-10-29T08:51:01.6001908\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-23 - Tự theo dõi chính mình",
@@ -1931,49 +1461,12 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"LO-23 - Tự theo dõi chính mình - status 400\", function () { pm.response.to.have.status(400); });",
-                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn không thể tự theo dõi chính mình'));"
+                  "pm.test(\"Đúng câu báo lỗi\", () => pm.expect(pm.response.json().message).to.eql('Không thể tự theo dõi chính mình'));"
                 ]
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-23 - Tự theo dõi chính mình",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/2/follow",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "2",
-                    "follow"
-                  ]
-                }
-              },
-              "status": "Bad Request",
-              "code": 400,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 400,\n  \"message\": \"Bạn không thể tự theo dõi chính mình\",\n  \"timestamp\": \"2026-10-29T08:51:01.6860962\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-24 - Theo dõi người không tồn tại",
@@ -2012,44 +1505,7 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-24 - Theo dõi người không tồn tại",
-              "originalRequest": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/999/follow",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "999",
-                    "follow"
-                  ]
-                }
-              },
-              "status": "Not Found",
-              "code": 404,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 404,\n  \"message\": \"Không tìm thấy người dùng id = 999\",\n  \"timestamp\": \"2026-10-29T08:51:01.8123322\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-25 - Theo dõi khi chưa đăng nhập",
@@ -2082,38 +1538,7 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-25 - Theo dõi khi chưa đăng nhập",
-              "originalRequest": {
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/5/follow",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "5",
-                    "follow"
-                  ]
-                }
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 401,\n  \"message\": \"Bạn cần đăng nhập\",\n  \"timestamp\": \"2026-10-29T08:51:01.903204300\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-26 - lan xem danh sách following của mình",
@@ -2148,50 +1573,14 @@
                 "exec": [
                   "pm.test(\"LO-26 - lan xem danh sách following của mình - status 200\", function () { pm.response.to.have.status(200); });",
                   "const b = pm.response.json();",
-                  "pm.test('Đang theo dõi 3 người: minh, hoa, an', () => { pm.expect(b.totalElements).to.eql(3); pm.expect(b.content.map(u => u.username)).to.have.members(['minh','hoa','an']); });",
-                  "pm.test('Tất cả following = true', () => pm.expect(b.content.every(u => u.following)).to.eql(true));"
+                  "pm.test(\"Đang theo dõi 3 người: minh, hoa, an (theo dõi 2 lần không bị trùng)\", () => { pm.expect(b.totalElements).to.eql(3); pm.expect(b.content.map(u => u.username)).to.have.members(['minh','hoa','an']); });",
+                  "pm.test(\"Tất cả following = true\", () => pm.expect(b.content.every(u => u.following)).to.eql(true));",
+                  "pm.test(\"an: followsMe = true (Bạn bè), followerCount = 1; hoa: followsMe = false\", () => { const an = b.content.find(u => u.username === 'an'); const hoa = b.content.find(u => u.username === 'hoa'); pm.expect(an.followsMe).to.eql(true); pm.expect(an.followerCount).to.eql(1); pm.expect(hoa.followsMe).to.eql(false); });"
                 ]
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-26 - lan xem danh sách following của mình",
-              "originalRequest": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/2/following",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "2",
-                    "following"
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"content\": [\n    {\n      \"id\": 5,\n      \"username\": \"an\",\n      \"displayName\": \"An Phạm\",\n      \"avatarUrl\": null,\n      \"following\": true,\n      \"me\": false\n    },\n    {\n      \"id\": 4,\n      \"username\": \"hoa\",\n      \"displayName\": \"Shop Hoa\",\n      \"avatarUrl\": null,\n      \"following\": true,\n      \"me\": false\n    },\n    {\n      \"id\": 3,\n      \"username\": \"minh\",\n      \"displayName\": \"Minh Trần\",\n      \"avatarUrl\": null,\n      \"following\": true,\n      \"me\": false\n    }\n  ],\n  \"page\": 0,\n  \"size\": 20,\n  \"totalElements\": 3,\n  \"totalPages\": 1,\n  \"last\": true\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-27 - Khách xem danh sách followers của lan",
@@ -2220,44 +1609,13 @@
                 "exec": [
                   "pm.test(\"LO-27 - Khách xem danh sách followers của lan - status 200\", function () { pm.response.to.have.status(200); });",
                   "const b = pm.response.json();",
-                  "pm.test('2 người theo dõi lan: minh, an', () => { pm.expect(b.totalElements).to.eql(2); pm.expect(b.content.map(u => u.username)).to.have.members(['minh','an']); });",
-                  "pm.test('Khách xem → following = false', () => pm.expect(b.content.every(u => !u.following)).to.eql(true));"
+                  "pm.test(\"2 người theo dõi lan: minh, an\", () => { pm.expect(b.totalElements).to.eql(2); pm.expect(b.content.map(u => u.username)).to.have.members(['minh','an']); });",
+                  "pm.test(\"Khách xem → following = false, followsMe = false\", () => pm.expect(b.content.every(u => !u.following && !u.followsMe)).to.eql(true));"
                 ]
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-27 - Khách xem danh sách followers của lan",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/2/followers",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "2",
-                    "followers"
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"content\": [\n    {\n      \"id\": 5,\n      \"username\": \"an\",\n      \"displayName\": \"An Phạm\",\n      \"avatarUrl\": null,\n      \"following\": false,\n      \"me\": false\n    },\n    {\n      \"id\": 3,\n      \"username\": \"minh\",\n      \"displayName\": \"Minh Trần\",\n      \"avatarUrl\": null,\n      \"following\": false,\n      \"me\": false\n    }\n  ],\n  \"page\": 0,\n  \"size\": 20,\n  \"totalElements\": 2,\n  \"totalPages\": 1,\n  \"last\": true\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-28 - lan bỏ theo dõi an",
@@ -2295,42 +1653,10 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-28 - lan bỏ theo dõi an",
-              "originalRequest": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/5/follow",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "5",
-                    "follow"
-                  ]
-                }
-              },
-              "status": "No Content",
-              "code": 204,
-              "_postman_previewlanguage": "text",
-              "header": [],
-              "cookie": [],
-              "body": ""
-            }
-          ]
+          "response": []
         },
         {
-          "name": "LO-29 - Bỏ theo dõi người chưa theo dõi",
+          "name": "LO-29 - Bỏ theo dõi người chưa theo dõi (không báo lỗi)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -2352,7 +1678,7 @@
                 "follow"
               ]
             },
-            "description": "Cần chạy SETUP - Login lan trước."
+            "description": "Cần chạy SETUP - Login lan trước. Chạy sau LO-28: lan đã bỏ theo dõi an, bấm bỏ lần nữa vẫn trả 204."
           },
           "event": [
             {
@@ -2360,50 +1686,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"LO-29 - Bỏ theo dõi người chưa theo dõi - status 404\", function () { pm.response.to.have.status(404); });",
-                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn chưa theo dõi người này'));"
+                  "pm.test(\"LO-29 - Bỏ theo dõi người chưa theo dõi (không báo lỗi) - status 204\", function () { pm.response.to.have.status(204); });"
                 ]
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-29 - Bỏ theo dõi người chưa theo dõi",
-              "originalRequest": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{lanToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/5/follow",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "5",
-                    "follow"
-                  ]
-                }
-              },
-              "status": "Not Found",
-              "code": 404,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 404,\n  \"message\": \"Bạn chưa theo dõi người này\",\n  \"timestamp\": \"2026-10-29T08:51:02.3351921\"\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "LO-30 - Danh sách following của người không tồn tại",
@@ -2436,40 +1724,10 @@
               }
             }
           ],
-          "response": [
-            {
-              "name": "LO-30 - Danh sách following của người không tồn tại",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/999/following",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "users",
-                    "999",
-                    "following"
-                  ]
-                }
-              },
-              "status": "Not Found",
-              "code": 404,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"status\": 404,\n  \"message\": \"Không tìm thấy người dùng id = 999\",\n  \"timestamp\": \"2026-10-29T08:51:02.40853\"\n}"
-            }
-          ]
+          "response": []
         }
-      ]
+      ],
+      "description": "Code UC07, UC12 dùng bản của Khánh (nhánh ui-demo). Long viết và chạy test."
     },
     {
       "name": "UC15 - Kiểm duyệt video",
