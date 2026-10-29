@@ -1,0 +1,83 @@
+@startuml seq_post_video
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam dpi 150
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 2
+skinparam BoxPadding 4
+skinparam maxMessageSize 170
+hide footbox
+autonumber
+title UC08 + UC09 - Đăng video (kèm bộ lọc, nhạc)
+
+actor "Người dùng" as U
+box "Ứng dụng di động" #F3F8FF
+  participant "CameraScreen" as CAM
+  participant "FilterScreen /\nMusicScreen" as FM
+  participant "PostVideoScreen" as PV
+  participant "api/videos.ts\n(videoApi)" as API
+end box
+box "Backend Spring Boot" #F4FFF4
+  participant "VideoController" as CTRL
+  participant "VideoService" as SVC
+  participant "FileStorageService" as FS
+  participant "SystemSettingService" as SS
+  participant "VideoRepository /\nHashtagRepository" as REPO
+end box
+database "MySQL" as DB
+collections "uploads/" as UP
+
+U -> CAM : Quay hoặc chọn video
+opt Chọn bộ lọc / nhạc
+  CAM -> FM : navigate('Filter' | 'Music')
+  FM --> CAM : popTo('Camera', {filter | audio},\n{merge: true})
+end
+CAM -> PV : navigate('PostVideo',\n{videoUri, filter, audio})
+U -> PV : Nhập tiêu đề, mô tả, hashtag, chủ đề,\nchế độ hiển thị, cho phép bình luận
+U -> PV : Bấm "Đăng" (draft = false)\nhoặc "Lưu nháp" (draft = true)
+PV -> API : videoApi.create(form)
+API -> CTRL : POST /api/videos (multipart/form-data)\nfile, thumbnail, title, description, hashtags,\ntopicId, audioId, filter, visibility,\nallowComments, draft
+CTRL -> SVC : create(file, thumbnail, request)
+SVC -> REPO : tìm User, Topic, Audio theo id
+REPO --> SVC : entity (không thấy → 404)
+SVC -> SVC : normalizeHashtags(hashtags)
+SVC -> FS : saveVideo(file)
+FS -> SS : getInt(VIDEO_MAX_SIZE_MB)
+SS --> FS : giới hạn (MB)
+alt Sai định dạng hoặc quá dung lượng
+  FS --> SVC : ApiException 400
+  SVC --> CTRL : lỗi
+  CTRL --> API : 400 {message: "File quá lớn, tối đa N MB"\nhoặc "Chỉ nhận file mp4, mov, webm"}
+  API --> PV : lỗi
+  PV --> U : Alert "Đăng video thất bại"
+else Hợp lệ
+  FS -> UP : ghi videos/<uuid>.<đuôi>
+  FS --> SVC : "/files/videos/<uuid>.mp4"
+  opt Có ảnh bìa
+    SVC -> FS : saveImage(thumbnail, "thumbnails")
+    FS -> UP : ghi thumbnails/<uuid>.jpg
+  end
+  SVC -> REPO : findOrCreateHashtags(names)\nfindByName / save
+  alt draft = true
+    SVC -> SVC : status = DRAFT
+  else draft = false
+    SVC -> SVC : status = PUBLISHED
+  end
+  SVC -> REPO : videoRepository.saveAndFlush(video)
+  REPO -> DB : INSERT videos, video_hashtags
+  note right of SVC
+    Lưu DB lỗi → xoá file vừa ghi
+    (fileStorageService.delete) rồi ném lỗi
+  end note
+  SVC --> CTRL : VideoResponse
+  CTRL --> API : 201 Created + VideoResponse
+  API --> PV : Video
+  alt draft = true
+    PV -> PV : navigation.reset → MyProfile + Drafts
+  else draft = false
+    PV -> PV : popTo('MainTabs', {screen: 'MyProfile'})
+  end
+end
+@enduml

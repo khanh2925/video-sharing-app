@@ -1,0 +1,89 @@
+@startuml seq_live
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam dpi 150
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 4
+skinparam BoxPadding 4
+skinparam maxMessageSize 190
+hide footbox
+autonumber
+title UC14 - Xem livestream qua WebSocket STOMP
+
+actor "Người xem" as U
+box "Ứng dụng di động" #F3F8FF
+  participant "LiveWatchScreen" as LW
+  participant "api/lives.ts\nconnectLive()\n(STOMP Client)" as CL
+end box
+box "Backend Spring Boot" #F4FFF4
+  participant "WebSocketConfig\n(ChannelInterceptor)" as WSC
+  participant "LiveWebSocketController" as CTRL
+  participant "LiveStreamService" as SVC
+  participant "Simple broker\n/topic/live/{id}" as BR
+  participant "LiveDisconnectListener" as DL
+end box
+database "MySQL" as DB
+
+U -> LW : Mở phòng live
+LW -> LW : liveApi.getById(id), liveApi.messages(id)\n(REST GET /api/lives/{id}, /messages)
+LW -> CL : connectLive(liveId, getAuthToken(), onEvent)
+CL -> WSC : CONNECT ws(s)://<host>/ws\nheader Authorization: Bearer <JWT>
+WSC -> WSC : jwtService.getUserId(token),\nkiểm tra user tồn tại, chưa bị khoá\n→ accessor.setUser(principal)
+WSC --> CL : CONNECTED
+CL -> BR : SUBSCRIBE /topic/live/{id}
+CL -> BR : SUBSCRIBE /user/queue/errors
+
+== Vào phòng ==
+CL -> CTRL : SEND /app/live/{id}/join
+CTRL -> SVC : join(id, userId)
+SVC -> DB : findActiveLive(id)\n(status phải là LIVE)
+SVC -> SVC : viewers[id].add(userId)\n(ConcurrentHashMap trong bộ nhớ)
+SVC -> BR : convertAndSend /topic/live/{id}\n{event: "VIEWERS", viewerCount}
+BR --> CL : MESSAGE VIEWERS
+CL --> LW : onEvent → cập nhật số người xem
+
+== Bình luận ==
+U -> LW : Gõ tin nhắn, bấm Gửi
+LW -> CL : conn.chat(content)
+CL -> CTRL : SEND /app/live/{id}/chat {content}
+CTRL -> SVC : sendMessage(id, userId, COMMENT, content)
+SVC -> DB : INSERT INTO live_messages
+SVC -> BR : {event: "COMMENT", message}
+BR --> CL : MESSAGE COMMENT (tới mọi người trong phòng)
+CL --> LW : thêm tin nhắn vào khung chat
+
+== Thả tim ==
+U -> LW : Bấm tim
+LW -> CL : conn.react('heart')
+CL -> CTRL : SEND /app/live/{id}/react {content: "heart"}
+CTRL -> SVC : sendMessage(id, userId, REACTION, "heart")
+note right of SVC : chỉ nhận heart | like | smile
+SVC -> DB : INSERT INTO live_messages
+SVC -> BR : {event: "REACTION", message}
+BR --> CL : MESSAGE REACTION
+CL --> LW : hiệu ứng tim bay
+
+alt Lỗi xử lý (live đã kết thúc, nội dung rỗng/quá dài, chưa đăng nhập)
+  CTRL -> CL : @SendToUser /user/queue/errors\n{status, message}
+  CL --> LW : onError → hiện thông báo
+end
+
+== Rời phòng ==
+alt Bấm thoát (conn.close())
+  CL -> CTRL : SEND /app/live/{id}/leave
+  CTRL -> SVC : leave(id, userId)
+  SVC -> BR : {event: "VIEWERS", viewerCount}
+  CL -> CL : client.deactivate()
+else Mất kết nối / tắt app
+  WSC -> DL : Spring phát SessionDisconnectEvent
+  DL -> SVC : leaveAll(userId)
+  SVC -> BR : {event: "VIEWERS", viewerCount}
+  DL -> SVC : endAllLiveOfHost(userId)
+  note right of SVC
+    Nếu người ngắt là chủ phòng: chốt viewerCount,
+    status = ENDED, gửi {event: "ENDED"} cho người xem
+  end note
+end
+@enduml
