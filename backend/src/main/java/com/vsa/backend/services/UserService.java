@@ -1,5 +1,7 @@
 package com.vsa.backend.services;
 
+import com.vsa.backend.dtos.request.UpdateProfileRequest;
+import com.vsa.backend.dtos.response.AuthUserResponse;
 import com.vsa.backend.dtos.response.PageResponse;
 import com.vsa.backend.dtos.response.UserProfileResponse;
 import com.vsa.backend.dtos.response.VideoResponse;
@@ -21,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Set;
@@ -28,7 +31,8 @@ import java.util.Set;
 /**
  * Nghiệp vụ hồ sơ người dùng.
  *  UC06 Xem hồ sơ người dùng       – getProfile, getUserVideos (tab Videos), getLikedVideos (tab Liked)
- *  UC07 Quản lý thông tin cá nhân  – (làm tiếp)
+ *  UC07 Quản lý thông tin cá nhân  – updateMyProfile (Edit Profile), updateMyAvatar (đổi ảnh đại diện)
+ *       (xem hồ sơ của mình dùng lại UC06 với id của mình → me = true, hoặc GET /api/auth/me)
  */
 @Service
 @RequiredArgsConstructor
@@ -40,6 +44,7 @@ public class UserService {
     private final VideoLikeRepository videoLikeRepository;
     private final UserMapper userMapper;
     private final VideoMapper videoMapper;
+    private final FileStorageService fileStorageService;
 
     // ===== UC06 – Xem hồ sơ người dùng =====
 
@@ -91,7 +96,48 @@ public class UserService {
         return PageResponse.of(videos, video -> videoMapper.toResponse(video, likedIds.contains(video.getId())));
     }
 
+    // ===== UC07 – Quản lý thông tin cá nhân =====
+
+    /** Sửa tên hiển thị, tiểu sử của chính mình. Không sửa được tên đăng nhập, email. */
+    @Transactional
+    public AuthUserResponse updateMyProfile(UpdateProfileRequest request) {
+        User user = findCurrentUser();
+
+        user.setDisplayName(request.displayName().trim());          // ① @NotBlank đã chặn chuỗi rỗng
+        user.setBio(trimToNull(request.bio()));                     // ② bio để trống → xoá tiểu sử
+        userRepository.save(user);
+
+        return userMapper.toAuthUserResponse(user);                 // ③ trả đúng dạng GET /api/auth/me để app cập nhật lại
+    }
+
+    /** Đổi ảnh đại diện: lưu ảnh mới (jpg, png, webp ≤ 5 MB – R8) rồi xoá ảnh cũ. */
+    @Transactional
+    public AuthUserResponse updateMyAvatar(MultipartFile file) {
+        User user = findCurrentUser();
+
+        String newUrl = fileStorageService.saveImage(file, FileStorageService.AVATAR_DIR);   // ① sai định dạng, quá lớn → 400
+        String oldUrl = user.getAvatarUrl();
+        user.setAvatarUrl(newUrl);
+        userRepository.save(user);
+        fileStorageService.delete(oldUrl);                          // ② xoá sau cùng; chưa có ảnh cũ (null) thì bỏ qua
+
+        return userMapper.toAuthUserResponse(user);
+    }
+
     // ===== Hàm phụ =====
+
+    private User findCurrentUser() {
+        Long currentUserId = SecurityUtils.getCurrentUserId();     // chưa đăng nhập → 401
+        return userRepository.findById(currentUserId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy người dùng id = " + currentUserId));
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
 
     private void checkUserExists(Long id) {
         if (!userRepository.existsById(id)) {

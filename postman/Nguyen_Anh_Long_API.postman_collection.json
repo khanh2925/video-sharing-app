@@ -1,14 +1,59 @@
 {
   "info": {
     "_postman_id": "7eab59c4-3407-4df7-ad62-cfe15e6192b0",
-    "name": "Nguyễn Anh Long - UC06",
-    "description": "Kiểm thử API xem hồ sơ người dùng (UC06). Dữ liệu mẫu: admin/lan/minh/hoa/an, mật khẩu 123456. Chạy thư mục Thiết lập trước để lấy token. Mã TC trùng tab Long trong sheet Test API.",
+    "name": "Nguyễn Anh Long - UC06 UC07 UC12 UC15 UC16 UC19",
+    "description": "Kiểm thử API phần của Long: xem hồ sơ (UC06), quản lý thông tin cá nhân (UC07), theo dõi (UC12), kiểm duyệt video (UC15), quản lý người dùng (UC16), cấu hình hệ thống (UC19). Dữ liệu mẫu: admin/lan/minh/hoa/an, mật khẩu 123456. Chạy thư mục Thiết lập trước để lấy token, rồi chạy từng thư mục theo thứ tự trên một database vừa nạp dữ liệu mẫu (các test UC12, UC15, UC16 làm thay đổi dữ liệu nên chạy lần hai sẽ khác kết quả). Mã TC trùng tab Long trong sheet Test API.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
       "name": "Thiết lập",
       "item": [
+        {
+          "name": "SETUP - Login admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"admin\",\n  \"password\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Đăng nhập thành công', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set(\"adminToken\", pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "SETUP - Login lan",
           "request": {
@@ -874,6 +919,1854 @@
           ]
         }
       ]
+    },
+    {
+      "name": "UC07 - Quản lý thông tin cá nhân",
+      "item": [
+        {
+          "name": "LO-12 - Sửa tên hiển thị và tiểu sử",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Lan Nguyễn\",\n  \"bio\": \"Mê du lịch, mèo và cà phê\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-12 - Sửa tên hiển thị và tiểu sử - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('Tiểu sử đã đổi', () => pm.expect(b.bio).to.eql('Mê du lịch, mèo và cà phê'));",
+                  "pm.test('Tên đăng nhập, email giữ nguyên', () => { pm.expect(b.username).to.eql('lan'); pm.expect(b.email).to.eql('lan@vsa.local'); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-13 - Tên hiển thị để trống",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"   \",\n  \"bio\": \"abc\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-13 - Tên hiển thị để trống - status 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Vui lòng nhập tên hiển thị'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-14 - Tiểu sử quá 200 ký tự",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Lan Nguyễn\",\n  \"bio\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-14 - Tiểu sử quá 200 ký tự - status 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Tiểu sử tối đa 200 ký tự'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-15 - Sửa hồ sơ khi chưa đăng nhập",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Lan\",\n  \"bio\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-15 - Sửa hồ sơ khi chưa đăng nhập - status 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn cần đăng nhập'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-16 - Đổi ảnh đại diện bằng ảnh jpg",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "backend/seed-media/thumbnails/video01.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/avatar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "avatar"
+              ]
+            },
+            "description": "File: backend/seed-media/thumbnails/video01.jpg. Postman đọc đường dẫn file tương đối theo Settings → General → Working directory: đặt là thư mục gốc repo video-sharing-app (hoặc bấm vào ô file chọn lại)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-16 - Đổi ảnh đại diện bằng ảnh jpg - status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('avatarUrl nằm trong /files/avatars/', () => pm.expect(pm.response.json().avatarUrl).to.match(/^\\/files\\/avatars\\/.+\\.jpg$/));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-17 - Ảnh đại diện sai định dạng (mp4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "backend/seed-media/videos/video01.mp4"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/avatar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "avatar"
+              ]
+            },
+            "description": "File: backend/seed-media/videos/video01.mp4. Postman đọc đường dẫn file tương đối theo Settings → General → Working directory: đặt là thư mục gốc repo video-sharing-app (hoặc bấm vào ô file chọn lại)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-17 - Ảnh đại diện sai định dạng (mp4) - status 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Chỉ nhận file jpg, jpeg, png, webp'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-18 - Đổi ảnh đại diện không gửi file",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "note",
+                  "value": "khong co file",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/avatar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "avatar"
+              ]
+            },
+            "description": "Form-data không có trường file."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-18 - Đổi ảnh đại diện không gửi file - status 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test('Báo thiếu dữ liệu', () => pm.expect(pm.response.json().message).to.include('Thiếu dữ liệu bắt buộc'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "UC12 - Theo dõi người dùng",
+      "item": [
+        {
+          "name": "LO-19 - Gợi ý tài khoản cho lan",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/suggestions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "suggestions"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-19 - Gợi ý tài khoản cho lan - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('Chỉ gợi ý an (lan đã theo dõi minh, hoa; không gợi ý admin, chính mình)', () => pm.expect(b.map(u => u.username)).to.eql(['an']));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-20 - Gợi ý tài khoản khi chưa đăng nhập",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/suggestions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "suggestions"
+              ]
+            },
+            "description": "Không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-20 - Gợi ý tài khoản khi chưa đăng nhập - status 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn cần đăng nhập'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-21 - lan theo dõi an",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/5/follow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "5",
+                "follow"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-21 - lan theo dõi an - status 204\", function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-22 - Theo dõi lại người đã theo dõi",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/5/follow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "5",
+                "follow"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-22 - Theo dõi lại người đã theo dõi - status 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn đã theo dõi người này'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-23 - Tự theo dõi chính mình",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/2/follow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "2",
+                "follow"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-23 - Tự theo dõi chính mình - status 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn không thể tự theo dõi chính mình'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-24 - Theo dõi người không tồn tại",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/999/follow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "999",
+                "follow"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-24 - Theo dõi người không tồn tại - status 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Không tìm thấy người dùng id = 999'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-25 - Theo dõi khi chưa đăng nhập",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/5/follow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "5",
+                "follow"
+              ]
+            },
+            "description": "Không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-25 - Theo dõi khi chưa đăng nhập - status 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn cần đăng nhập'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-26 - lan xem danh sách following của mình",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/2/following",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "2",
+                "following"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-26 - lan xem danh sách following của mình - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('Đang theo dõi 3 người: minh, hoa, an', () => { pm.expect(b.totalElements).to.eql(3); pm.expect(b.content.map(u => u.username)).to.have.members(['minh','hoa','an']); });",
+                  "pm.test('Tất cả following = true', () => pm.expect(b.content.every(u => u.following)).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-27 - Khách xem danh sách followers của lan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/2/followers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "2",
+                "followers"
+              ]
+            },
+            "description": "Không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-27 - Khách xem danh sách followers của lan - status 200\", function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "pm.test('2 người theo dõi lan: minh, an', () => { pm.expect(b.totalElements).to.eql(2); pm.expect(b.content.map(u => u.username)).to.have.members(['minh','an']); });",
+                  "pm.test('Khách xem → following = false', () => pm.expect(b.content.every(u => !u.following)).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-28 - lan bỏ theo dõi an",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/5/follow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "5",
+                "follow"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-28 - lan bỏ theo dõi an - status 204\", function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-29 - Bỏ theo dõi người chưa theo dõi",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/5/follow",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "5",
+                "follow"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-29 - Bỏ theo dõi người chưa theo dõi - status 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn chưa theo dõi người này'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-30 - Danh sách following của người không tồn tại",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/999/following",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "999",
+                "following"
+              ]
+            },
+            "description": "Không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-30 - Danh sách following của người không tồn tại - status 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Không tìm thấy người dùng id = 999'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "UC15 - Kiểm duyệt video",
+      "item": [
+        {
+          "name": "LO-31 - Quản trị viên ẩn video 6",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/videos/6/hide",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "videos",
+                "6",
+                "hide"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-31 - Quản trị viên ẩn video 6 - status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('status = HIDDEN', () => pm.expect(pm.response.json().status).to.eql('HIDDEN'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-32 - Ẩn lại video đã ẩn",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/videos/6/hide",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "videos",
+                "6",
+                "hide"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-32 - Ẩn lại video đã ẩn - status 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Video đã bị ẩn trước đó'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-33 - Ẩn video không tồn tại",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/videos/999/hide",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "videos",
+                "999",
+                "hide"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-33 - Ẩn video không tồn tại - status 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Không tìm thấy video id = 999'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-34 - Người dùng thường gọi API ẩn video",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/videos/6/hide",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "videos",
+                "6",
+                "hide"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-34 - Người dùng thường gọi API ẩn video - status 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn không có quyền thực hiện thao tác này'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-35 - Ẩn video khi chưa đăng nhập",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/videos/6/hide",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "videos",
+                "6",
+                "hide"
+              ]
+            },
+            "description": "Không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-35 - Ẩn video khi chưa đăng nhập - status 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn cần đăng nhập'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-36 - Video bị ẩn biến khỏi hồ sơ lan",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/2/videos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "2",
+                "videos"
+              ]
+            },
+            "description": "Không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-36 - Video bị ẩn biến khỏi hồ sơ lan - status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('Không còn video 6', () => pm.expect(pm.response.json().content.map(v => v.id)).to.not.include(6));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "UC16 - Quản lý người dùng",
+      "item": [
+        {
+          "name": "LO-37 - Quản trị viên khóa tài khoản an",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/5/lock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "5",
+                "lock"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-37 - Quản trị viên khóa tài khoản an - status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('locked = true', () => pm.expect(pm.response.json().locked).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-38 - Tài khoản bị khóa không đăng nhập được",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Không gửi token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"an\",\n  \"password\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-38 - Tài khoản bị khóa không đăng nhập được - status 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Tài khoản đã bị khóa'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-39 - Khóa lại tài khoản đã khóa",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/5/lock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "5",
+                "lock"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-39 - Khóa lại tài khoản đã khóa - status 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Tài khoản đã bị khóa trước đó'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-40 - Khóa tài khoản quản trị",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/1/lock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "1",
+                "lock"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-40 - Khóa tài khoản quản trị - status 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Không thể khóa tài khoản quản trị'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-41 - Khóa tài khoản không tồn tại",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/999/lock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "999",
+                "lock"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-41 - Khóa tài khoản không tồn tại - status 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Không tìm thấy người dùng id = 999'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-42 - Người dùng thường gọi API khóa tài khoản",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/5/lock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "5",
+                "lock"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-42 - Người dùng thường gọi API khóa tài khoản - status 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn không có quyền thực hiện thao tác này'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-43 - Quản trị viên mở khóa tài khoản an",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/5/unlock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "5",
+                "unlock"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-43 - Quản trị viên mở khóa tài khoản an - status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('locked = false', () => pm.expect(pm.response.json().locked).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-44 - Mở khóa tài khoản chưa bị khóa",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/5/unlock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "5",
+                "unlock"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-44 - Mở khóa tài khoản chưa bị khóa - status 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Tài khoản chưa bị khóa'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-45 - Mở khóa xong đăng nhập lại được",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Không gửi token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usernameOrEmail\": \"an\",\n  \"password\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-45 - Mở khóa xong đăng nhập lại được - status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('Có token', () => pm.expect(pm.response.json().token).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "UC19 - Cấu hình hệ thống",
+      "item": [
+        {
+          "name": "LO-46 - Quản trị viên xem thông số hệ thống",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "settings"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-46 - Quản trị viên xem thông số hệ thống - status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('Đủ 3 thông số', () => pm.expect(pm.response.json().map(s => s.key)).to.eql(['STORY_MAX_DURATION_SEC','STORY_LIFETIME_HOURS','VIDEO_MAX_SIZE_MB']));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-47 - Đổi độ dài story tối đa thành 30 giây",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/settings/STORY_MAX_DURATION_SEC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "settings",
+                "STORY_MAX_DURATION_SEC"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-47 - Đổi độ dài story tối đa thành 30 giây - status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('value = 30', () => pm.expect(pm.response.json().value).to.eql('30'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-48 - App đọc thông số (công khai), có hiệu lực ngay",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings"
+              ]
+            },
+            "description": "Không gửi token."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-48 - App đọc thông số (công khai), có hiệu lực ngay - status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('STORY_MAX_DURATION_SEC = 30', () => pm.expect(pm.response.json().STORY_MAX_DURATION_SEC).to.eql(30));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-49 - Thông số không tồn tại",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/settings/KHONG_CO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "settings",
+                "KHONG_CO"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-49 - Thông số không tồn tại - status 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Không có thông số KHONG_CO'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-50 - Giá trị không phải số",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/settings/STORY_MAX_DURATION_SEC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "settings",
+                "STORY_MAX_DURATION_SEC"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"abc\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-50 - Giá trị không phải số - status 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Giá trị phải là số nguyên'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-51 - Giá trị bằng 0",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/settings/STORY_MAX_DURATION_SEC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "settings",
+                "STORY_MAX_DURATION_SEC"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"0\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-51 - Giá trị bằng 0 - status 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Giá trị phải lớn hơn 0'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-52 - Dung lượng video vượt trần 500 MB",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/settings/VIDEO_MAX_SIZE_MB",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "settings",
+                "VIDEO_MAX_SIZE_MB"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"600\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-52 - Dung lượng video vượt trần 500 MB - status 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Dung lượng video tối đa không được vượt quá 500 MB'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-53 - Người dùng thường xem thông số quản trị",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{lanToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "settings"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login lan trước."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-53 - Người dùng thường xem thông số quản trị - status 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test('Đúng câu báo lỗi', () => pm.expect(pm.response.json().message).to.eql('Bạn không có quyền thực hiện thao tác này'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "LO-54 - Trả độ dài story về mặc định 15 giây",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/settings/STORY_MAX_DURATION_SEC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "settings",
+                "STORY_MAX_DURATION_SEC"
+              ]
+            },
+            "description": "Cần chạy SETUP - Login admin trước.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"LO-54 - Trả độ dài story về mặc định 15 giây - status 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test('value = 15', () => pm.expect(pm.response.json().value).to.eql('15'));"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -887,6 +2780,10 @@
     },
     {
       "key": "hoaToken",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
       "value": ""
     }
   ]
