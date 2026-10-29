@@ -975,7 +975,57 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-12 - Sửa tên hiển thị và tiểu sử",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"displayName\": \"Lan Nguyễn\",\n  \"bio\": \"Mê du lịch, mèo và cà phê\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 2,\n  \"username\": \"lan\",\n  \"displayName\": \"Lan Nguyễn\",\n  \"email\": \"lan@vsa.local\",\n  \"bio\": \"Mê du lịch, mèo và cà phê\",\n  \"avatarUrl\": null,\n  \"role\": \"USER\",\n  \"createdAt\": \"2026-10-29T08:42:01.365379\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-13 - Tên hiển thị để trống",
@@ -1027,7 +1077,57 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-13 - Tên hiển thị để trống",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"displayName\": \"   \",\n  \"bio\": \"abc\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Vui lòng nhập tên hiển thị\",\n  \"timestamp\": \"2026-10-29T08:51:00.5802664\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-14 - Tiểu sử quá 200 ký tự",
@@ -1079,7 +1179,57 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-14 - Tiểu sử quá 200 ký tự",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"displayName\": \"Lan Nguyễn\",\n  \"bio\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Tiểu sử tối đa 200 ký tự\",\n  \"timestamp\": \"2026-10-29T08:51:00.6689946\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-15 - Sửa hồ sơ khi chưa đăng nhập",
@@ -1126,7 +1276,52 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-15 - Sửa hồ sơ khi chưa đăng nhập",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"displayName\": \"Lan\",\n  \"bio\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 401,\n  \"message\": \"Bạn cần đăng nhập\",\n  \"timestamp\": \"2026-10-29T08:51:00.747489200\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-16 - Đổi ảnh đại diện bằng ảnh jpg",
@@ -1175,7 +1370,54 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-16 - Đổi ảnh đại diện bằng ảnh jpg",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "backend/seed-media/thumbnails/video01.jpg"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/avatar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "avatar"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 2,\n  \"username\": \"lan\",\n  \"displayName\": \"Lan Nguyễn\",\n  \"email\": \"lan@vsa.local\",\n  \"bio\": \"Mê du lịch, mèo và cà phê\",\n  \"avatarUrl\": \"/files/avatars/a3df28ee-e188-4f80-8579-dd616afb9041.jpg\",\n  \"role\": \"USER\",\n  \"createdAt\": \"2026-10-29T08:42:01.365379\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-17 - Ảnh đại diện sai định dạng (mp4)",
@@ -1224,7 +1466,54 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-17 - Ảnh đại diện sai định dạng (mp4)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "backend/seed-media/videos/video01.mp4"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/avatar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "avatar"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Chỉ nhận file jpg, jpeg, png, webp\",\n  \"timestamp\": \"2026-10-29T08:51:01.0377653\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-18 - Đổi ảnh đại diện không gửi file",
@@ -1273,7 +1562,54 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-18 - Đổi ảnh đại diện không gửi file",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "note",
+                      "value": "khong co file",
+                      "type": "text"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/avatar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "avatar"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Thiếu dữ liệu bắt buộc: Required part 'file' is not present.\",\n  \"timestamp\": \"2026-10-29T08:51:01.1481908\"\n}"
+            }
+          ]
         }
       ]
     },
@@ -1317,7 +1653,43 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-19 - Gợi ý tài khoản cho lan",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/suggestions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "suggestions"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "[\n  {\n    \"id\": 5,\n    \"username\": \"an\",\n    \"displayName\": \"An Phạm\",\n    \"avatarUrl\": null,\n    \"following\": false,\n    \"me\": false\n  }\n]"
+            }
+          ]
         },
         {
           "name": "LO-20 - Gợi ý tài khoản khi chưa đăng nhập",
@@ -1349,7 +1721,37 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-20 - Gợi ý tài khoản khi chưa đăng nhập",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/suggestions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "suggestions"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 401,\n  \"message\": \"Bạn cần đăng nhập\",\n  \"timestamp\": \"2026-10-29T08:51:01.382482\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-21 - lan theo dõi an",
@@ -1387,7 +1789,39 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-21 - lan theo dõi an",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/5/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "5",
+                    "follow"
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
         },
         {
           "name": "LO-22 - Theo dõi lại người đã theo dõi",
@@ -1426,7 +1860,44 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-22 - Theo dõi lại người đã theo dõi",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/5/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "5",
+                    "follow"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 409,\n  \"message\": \"Bạn đã theo dõi người này\",\n  \"timestamp\": \"2026-10-29T08:51:01.6001908\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-23 - Tự theo dõi chính mình",
@@ -1465,7 +1936,44 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-23 - Tự theo dõi chính mình",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/2/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "2",
+                    "follow"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Bạn không thể tự theo dõi chính mình\",\n  \"timestamp\": \"2026-10-29T08:51:01.6860962\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-24 - Theo dõi người không tồn tại",
@@ -1504,7 +2012,44 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-24 - Theo dõi người không tồn tại",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/999/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "999",
+                    "follow"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 404,\n  \"message\": \"Không tìm thấy người dùng id = 999\",\n  \"timestamp\": \"2026-10-29T08:51:01.8123322\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-25 - Theo dõi khi chưa đăng nhập",
@@ -1537,7 +2082,38 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-25 - Theo dõi khi chưa đăng nhập",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/5/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "5",
+                    "follow"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 401,\n  \"message\": \"Bạn cần đăng nhập\",\n  \"timestamp\": \"2026-10-29T08:51:01.903204300\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-26 - lan xem danh sách following của mình",
@@ -1578,7 +2154,44 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-26 - lan xem danh sách following của mình",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/2/following",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "2",
+                    "following"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": 5,\n      \"username\": \"an\",\n      \"displayName\": \"An Phạm\",\n      \"avatarUrl\": null,\n      \"following\": true,\n      \"me\": false\n    },\n    {\n      \"id\": 4,\n      \"username\": \"hoa\",\n      \"displayName\": \"Shop Hoa\",\n      \"avatarUrl\": null,\n      \"following\": true,\n      \"me\": false\n    },\n    {\n      \"id\": 3,\n      \"username\": \"minh\",\n      \"displayName\": \"Minh Trần\",\n      \"avatarUrl\": null,\n      \"following\": true,\n      \"me\": false\n    }\n  ],\n  \"page\": 0,\n  \"size\": 20,\n  \"totalElements\": 3,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
         },
         {
           "name": "LO-27 - Khách xem danh sách followers của lan",
@@ -1613,7 +2226,38 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-27 - Khách xem danh sách followers của lan",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/2/followers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "2",
+                    "followers"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": 5,\n      \"username\": \"an\",\n      \"displayName\": \"An Phạm\",\n      \"avatarUrl\": null,\n      \"following\": false,\n      \"me\": false\n    },\n    {\n      \"id\": 3,\n      \"username\": \"minh\",\n      \"displayName\": \"Minh Trần\",\n      \"avatarUrl\": null,\n      \"following\": false,\n      \"me\": false\n    }\n  ],\n  \"page\": 0,\n  \"size\": 20,\n  \"totalElements\": 2,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
         },
         {
           "name": "LO-28 - lan bỏ theo dõi an",
@@ -1651,7 +2295,39 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-28 - lan bỏ theo dõi an",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/5/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "5",
+                    "follow"
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
         },
         {
           "name": "LO-29 - Bỏ theo dõi người chưa theo dõi",
@@ -1690,7 +2366,44 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-29 - Bỏ theo dõi người chưa theo dõi",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/5/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "5",
+                    "follow"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 404,\n  \"message\": \"Bạn chưa theo dõi người này\",\n  \"timestamp\": \"2026-10-29T08:51:02.3351921\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-30 - Danh sách following của người không tồn tại",
@@ -1723,7 +2436,38 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-30 - Danh sách following của người không tồn tại",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/999/following",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "999",
+                    "following"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 404,\n  \"message\": \"Không tìm thấy người dùng id = 999\",\n  \"timestamp\": \"2026-10-29T08:51:02.40853\"\n}"
+            }
+          ]
         }
       ]
     },
@@ -1768,7 +2512,45 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-31 - Quản trị viên ẩn video 6",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/videos/6/hide",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "videos",
+                    "6",
+                    "hide"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 6,\n  \"title\": \"Yoga 5 phút\",\n  \"description\": \"Bài tập giãn cơ cho dân văn phòng\",\n  \"videoUrl\": \"/files/videos/video06.mp4\",\n  \"thumbnailUrl\": \"/files/thumbnails/video06.jpg\",\n  \"filter\": \"Spring\",\n  \"visibility\": \"PUBLIC\",\n  \"status\": \"HIDDEN\",\n  \"allowComments\": true,\n  \"viewCount\": 3185,\n  \"likeCount\": 0,\n  \"commentCount\": 0,\n  \"liked\": false,\n  \"createdAt\": \"2026-10-29T08:42:01.809829\",\n  \"owner\": {\n    \"id\": 2,\n    \"username\": \"lan\",\n    \"displayName\": \"Lan Nguyễn\",\n    \"avatarUrl\": \"/files/avatars/a3df28ee-e188-4f80-8579-dd616afb9041.jpg\"\n  },\n  \"topic\": {\n    \"id\": 5,\n    \"name\": \"Health\",\n    \"icon\": \"heart\",\n    \"color\": \"#06D6A0\"\n  },\n  \"audio\": {\n    \"id\": 1,\n    \"title\": \"Chill buổi sáng\",\n    \"artist\": \"Lofi VN\",\n    \"coverUrl\": null,\n    \"durationSec\": 30,\n    \"trending\": true\n  },\n  \"hashtags\": [\n    \"suckhoe\",\n    \"yoga\"\n  ]\n}"
+            }
+          ]
         },
         {
           "name": "LO-32 - Ẩn lại video đã ẩn",
@@ -1808,7 +2590,45 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-32 - Ẩn lại video đã ẩn",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/videos/6/hide",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "videos",
+                    "6",
+                    "hide"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 409,\n  \"message\": \"Video đã bị ẩn trước đó\",\n  \"timestamp\": \"2026-10-29T08:51:02.6389935\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-33 - Ẩn video không tồn tại",
@@ -1848,7 +2668,45 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-33 - Ẩn video không tồn tại",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/videos/999/hide",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "videos",
+                    "999",
+                    "hide"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 404,\n  \"message\": \"Không tìm thấy video id = 999\",\n  \"timestamp\": \"2026-10-29T08:51:02.7189233\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-34 - Người dùng thường gọi API ẩn video",
@@ -1888,7 +2746,45 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-34 - Người dùng thường gọi API ẩn video",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/videos/6/hide",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "videos",
+                    "6",
+                    "hide"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 403,\n  \"message\": \"Bạn không có quyền thực hiện thao tác này\",\n  \"timestamp\": \"2026-10-29T08:51:02.838329\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-35 - Ẩn video khi chưa đăng nhập",
@@ -1922,7 +2818,39 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-35 - Ẩn video khi chưa đăng nhập",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/videos/6/hide",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "videos",
+                    "6",
+                    "hide"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 401,\n  \"message\": \"Bạn cần đăng nhập\",\n  \"timestamp\": \"2026-10-29T08:51:02.911140500\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-36 - Video bị ẩn biến khỏi hồ sơ lan",
@@ -1955,7 +2883,38 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-36 - Video bị ẩn biến khỏi hồ sơ lan",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/2/videos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "2",
+                    "videos"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"content\": [\n    {\n      \"id\": 2,\n      \"title\": \"Mèo con dễ thương\",\n      \"description\": \"Bé mèo nhà mình lần đầu thấy gương\",\n      \"videoUrl\": \"/files/videos/video02.mp4\",\n      \"thumbnailUrl\": \"/files/thumbnails/video02.jpg\",\n      \"filter\": \"Baby\",\n      \"visibility\": \"PUBLIC\",\n      \"status\": \"PUBLISHED\",\n      \"allowComments\": true,\n      \"viewCount\": 7037,\n      \"likeCount\": 2,\n      \"commentCount\": 1,\n      \"liked\": false,\n      \"createdAt\": \"2026-10-29T08:42:01.797075\",\n      \"owner\": {\n        \"id\": 2,\n        \"username\": \"lan\",\n        \"displayName\": \"Lan Nguyễn\",\n        \"avatarUrl\": \"/files/avatars/a3df28ee-e188-4f80-8579-dd616afb9041.jpg\"\n      },\n      \"topic\": {\n        \"id\": 8,\n        \"name\": \"Pets\",\n        \"icon\": \"paw\",\n        \"color\": \"#FF9F1C\"\n      },\n      \"audio\": {\n        \"id\": 2,\n        \"title\": \"Nhịp vui\",\n        \"artist\": \"Beat House\",\n        \"coverUrl\": null,\n        \"durationSec\": 45,\n        \"trending\": true\n      },\n      \"hashtags\": [\n        \"meo\",\n        \"thucung\"\n      ]\n    }\n  ],\n  \"page\": 0,\n  \"size\": 20,\n  \"totalElements\": 1,\n  \"totalPages\": 1,\n  \"last\": true\n}"
+            }
+          ]
         }
       ]
     },
@@ -2000,7 +2959,45 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-37 - Quản trị viên khóa tài khoản an",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/users/5/lock",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users",
+                    "5",
+                    "lock"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 5,\n  \"username\": \"an\",\n  \"displayName\": \"An Phạm\",\n  \"email\": \"an@vsa.local\",\n  \"role\": \"USER\",\n  \"locked\": true,\n  \"createdAt\": \"2026-10-29T08:42:01.581647\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-38 - Tài khoản bị khóa không đăng nhập được",
@@ -2047,7 +3044,52 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-38 - Tài khoản bị khóa không đăng nhập được",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"usernameOrEmail\": \"an\",\n  \"password\": \"123456\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 403,\n  \"message\": \"Tài khoản đã bị khóa\",\n  \"timestamp\": \"2026-10-29T08:51:03.3378273\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-39 - Khóa lại tài khoản đã khóa",
@@ -2087,7 +3129,45 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-39 - Khóa lại tài khoản đã khóa",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/users/5/lock",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users",
+                    "5",
+                    "lock"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 409,\n  \"message\": \"Tài khoản đã bị khóa trước đó\",\n  \"timestamp\": \"2026-10-29T08:51:03.4679432\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-40 - Khóa tài khoản quản trị",
@@ -2127,7 +3207,45 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-40 - Khóa tài khoản quản trị",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/users/1/lock",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users",
+                    "1",
+                    "lock"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Không thể khóa tài khoản quản trị\",\n  \"timestamp\": \"2026-10-29T08:51:03.5542678\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-41 - Khóa tài khoản không tồn tại",
@@ -2167,7 +3285,45 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-41 - Khóa tài khoản không tồn tại",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/users/999/lock",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users",
+                    "999",
+                    "lock"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 404,\n  \"message\": \"Không tìm thấy người dùng id = 999\",\n  \"timestamp\": \"2026-10-29T08:51:03.6300977\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-42 - Người dùng thường gọi API khóa tài khoản",
@@ -2207,7 +3363,45 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-42 - Người dùng thường gọi API khóa tài khoản",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/users/5/lock",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users",
+                    "5",
+                    "lock"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 403,\n  \"message\": \"Bạn không có quyền thực hiện thao tác này\",\n  \"timestamp\": \"2026-10-29T08:51:03.717667700\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-43 - Quản trị viên mở khóa tài khoản an",
@@ -2247,7 +3441,45 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-43 - Quản trị viên mở khóa tài khoản an",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/users/5/unlock",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users",
+                    "5",
+                    "unlock"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 5,\n  \"username\": \"an\",\n  \"displayName\": \"An Phạm\",\n  \"email\": \"an@vsa.local\",\n  \"role\": \"USER\",\n  \"locked\": false,\n  \"createdAt\": \"2026-10-29T08:42:01.581647\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-44 - Mở khóa tài khoản chưa bị khóa",
@@ -2287,7 +3519,45 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-44 - Mở khóa tài khoản chưa bị khóa",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/users/5/unlock",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "users",
+                    "5",
+                    "unlock"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 409,\n  \"message\": \"Tài khoản chưa bị khóa\",\n  \"timestamp\": \"2026-10-29T08:51:03.9424582\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-45 - Mở khóa xong đăng nhập lại được",
@@ -2334,7 +3604,52 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-45 - Mở khóa xong đăng nhập lại được",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"usernameOrEmail\": \"an\",\n  \"password\": \"123456\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"token\": \"eyJhbGciOiJIUzM4NCJ9...(rút gọn)\",\n  \"user\": {\n    \"id\": 5,\n    \"username\": \"an\",\n    \"displayName\": \"An Phạm\",\n    \"email\": \"an@vsa.local\",\n    \"bio\": \"Thích thể thao và podcast\",\n    \"avatarUrl\": null,\n    \"role\": \"USER\",\n    \"createdAt\": \"2026-10-29T08:42:01.581647\"\n  }\n}"
+            }
+          ]
         }
       ]
     },
@@ -2377,7 +3692,43 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-46 - Quản trị viên xem thông số hệ thống",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/settings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "settings"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "[\n  {\n    \"key\": \"STORY_MAX_DURATION_SEC\",\n    \"value\": \"15\",\n    \"description\": \"Story là video dài tối đa (giây)\",\n    \"updatedAt\": \"2026-10-29T08:42:01.139841\"\n  },\n  {\n    \"key\": \"STORY_LIFETIME_HOURS\",\n    \"value\": \"24\",\n    \"description\": \"Story tự ẩn sau (giờ)\",\n    \"updatedAt\": \"2026-10-29T08:42:01.153257\"\n  },\n  {\n    \"key\": \"VIDEO_MAX_SIZE_MB\",\n    \"value\": \"100\",\n    \"description\": \"Dung lượng video tối đa (MB)\",\n    \"updatedAt\": \"2026-10-29T08:42:01.156613\"\n  }\n]"
+            }
+          ]
         },
         {
           "name": "LO-47 - Đổi độ dài story tối đa thành 30 giây",
@@ -2430,7 +3781,58 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-47 - Đổi độ dài story tối đa thành 30 giây",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/settings/STORY_MAX_DURATION_SEC",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "settings",
+                    "STORY_MAX_DURATION_SEC"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"value\": \"30\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"key\": \"STORY_MAX_DURATION_SEC\",\n  \"value\": \"30\",\n  \"description\": \"Story là video dài tối đa (giây)\",\n  \"updatedAt\": \"2026-10-29T08:51:04.382456\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-48 - App đọc thông số (công khai), có hiệu lực ngay",
@@ -2461,7 +3863,36 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-48 - App đọc thông số (công khai), có hiệu lực ngay",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/settings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "settings"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"STORY_MAX_DURATION_SEC\": 30,\n  \"STORY_LIFETIME_HOURS\": 24,\n  \"VIDEO_MAX_SIZE_MB\": 100\n}"
+            }
+          ]
         },
         {
           "name": "LO-49 - Thông số không tồn tại",
@@ -2514,7 +3945,58 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-49 - Thông số không tồn tại",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/settings/KHONG_CO",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "settings",
+                    "KHONG_CO"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"value\": \"30\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 404,\n  \"message\": \"Không có thông số KHONG_CO\",\n  \"timestamp\": \"2026-10-29T08:51:04.5769161\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-50 - Giá trị không phải số",
@@ -2567,7 +4049,58 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-50 - Giá trị không phải số",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/settings/STORY_MAX_DURATION_SEC",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "settings",
+                    "STORY_MAX_DURATION_SEC"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"value\": \"abc\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Giá trị phải là số nguyên\",\n  \"timestamp\": \"2026-10-29T08:51:04.6826432\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-51 - Giá trị bằng 0",
@@ -2620,7 +4153,58 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-51 - Giá trị bằng 0",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/settings/STORY_MAX_DURATION_SEC",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "settings",
+                    "STORY_MAX_DURATION_SEC"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"value\": \"0\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Giá trị phải lớn hơn 0\",\n  \"timestamp\": \"2026-10-29T08:51:04.7476814\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-52 - Dung lượng video vượt trần 500 MB",
@@ -2673,7 +4257,58 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-52 - Dung lượng video vượt trần 500 MB",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/settings/VIDEO_MAX_SIZE_MB",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "settings",
+                    "VIDEO_MAX_SIZE_MB"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"value\": \"600\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Dung lượng video tối đa không được vượt quá 500 MB\",\n  \"timestamp\": \"2026-10-29T08:51:04.8204556\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-53 - Người dùng thường xem thông số quản trị",
@@ -2711,7 +4346,43 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-53 - Người dùng thường xem thông số quản trị",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{lanToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/settings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "settings"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": 403,\n  \"message\": \"Bạn không có quyền thực hiện thao tác này\",\n  \"timestamp\": \"2026-10-29T08:51:04.913374\"\n}"
+            }
+          ]
         },
         {
           "name": "LO-54 - Trả độ dài story về mặc định 15 giây",
@@ -2764,7 +4435,58 @@
               }
             }
           ],
-          "response": []
+          "response": [
+            {
+              "name": "LO-54 - Trả độ dài story về mặc định 15 giây",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/settings/STORY_MAX_DURATION_SEC",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "settings",
+                    "STORY_MAX_DURATION_SEC"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"value\": \"15\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"key\": \"STORY_MAX_DURATION_SEC\",\n  \"value\": \"15\",\n  \"description\": \"Story là video dài tối đa (giây)\",\n  \"updatedAt\": \"2026-10-29T08:51:05.025509\"\n}"
+            }
+          ]
         }
       ]
     }
