@@ -40,6 +40,7 @@ class VideoServiceTest {
     private UserRepository userRepository;
     private TopicRepository topicRepository;
     private HashtagRepository hashtagRepository;
+    private FollowRepository followRepository;
     private VideoLikeRepository videoLikeRepository;
     private CommentRepository commentRepository;
     private CommentLikeRepository commentLikeRepository;
@@ -55,6 +56,7 @@ class VideoServiceTest {
         userRepository = mock(UserRepository.class);
         topicRepository = mock(TopicRepository.class);
         hashtagRepository = mock(HashtagRepository.class);
+        followRepository = mock(FollowRepository.class);
         videoLikeRepository = mock(VideoLikeRepository.class);
         commentRepository = mock(CommentRepository.class);
         commentLikeRepository = mock(CommentLikeRepository.class);
@@ -62,7 +64,7 @@ class VideoServiceTest {
         VideoMapper videoMapper = new VideoMapper(new UserMapper(), new CatalogMapper());
 
         videoService = new VideoService(videoRepository, userRepository, topicRepository,
-                mock(AudioRepository.class), hashtagRepository, videoLikeRepository,
+                mock(AudioRepository.class), hashtagRepository, followRepository, videoLikeRepository,
                 commentRepository, commentLikeRepository, fileStorageService, videoMapper);
 
         // Giả lập "đã đăng nhập" giống JwtAuthFilter: principal là id người dùng

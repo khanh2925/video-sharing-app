@@ -8,3 +8,7 @@ node_modules/
 # File người dùng upload khi chạy thử (không đưa lên Git)
 uploads/
 backend/uploads/
+
+# Local API test captures and machine-specific launch task
+.codex-tmp/
+.vscode/tasks.json

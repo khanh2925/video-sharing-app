@@ -22,6 +22,23 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     // UC10: video của một người theo trạng thái, mới nhất trước (vd danh sách bản nháp)
     Page<Video> findByOwnerIdAndStatusOrderByCreatedAtDesc(Long ownerId, VideoStatus status, Pageable pageable);
 
+    Page<Video> findByStatusAndVisibilityOrderByViewCountDesc(
+            VideoStatus status, Visibility visibility, Pageable pageable);
+
+    Page<Video> findByTopicIdAndStatusAndVisibilityOrderByCreatedAtDesc(
+            Long topicId, VideoStatus status, Visibility visibility, Pageable pageable);
+
+    @Query("select distinct v from Video v left join v.hashtags h "
+            + "where v.status = :status and v.visibility = :visibility and "
+            + "(lower(coalesce(v.title, '')) like lower(concat('%', :query, '%')) "
+            + "or lower(coalesce(v.description, '')) like lower(concat('%', :query, '%')) "
+            + "or lower(coalesce(h.name, '')) like lower(concat('%', :query, '%'))) "
+            + "order by v.viewCount desc")
+    Page<Video> searchPublic(@Param("query") String query,
+                             @Param("status") VideoStatus status,
+                             @Param("visibility") Visibility visibility,
+                             Pageable pageable);
+
     // ===== UC06 – Xem hồ sơ người dùng =====
     // Tổng lượt thích trên các video của một người (ô "Likes" ở hồ sơ).
     // COALESCE: người chưa có video nào thì SUM trả NULL → đổi thành 0

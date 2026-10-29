@@ -17,6 +17,7 @@ import com.vsa.backend.repositories.AudioRepository;
 import com.vsa.backend.repositories.CommentLikeRepository;
 import com.vsa.backend.repositories.CommentRepository;
 import com.vsa.backend.repositories.HashtagRepository;
+import com.vsa.backend.repositories.FollowRepository;
 import com.vsa.backend.repositories.TopicRepository;
 import com.vsa.backend.repositories.UserRepository;
 import com.vsa.backend.repositories.VideoLikeRepository;
@@ -48,11 +49,50 @@ public class VideoService {
     private final TopicRepository topicRepository;
     private final AudioRepository audioRepository;
     private final HashtagRepository hashtagRepository;
+    private final FollowRepository followRepository;
     private final VideoLikeRepository videoLikeRepository;
     private final CommentRepository commentRepository;
     private final CommentLikeRepository commentLikeRepository;
     private final FileStorageService fileStorageService;
     private final VideoMapper videoMapper;
+
+    // ===================== UC05: xem video =====================
+
+    @Transactional(readOnly = true)
+    public PageResponse<VideoResponse> getTrending(Pageable pageable) {
+        Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();
+        return PageResponse.of(
+                videoRepository.findByStatusAndVisibilityOrderByViewCountDesc(
+                        VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable),
+                video -> videoMapper.toResponse(video, isLiked(video.getId(), currentUserId)));
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<VideoResponse> getByTopic(Long topicId, Pageable pageable) {
+        if (!topicRepository.existsById(topicId)) {
+            throw ApiException.notFound("Không tìm thấy chủ đề");
+        }
+        Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();
+        return PageResponse.of(
+                videoRepository.findByTopicIdAndStatusAndVisibilityOrderByCreatedAtDesc(
+                        topicId, VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable),
+                video -> videoMapper.toResponse(video, isLiked(video.getId(), currentUserId)));
+    }
+
+    @Transactional(readOnly = true)
+    public VideoResponse getById(Long videoId) {
+        Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();
+        Video video = findViewableVideo(videoId, currentUserId);
+        return videoMapper.toResponse(video, isLiked(videoId, currentUserId));
+    }
+
+    @Transactional
+    public VideoResponse recordView(Long videoId) {
+        Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();
+        Video video = findViewableVideo(videoId, currentUserId);
+        video.setViewCount(video.getViewCount() + 1);
+        return videoMapper.toResponse(video, isLiked(videoId, currentUserId));
+    }
 
     // ===================== UC08 + UC09: đăng video =====================
 
@@ -178,6 +218,40 @@ public class VideoService {
             throw ApiException.forbidden("Video đã bị quản trị viên ẩn");
         }
         return video;
+    }
+
+    /** Áp dụng bảng quyền xem ở mục 6.2 của tài liệu nghiệp vụ. */
+    private Video findViewableVideo(Long videoId, Long currentUserId) {
+        Video video = videoRepository.findById(videoId)
+                .orElseThrow(() -> ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem"));
+
+        if (video.getStatus() == VideoStatus.HIDDEN) {
+            throw ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem");
+        }
+
+        boolean owner = currentUserId != null && video.getOwner().getId().equals(currentUserId);
+        if (video.getStatus() == VideoStatus.DRAFT && !owner) {
+            throw ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem");
+        }
+        if (video.getStatus() != VideoStatus.PUBLISHED && !owner) {
+            throw ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem");
+        }
+
+        if (video.getVisibility() == Visibility.PRIVATE && !owner) {
+            throw ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem");
+        }
+        if (video.getVisibility() == Visibility.FOLLOWERS && !owner) {
+            boolean following = currentUserId != null
+                    && followRepository.existsByFollowerIdAndFollowingId(currentUserId, video.getOwner().getId());
+            if (!following) {
+                throw ApiException.notFound("Video không tồn tại hoặc bạn không có quyền xem");
+            }
+        }
+        return video;
+    }
+
+    private boolean isLiked(Long videoId, Long currentUserId) {
+        return currentUserId != null && videoLikeRepository.existsByVideoIdAndUserId(videoId, currentUserId);
     }
 
     /**

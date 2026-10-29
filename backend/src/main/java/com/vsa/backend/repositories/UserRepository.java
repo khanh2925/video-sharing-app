@@ -2,6 +2,7 @@ package com.vsa.backend.repositories;
 
 import com.vsa.backend.entities.User;
 import com.vsa.backend.enums.Role;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -19,6 +20,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
+
+    // UC04 – tìm kiếm người dùng (Thanh)
+    Page<User> findByUsernameContainingIgnoreCaseOrDisplayNameContainingIgnoreCase(
+            String username, String displayName, Pageable pageable);
 
     // ===== UC12 – Gợi ý tài khoản ("Suggestions for you") =====
     // Người dùng thường (không gợi ý quản trị viên), chưa bị khoá, không phải mình, mình chưa theo dõi; mới tham gia trước.
