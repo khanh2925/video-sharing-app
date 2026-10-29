@@ -1,7 +1,6 @@
 package com.vsa.backend.mappers;
 
 import com.vsa.backend.dtos.response.AuthUserResponse;
-import com.vsa.backend.dtos.response.FollowUserResponse;
 import com.vsa.backend.dtos.response.UserProfileResponse;
 import com.vsa.backend.dtos.response.UserSummaryResponse;
 import com.vsa.backend.entities.User;
@@ -50,17 +49,6 @@ public class UserMapper {
                 followingCount,
                 followerCount,
                 likeCount,
-                following,
-                me);
-    }
-
-    /** UC12. Một dòng trong danh sách followers / following / gợi ý; cờ following, me tính ở FollowService. */
-    public FollowUserResponse toFollowUser(User user, boolean following, boolean me) {
-        return new FollowUserResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getDisplayName(),
-                user.getAvatarUrl(),
                 following,
                 me);
     }

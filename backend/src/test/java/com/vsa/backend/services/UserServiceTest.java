@@ -1,7 +1,5 @@
 package com.vsa.backend.services;
 
-import com.vsa.backend.dtos.request.UpdateProfileRequest;
-import com.vsa.backend.dtos.response.AuthUserResponse;
 import com.vsa.backend.dtos.response.PageResponse;
 import com.vsa.backend.dtos.response.UserProfileResponse;
 import com.vsa.backend.dtos.response.VideoResponse;
@@ -25,7 +23,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -38,7 +35,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Test UC06, UC07 không cần MySQL: repository là đồ giả (mock) của Mockito.
+ * Test UC06 không cần MySQL: repository là đồ giả (mock) của Mockito.
  * Dữ liệu giả giống DataSeeder: lan (id 2) theo dõi minh (id 3).
  * Chạy: chuột phải file → Run 'UserServiceTest'.
  */
@@ -52,11 +49,7 @@ class UserServiceTest {
     private FollowRepository followRepository;
     private VideoRepository videoRepository;
     private VideoLikeRepository videoLikeRepository;
-    private FileStorageService fileStorageService;
     private UserService userService;
-
-    private final MockMultipartFile anh =
-            new MockMultipartFile("file", "avatar.jpg", "image/jpeg", new byte[]{1, 2, 3});
 
     @BeforeEach
     void setUp() {
@@ -64,10 +57,9 @@ class UserServiceTest {
         followRepository = mock(FollowRepository.class);
         videoRepository = mock(VideoRepository.class);
         videoLikeRepository = mock(VideoLikeRepository.class);
-        fileStorageService = mock(FileStorageService.class);
         VideoMapper videoMapper = new VideoMapper(new UserMapper(), new CatalogMapper());
         userService = new UserService(userRepository, followRepository, videoRepository,
-                videoLikeRepository, new UserMapper(), videoMapper, fileStorageService);
+                videoLikeRepository, new UserMapper(), videoMapper);
 
         when(userRepository.findById(MINH)).thenReturn(Optional.of(taoUser(MINH, "minh")));
         when(userRepository.findById(LAN)).thenReturn(Optional.of(taoUser(LAN, "lan")));
@@ -201,58 +193,6 @@ class UserServiceTest {
 
         assertEquals(HttpStatus.NOT_FOUND, e.getStatus());
         verifyNoInteractions(videoLikeRepository);
-    }
-
-    // ---------- UC07: sửa hồ sơ ----------
-
-    @Test
-    void updateMyProfile_thanhCong_trimTen_bioRongThanhNull() {
-        dangNhapLa(LAN);
-
-        AuthUserResponse me = userService.updateMyProfile(new UpdateProfileRequest("  Lan Mới  ", "   "));
-
-        assertEquals("Lan Mới", me.displayName());
-        assertNull(me.bio());                                   // bio toàn khoảng trắng → xoá tiểu sử
-        verify(userRepository).save(argThat(u -> u.getId().equals(LAN) && "Lan Mới".equals(u.getDisplayName())));
-    }
-
-    @Test
-    void updateMyProfile_chuaDangNhap_bao401() {
-        ApiException e = assertThrows(ApiException.class,
-                () -> userService.updateMyProfile(new UpdateProfileRequest("Lan", null)));
-
-        assertEquals(HttpStatus.UNAUTHORIZED, e.getStatus());
-        verify(userRepository, never()).save(any());
-    }
-
-    // ---------- UC07: đổi ảnh đại diện ----------
-
-    @Test
-    void updateMyAvatar_thanhCong_luuAnhMoi_xoaAnhCu() {
-        dangNhapLa(LAN);
-        User lan = taoUser(LAN, "lan");
-        lan.setAvatarUrl("/files/avatars/cu.jpg");
-        when(userRepository.findById(LAN)).thenReturn(Optional.of(lan));
-        when(fileStorageService.saveImage(anh, FileStorageService.AVATAR_DIR)).thenReturn("/files/avatars/moi.jpg");
-
-        AuthUserResponse me = userService.updateMyAvatar(anh);
-
-        assertEquals("/files/avatars/moi.jpg", me.avatarUrl());
-        verify(fileStorageService).delete("/files/avatars/cu.jpg");
-    }
-
-    @Test
-    void updateMyAvatar_fileSaiDinhDang_bao400_giuNguyenAnhCu() {
-        dangNhapLa(LAN);
-        MockMultipartFile pdf = new MockMultipartFile("file", "cv.pdf", "application/pdf", new byte[]{1});
-        when(fileStorageService.saveImage(pdf, FileStorageService.AVATAR_DIR))
-                .thenThrow(ApiException.badRequest("Chỉ nhận file jpg, jpeg, png, webp"));
-
-        ApiException e = assertThrows(ApiException.class, () -> userService.updateMyAvatar(pdf));
-
-        assertEquals(HttpStatus.BAD_REQUEST, e.getStatus());
-        verify(userRepository, never()).save(any());
-        verify(fileStorageService, never()).delete(any());
     }
 
     // ---------- Hàm phụ ----------
