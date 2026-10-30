@@ -22,6 +22,7 @@ export function useBackgroundMusic(url: string | null | undefined, playing: bool
   const player = useAudioPlayer(uri ? { uri } : null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/immutability -- Đây là thuộc tính native mutable theo API expo-audio.
     player.loop = loop;
   }, [player, loop]);
 
