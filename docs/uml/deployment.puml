@@ -1,0 +1,56 @@
+@startuml deployment
+!pragma layout smetana
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam dpi 150
+skinparam shadowing false
+skinparam ArrowColor #444444
+skinparam node {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+}
+title Biểu đồ triển khai - VPS Oracle Cloud (deploy/docker-compose.prod.yml)
+
+node "Điện thoại (iOS / Android)" as phone #F3F8FF {
+  artifact "Expo Go\n+ bundle JS của app\n(EXPO_PUBLIC_API_URL =\nhttps://<ip>.sslip.io)" as app
+}
+
+node "Máy dev (npx expo start)" as devpc #F7F7F7 {
+  component "Metro bundler" as metro
+}
+
+cloud "Internet" as inet
+
+node "VPS Oracle Cloud (Always Free)\nUbuntu 24.04 - Docker Compose (project: vsa)" as vps #F4FFF4 {
+  node "Container caddy\n(image caddy:2)\ncổng 80, 443 (TCP/UDP)" as caddy #FFF7E6 {
+    component "reverse_proxy backend:8080\nHTTPS tự động (Let's Encrypt)" as rp
+  }
+  node "Container backend\n(build ../backend, eclipse-temurin:21-jre)\nexpose 8080" as be #FFFFFF {
+    artifact "app.jar (Spring Boot 4)\nREST /api/**, STOMP /ws,\nfile tĩnh /files/**" as jar
+  }
+  node "Container db\n(image mysql:8.4)\nkhông mở cổng ra ngoài" as db #EEF0FF {
+    database "video_sharing" as schema
+  }
+  storage "volume uploads\n(/app/uploads)" as vup
+  storage "volume mysql_data\n(/var/lib/mysql)" as vdb
+  storage "volume caddy_data,\ncaddy_config\n(chứng chỉ)" as vcad
+}
+
+app --> inet : HTTPS + WSS
+metro ..> app : tải bundle JS (khi phát triển)
+inet --> rp : 443 / 80
+rp --> jar : HTTP :8080\n(mạng Docker nội bộ)
+jar --> schema : JDBC jdbc:mysql://db:3306/video_sharing
+jar --> vup : ghi / đọc file upload
+schema --> vdb
+rp --> vcad
+
+note as Nenv
+  Biến môi trường (MYSQL_PASSWORD,
+  JWT_SECRET, DOMAIN) đọc từ deploy/.env
+  do deploy/setup-vps.sh sinh ra.
+  DOMAIN mặc định <ip>.sslip.io.
+  backend chỉ khởi động khi db healthy.
+  Oracle mở ingress TCP 80, 443.
+end note
+@enduml

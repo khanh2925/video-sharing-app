@@ -1,60 +1,45 @@
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Button, StyleSheet, Text, View } from 'react-native';
+/**
+ * Điểm khởi đầu của app: tải font, bọc các Provider, rồi hiển thị RootNavigator.
+ * Thứ tự bọc: Gesture (cử chỉ, Chương 11) → SafeArea (tai thỏ) → Auth (đăng nhập) → Navigation.
+ */
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { useFonts } from 'expo-font';
+import { BeVietnamPro_400Regular } from '@expo-google-fonts/be-vietnam-pro/400Regular';
+import { BeVietnamPro_500Medium } from '@expo-google-fonts/be-vietnam-pro/500Medium';
+import { BeVietnamPro_600SemiBold } from '@expo-google-fonts/be-vietnam-pro/600SemiBold';
+import { BeVietnamPro_700Bold } from '@expo-google-fonts/be-vietnam-pro/700Bold';
+import { AuthProvider } from './src/context/AuthContext';
+import RootNavigator from './src/navigation/RootNavigator';
+import { colors } from './src/constants/theme';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL; // ← đổi thành IP Mac của bạn
-
-
-
-type Health = { status: string; mysqlVersion: string };
+const navTheme = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, primary: colors.primary, background: colors.background, text: colors.text, border: colors.border },
+};
 
 export default function App() {
-  const [data, setData] = useState<Health | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [fontsLoaded] = useFonts({
+    BeVietnamPro_400Regular,
+    BeVietnamPro_500Medium,
+    BeVietnamPro_600SemiBold,
+    BeVietnamPro_700Bold,
+  });
 
-  const checkHealth = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_URL}/api/health`);
-      const json: Health = await res.json();
-      setData(json);
-    } catch (e) {
-      setData(null);
-      setError(String(e));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    checkHealth();
-  }, []);
+  if (!fontsLoaded) {
+    return null; // chờ font tải xong (rất nhanh) rồi mới vẽ
+  }
 
   return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Video Sharing App</Text>
-
-        {loading && <ActivityIndicator size="large" />}
-
-        {data && (
-            <Text style={styles.ok}>
-              ✅ Backend: {data.status}{'\n'}MySQL: {data.mysqlVersion}
-            </Text>
-        )}
-
-        {error && <Text style={styles.err}>❌ {error}</Text>}
-
-        <Button title="Kiểm tra lại" onPress={checkHealth} />
-        <StatusBar style="auto" />
-      </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <NavigationContainer theme={navTheme}>
+            <RootNavigator />
+          </NavigationContainer>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 },
-  title: { fontSize: 22, fontWeight: 'bold' },
-  ok: { fontSize: 16, color: 'green', textAlign: 'center' },
-  err: { fontSize: 14, color: 'red', textAlign: 'center' },
-});

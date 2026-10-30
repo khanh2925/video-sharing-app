@@ -11,6 +11,7 @@ import com.vsa.backend.entities.Video;
 import com.vsa.backend.enums.LiveMessageType;
 import com.vsa.backend.enums.LiveStatus;
 import com.vsa.backend.enums.VideoStatus;
+import com.vsa.backend.enums.Visibility;
 import com.vsa.backend.exceptions.ApiException;
 import com.vsa.backend.mappers.UserMapper;
 import com.vsa.backend.repositories.LiveMessageRepository;
@@ -47,17 +48,20 @@ public class LiveStreamService {
     @Transactional
     public LiveStreamResponse create(CreateLiveRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
-        if (liveStreamRepository.existsByHostIdAndStatus(userId, LiveStatus.LIVE)) {
-            throw ApiException.conflict("Bạn đang có một buổi live chưa kết thúc");
-        }
         Video source = videoRepository.findById(request.sourceVideoId())
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy video nguồn"));
         if (!source.getOwner().getId().equals(userId)) {
             throw ApiException.forbidden("Bạn chỉ được dùng video của mình để phát livestream");
         }
-        if (source.getStatus() != VideoStatus.PUBLISHED) {
-            throw ApiException.badRequest("Video nguồn phải ở trạng thái đã đăng");
+        // Live là công khai, ai cũng xem được → không cho phát lại video nháp, riêng tư, chỉ người theo dõi
+        if (source.getStatus() != VideoStatus.PUBLISHED || source.getVisibility() != Visibility.PUBLIC) {
+            throw ApiException.badRequest("Video nguồn phải là video công khai đã đăng");
         }
+        // Còn buổi live cũ chưa kết thúc (vd app bị tắt ngang, không kịp bấm Kết thúc):
+        // tự kết thúc buổi cũ rồi mới tạo buổi mới, thay vì báo lỗi mãi không phát được.
+        // Làm SAU khi kiểm tra video nguồn để tạo lỗi thì buổi cũ vẫn còn.
+        endAllLiveOfHost(userId);
+
         User host = userRepository.getReferenceById(userId);
         LiveStream live = liveStreamRepository.save(LiveStream.builder()
                 .title(request.title().trim())
@@ -82,6 +86,23 @@ public class LiveStreamService {
         if (live.getStatus() == LiveStatus.ENDED) {
             throw ApiException.conflict("Buổi live đã kết thúc");
         }
+        return finish(live);
+    }
+
+    /**
+     * Kết thúc mọi buổi live đang phát của một người (không kiểm tra người gọi).
+     * Dùng khi chủ phòng mất kết nối WebSocket (LiveDisconnectListener) và khi tạo buổi live mới.
+     */
+    @Transactional
+    public void endAllLiveOfHost(Long hostId) {
+        for (LiveStream live : liveStreamRepository.findByHostIdAndStatus(hostId, LiveStatus.LIVE)) {
+            finish(live);
+        }
+    }
+
+    // Chốt số người xem, đổi trạng thái ENDED và báo cho mọi người đang xem (sự kiện "ENDED")
+    private LiveStreamResponse finish(LiveStream live) {
+        Long liveId = live.getId();
         int viewerCount = viewers.getOrDefault(liveId, Set.of()).size();
         live.setViewerCount(viewerCount);
         live.setStatus(LiveStatus.ENDED);

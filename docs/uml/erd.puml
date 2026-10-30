@@ -1,0 +1,185 @@
+@startuml erd
+!pragma layout smetana
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam dpi 150
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 30
+skinparam ranksep 50
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+  HeaderBackgroundColor #E8EEF8
+}
+hide circle
+hide methods
+title Lược đồ cơ sở dữ liệu (MySQL 8.4) - 14 bảng thực thể + 1 bảng nối
+
+entity "users" as users {
+  * id : BIGINT <<PK>>
+  --
+  * username : VARCHAR <<UQ>>
+  * email : VARCHAR <<UQ>>
+  * password_hash : VARCHAR
+  display_name, bio, avatar_url
+  * role : USER | ADMIN
+  * locked : BOOLEAN
+  * created_at : DATETIME
+}
+
+entity "videos" as videos {
+  * id : BIGINT <<PK>>
+  --
+  * owner_id : <<FK users>>
+  topic_id : <<FK topics>>
+  audio_id : <<FK audios>>
+  title, description, filter
+  * video_url : VARCHAR
+  thumbnail_url : VARCHAR
+  * visibility : PUBLIC | FOLLOWERS | PRIVATE
+  * status : DRAFT | PUBLISHED | HIDDEN
+  allow_comments : BOOLEAN
+  view_count, like_count, comment_count
+  * created_at : DATETIME
+}
+
+entity "topics" as topics {
+  * id : BIGINT <<PK>>
+  --
+  * name : VARCHAR <<UQ>>
+  icon, color
+}
+
+entity "audios" as audios {
+  * id : BIGINT <<PK>>
+  --
+  * title : VARCHAR
+  artist, cover_url, file_url
+  duration_sec : INT
+  trending : BOOLEAN
+}
+
+entity "hashtags" as hashtags {
+  * id : BIGINT <<PK>>
+  --
+  * name : VARCHAR <<UQ>>
+}
+
+entity "video_hashtags" as video_hashtags {
+  * video_id : <<PK, FK videos>>
+  * hashtag_id : <<PK, FK hashtags>>
+}
+
+entity "video_likes" as video_likes {
+  * id : BIGINT <<PK>>
+  --
+  * user_id : <<FK users>>
+  * video_id : <<FK videos>>
+  * created_at : DATETIME
+  UQ (user_id, video_id)
+}
+
+entity "comments" as comments {
+  * id : BIGINT <<PK>>
+  --
+  * user_id : <<FK users>>
+  * video_id : <<FK videos>>
+  * content : VARCHAR
+  like_count : BIGINT
+  * created_at : DATETIME
+}
+
+entity "comment_likes" as comment_likes {
+  * id : BIGINT <<PK>>
+  --
+  * user_id : <<FK users>>
+  * comment_id : <<FK comments>>
+  * created_at : DATETIME
+  UQ (user_id, comment_id)
+}
+
+entity "follows" as follows {
+  * id : BIGINT <<PK>>
+  --
+  * follower_id : <<FK users>>
+  * following_id : <<FK users>>
+  * created_at : DATETIME
+  UQ (follower_id, following_id)
+}
+
+entity "stories" as stories {
+  * id : BIGINT <<PK>>
+  --
+  * owner_id : <<FK users>>
+  audio_id : <<FK audios>>
+  * media_url : VARCHAR
+  * media_type : IMAGE | VIDEO
+  duration_sec : INT
+  * created_at, expires_at : DATETIME
+}
+
+entity "story_views" as story_views {
+  * id : BIGINT <<PK>>
+  --
+  * story_id : <<FK stories>>
+  * viewer_id : <<FK users>>
+  * viewed_at : DATETIME
+  UQ (story_id, viewer_id)
+}
+
+entity "live_streams" as live_streams {
+  * id : BIGINT <<PK>>
+  --
+  * host_id : <<FK users>>
+  * title : VARCHAR
+  source_video_url, thumbnail_url
+  * status : LIVE | ENDED
+  viewer_count : INT
+  product_name, product_price, product_image_url
+  * started_at, ended_at : DATETIME
+}
+
+entity "live_messages" as live_messages {
+  * id : BIGINT <<PK>>
+  --
+  * live_stream_id : <<FK live_streams>>
+  * sender_id : <<FK users>>
+  * type : COMMENT | REACTION
+  * content : VARCHAR(300)
+  * created_at : DATETIME
+}
+
+entity "system_settings" as system_settings {
+  * setting_key : VARCHAR(50) <<PK>>
+  --
+  * setting_value : VARCHAR(100)
+  description : VARCHAR(200)
+  updated_at : DATETIME
+  .. Các khoá (enum SettingKey) ..
+  STORY_MAX_DURATION_SEC
+  STORY_LIFETIME_HOURS
+  VIDEO_MAX_SIZE_MB
+}
+
+users ||--o{ videos : owner_id
+topics |o--o{ videos : topic_id
+audios |o--o{ videos : audio_id
+videos ||--o{ video_hashtags
+hashtags ||--o{ video_hashtags
+users ||--o{ video_likes
+videos ||--o{ video_likes
+users ||--o{ comments
+videos ||--o{ comments
+comments ||--o{ comment_likes
+users ||--o{ comment_likes
+users ||--o{ follows : follower_id
+users ||--o{ follows : following_id
+users ||--o{ stories : owner_id
+audios |o--o{ stories : audio_id
+stories ||--o{ story_views
+users ||--o{ story_views : viewer_id
+users ||--o{ live_streams : host_id
+live_streams ||--o{ live_messages
+users ||--o{ live_messages : sender_id
+@enduml

@@ -30,7 +30,7 @@ public class InteractionController {
     @GetMapping("/api/videos/{videoId}/comments")
     public PageResponse<CommentResponse> getComments(@PathVariable Long videoId,
                                                       @RequestParam(defaultValue = "0") int page) {
-        return interactionService.getComments(videoId, page);
+        return interactionService.getComments(videoId, Math.max(page, 0));   // page âm → trang đầu
     }
 
     @PostMapping("/api/videos/{videoId}/comments")
