@@ -18,7 +18,7 @@ name: Deploy VPS
 
 on:
   push:
-    branches: [main]
+    branches: [main,long]
   workflow_dispatch:
 
 # Hai lần push sát nhau thì deploy lần lượt, không chạy chồng lên nhau
