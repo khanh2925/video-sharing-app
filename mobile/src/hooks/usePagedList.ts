@@ -34,51 +34,67 @@ export function usePagedList<T>(
   const [totalElements, setTotalElements] = useState(0);
 
   const pageRef = useRef(0);
+  // Mỗi lần đổi nguồn/từ khoá hoặc tải lại, mọi phản hồi của lượt cũ hết hiệu lực.
+  const generationRef = useRef(0);
   const busyRef = useRef(false); // chặn gọi trùng khi onEndReached bắn nhiều lần
   const fetchRef = useRef(fetchPage);
-  fetchRef.current = fetchPage;
+  useEffect(() => { fetchRef.current = fetchPage; });
 
   const loadFirstPage = useCallback(async (mode: 'initial' | 'refresh') => {
+    const generation = ++generationRef.current;
     busyRef.current = true;
-    mode === 'initial' ? setLoading(true) : setRefreshing(true);
+    setLoadingMore(false);
+    if (mode === 'initial') setLoading(true);
+    else setRefreshing(true);
     setError(null);
     try {
       const res = await fetchRef.current(0, size);
+      if (generation !== generationRef.current) return;
       pageRef.current = 0;
       setItems(res.content);
       setIsLast(res.last);
       setTotalElements(res.totalElements);
     } catch (e) {
+      if (generation !== generationRef.current) return;
       setError(getErrorMessage(e));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
-      busyRef.current = false;
+      if (generation === generationRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+        busyRef.current = false;
+      }
     }
   }, [size]);
 
   const loadMore = useCallback(async () => {
     if (busyRef.current || isLast) return;
     busyRef.current = true;
+    const generation = generationRef.current;
     setLoadingMore(true);
     try {
       const next = pageRef.current + 1;
       const res = await fetchRef.current(next, size);
+      if (generation !== generationRef.current) return;
       pageRef.current = next;
       setItems((prev) => [...prev, ...res.content]);
       setIsLast(res.last);
     } catch {
       // Lỗi khi tải thêm thì bỏ qua, cuộn lần sau sẽ thử lại
     } finally {
-      setLoadingMore(false);
-      busyRef.current = false;
+      if (generation === generationRef.current) {
+        setLoadingMore(false);
+        busyRef.current = false;
+      }
     }
   }, [isLast, size]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Bắt đầu tải dữ liệu khi nguồn thay đổi.
     loadFirstPage('initial');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Cố ý vô hiệu hoá thế hệ hiện tại khi huỷ effect.
+    return () => { ++generationRef.current; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [...deps, size]);
 
   return {
     items,

@@ -15,7 +15,7 @@ export function useFetch<T>(fetcher: () => Promise<T>, deps: DependencyList) {
 
   // Luôn dùng hàm fetcher mới nhất mà không cần đưa nó vào deps
   const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
+  useEffect(() => { fetcherRef.current = fetcher; });
 
   // Mỗi lần gọi có 1 số thứ tự; kết quả về muộn của lần gọi cũ (deps đã đổi) thì bỏ qua
   const requestIdRef = useRef(0);
@@ -35,7 +35,9 @@ export function useFetch<T>(fetcher: () => Promise<T>, deps: DependencyList) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Đồng bộ trạng thái chờ với yêu cầu REST mới.
     reload();
+    return () => { requestIdRef.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
