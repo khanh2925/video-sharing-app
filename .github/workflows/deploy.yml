@@ -48,7 +48,7 @@ jobs:
 
       - name: Kiểm tra API sau khi deploy
         run: |
-          URL="https://${VPS_HOST//./-}.sslip.io/api/health"
+          URL="https://liktok.${VPS_HOST//./-}.sslip.io/api/health"
           curl -fsS --retry 12 --retry-delay 10 --retry-all-errors "$URL"
           echo
           echo "Deploy xong: $URL"
