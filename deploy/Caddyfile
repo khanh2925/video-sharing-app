@@ -1,7 +1,21 @@
 # DOMAIN có giá trị (vd 140-238-1-2.sslip.io) → Caddy tự xin chứng chỉ HTTPS.
 # DOMAIN để trống → chạy HTTP thường ở cổng 80.
 {$DOMAIN::80} {
+	encode gzip
+
+	# API, file video/ảnh và WebSocket livestream → backend Spring Boot.
 	# Không giới hạn dung lượng upload ở đây; backend tự chặn theo VIDEO_MAX_SIZE_MB.
 	# WebSocket (/ws/**) và HTTP Range (tua video) được chuyển tiếp tự động.
-	reverse_proxy backend:8080
+	@backend path /api/* /files/* /ws /ws/*
+	handle @backend {
+		reverse_proxy backend:8080
+	}
+
+	# Còn lại → giao diện web của app (build từ mobile/, xem web.Dockerfile).
+	# Đường dẫn không có file thật thì trả index.html để app tự điều hướng.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
 }

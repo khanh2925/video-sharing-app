@@ -1,4 +1,4 @@
-# Chạy toàn bộ hệ thống trên VPS: MySQL + backend Spring Boot + Caddy (HTTPS tự động).
+# Chạy toàn bộ hệ thống trên VPS: MySQL + backend Spring Boot + Caddy (HTTPS tự động, kèm bản web của app).
 # Dùng:  docker compose -f deploy/docker-compose.prod.yml up -d --build
 # Biến (mật khẩu, JWT, DOMAIN) đọc từ deploy/.env – setup-vps.sh tự tạo file này.
 
@@ -47,7 +47,12 @@ services:
       - "8080"
 
   caddy:
-    image: caddy:2
+    # Caddy + giao diện web của app (build từ mobile/ theo web.Dockerfile)
+    build:
+      context: ../mobile
+      dockerfile: ../deploy/web.Dockerfile
+      args:
+        API_URL: https://${DOMAIN:?thiếu DOMAIN}
     restart: unless-stopped
     depends_on:
       - backend
