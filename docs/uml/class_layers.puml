@@ -1,0 +1,176 @@
+@startuml class_layers
+!pragma layout smetana
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam dpi 150
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam nodesep 25
+skinparam ranksep 45
+hide empty members
+hide circle
+title Biểu đồ lớp theo tầng - mô-đun Video, Tương tác (Comment), LiveStream
+
+package "Tầng Controller" #F3F8FF {
+  class VideoController <<RestController>> {
+    + create(file, thumbnail, request)
+    + getById(id)
+    + getTrending(page, size)
+    + getFollowingFeed(page, size)
+    + getMyDrafts(pageable)
+    + update(id, request)
+    + delete(id)
+  }
+  class InteractionController <<RestController>> {
+    + likeVideo(videoId)
+    + unlikeVideo(videoId)
+    + getComments(videoId, page)
+    + createComment(videoId, request)
+    + deleteComment(commentId)
+    + likeComment(commentId)
+    + unlikeComment(commentId)
+  }
+  class LiveStreamController <<RestController>> {
+    + create(request)
+    + end(id)
+    + getActive()
+    + getById(id) / getMessages(id)
+  }
+  class LiveWebSocketController <<Controller STOMP>> {
+    + join(id, principal)
+    + leave(id, principal)
+    + chat(id, principal, request)
+    + react(id, principal, request)
+  }
+}
+
+package "Tầng Service" #F4FFF4 {
+  class VideoService <<Service>> {
+    + create(file, thumbnail, request)
+    + getById(videoId)
+    + getTrending(pageable)
+    + getMyDrafts(pageable)
+    + update(videoId, request)
+    + delete(videoId)
+  }
+  class InteractionService <<Service>> {
+    + likeVideo(videoId)
+    + unlikeVideo(videoId)
+    + getComments(videoId, page)
+    + createComment(videoId, request)
+    + deleteComment(commentId)
+    + likeComment(commentId)
+    + unlikeComment(commentId)
+  }
+  class LiveStreamService <<Service>> {
+    - viewers: Map<Long, Set<Long>>
+    + create(request) / end(liveId)
+    + join(liveId, userId)
+    + leave(liveId, userId)
+    + leaveAll(userId)
+    + endAllLiveOfHost(hostId)
+    + sendMessage(liveId, userId, type, content)
+  }
+  class VideoAccessPolicy <<Component>> {
+    + findViewableVideo(videoId, viewerId)
+    + checkViewable(video, viewerId)
+  }
+  class FileStorageService <<Service>> {
+    + saveVideo(file)
+    + saveImage(file, subDir)
+    + delete(url)
+  }
+  class LiveDisconnectListener <<Component>> {
+    + onDisconnect(event)
+  }
+}
+
+package "Tầng Repository (Spring Data JPA)" #FFF7E6 {
+  interface VideoRepository {
+    + findByStatusAndVisibilityOrderByViewCountDesc(...)
+    + findByOwnerIdAndStatusOrderByCreatedAtDesc(...)
+    + addLikeCount(videoId, delta)
+    + addCommentCount(videoId, delta)
+    + incrementViewCount(videoId)
+  }
+  interface CommentRepository {
+    + findByVideoIdOrderByCreatedAtDesc(...)
+    + addLikeCount(commentId, delta)
+    + deleteAllByVideoId(videoId)
+  }
+  interface VideoLikeRepository {
+    + existsByVideoIdAndUserId(...)
+    + findLikedVideoIds(userId, videoIds)
+  }
+  interface CommentLikeRepository {
+    + existsByCommentIdAndUserId(...)
+    + deleteAllByCommentId(commentId)
+  }
+  interface LiveStreamRepository {
+    + findByHostIdAndStatus(hostId, status)
+    + findByStatusOrderByStartedAtDesc(...)
+  }
+  interface LiveMessageRepository {
+    + findByLiveStreamIdOrderByCreatedAtAsc(liveStreamId)
+  }
+}
+
+package "Tầng Entity" #F7F0FF {
+  class Video <<Entity>> {
+    - id, title, description
+    - videoUrl, thumbnailUrl, filter
+    - visibility: Visibility
+    - status: VideoStatus
+    - allowComments: boolean
+    - viewCount, likeCount, commentCount
+  }
+  class Comment <<Entity>> {
+    - id, content, likeCount, createdAt
+  }
+  class VideoLike <<Entity>>
+  class CommentLike <<Entity>>
+  class LiveStream <<Entity>> {
+    - id, title, sourceVideoUrl
+    - status: LiveStatus
+    - viewerCount, startedAt, endedAt
+  }
+  class LiveMessage <<Entity>> {
+    - id, type: LiveMessageType
+    - content, createdAt
+  }
+  class User <<Entity>>
+}
+
+VideoController --> VideoService
+InteractionController --> InteractionService
+LiveStreamController --> LiveStreamService
+LiveWebSocketController --> LiveStreamService
+LiveDisconnectListener --> LiveStreamService
+
+VideoService --> FileStorageService
+VideoService --> VideoAccessPolicy
+InteractionService --> VideoAccessPolicy
+VideoService --> VideoRepository
+VideoService --> VideoLikeRepository
+InteractionService --> CommentRepository
+InteractionService --> CommentLikeRepository
+InteractionService --> VideoRepository
+LiveStreamService --> LiveStreamRepository
+LiveStreamService --> LiveMessageRepository
+
+VideoRepository ..> Video
+CommentRepository ..> Comment
+VideoLikeRepository ..> VideoLike
+CommentLikeRepository ..> CommentLike
+LiveStreamRepository ..> LiveStream
+LiveMessageRepository ..> LiveMessage
+
+Video "*" --> "1" User : owner
+Comment "*" --> "1" Video
+Comment "*" --> "1" User
+VideoLike "*" --> "1" Video
+CommentLike "*" --> "1" Comment
+LiveStream "*" --> "1" User : host
+LiveMessage "*" --> "1" LiveStream
+@enduml

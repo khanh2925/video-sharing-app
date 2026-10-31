@@ -1,0 +1,68 @@
+@startuml seq_comment
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam dpi 150
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 4
+skinparam BoxPadding 4
+skinparam maxMessageSize 180
+hide footbox
+autonumber
+title UC11 - Bình luận video
+
+actor "Người dùng" as U
+box "Ứng dụng di động" #F3F8FF
+  participant "WatchScreen" as W
+  participant "CommentsScreen" as CS
+  participant "api/videos.ts\n(videoApi)" as API
+end box
+box "Backend Spring Boot" #F4FFF4
+  participant "InteractionController" as CTRL
+  participant "InteractionService" as SVC
+  participant "VideoAccessPolicy" as POL
+  participant "CommentRepository /\nVideoRepository" as REPO
+end box
+database "MySQL" as DB
+
+U -> W : Bấm biểu tượng bình luận
+W -> CS : navigate('Comments',\n{videoId, allowComments})
+CS -> API : videoApi.comments(videoId, page)
+API -> CTRL : GET /api/videos/{id}/comments?page=0
+CTRL --> CS : 200 PageResponse<CommentResponse>
+note right of CS
+  allowComments = false → ẩn ô viết,
+  hiện "Tác giả đã tắt bình luận"
+end note
+
+U -> CS : Nhập nội dung, bấm Gửi
+CS -> API : videoApi.addComment(videoId, content)
+API -> CTRL : POST /api/videos/{videoId}/comments\n{content} + Authorization: Bearer
+CTRL -> SVC : createComment(videoId, request)
+SVC -> POL : findViewableVideo(videoId, userId)
+POL --> SVC : Video (không xem được → 404)
+SVC -> SVC : checkPublished(video)
+
+alt Video đã tắt bình luận (allowComments = false)
+  SVC --> CTRL : ApiException 409
+  CTRL --> API : 409 {message: "Video đã tắt bình luận"}
+  API --> CS : lỗi
+  CS --> U : Alert "Không gửi được"
+else Cho phép bình luận
+  SVC -> REPO : commentRepository.save(Comment)
+  REPO -> DB : INSERT INTO comments
+  SVC -> REPO : videoRepository.addCommentCount(videoId, 1)
+  REPO -> DB : UPDATE videos SET comment_count = comment_count + 1
+  SVC -> SVC : toResponse(comment, userId)
+  SVC --> CTRL : CommentResponse
+  CTRL --> API : 201 Created + CommentResponse
+  API --> CS : Comment
+  CS --> U : Thêm bình luận lên đầu danh sách
+end
+
+note over U, CS
+  Khách bấm Gửi → requireAuth() chuyển sang
+  Đăng nhập (R3); backend cũng trả 401 nếu thiếu token.
+end note
+@enduml

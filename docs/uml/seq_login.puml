@@ -1,0 +1,74 @@
+@startuml seq_login
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam dpi 150
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam ParticipantPadding 2
+skinparam BoxPadding 4
+skinparam maxMessageSize 170
+hide footbox
+autonumber
+title UC02 - Đăng nhập
+
+actor "Người dùng" as U
+box "Ứng dụng di động" #F3F8FF
+  participant "LoginScreen" as LS
+  participant "AuthContext" as AC
+  participant "api/auth.ts\n(authApi)" as API
+end box
+box "Backend Spring Boot" #F4FFF4
+  participant "AuthController" as CTRL
+  participant "AuthService" as SVC
+  participant "UserRepository" as REPO
+  participant "PasswordEncoder\n(BCrypt)" as PE
+  participant "JwtService" as JWT
+end box
+database "MySQL" as DB
+
+U -> LS : Nhập tên đăng nhập/email,\nmật khẩu, bấm "Đăng nhập"
+LS -> LS : validate()\n(bỏ trống thì báo lỗi dưới ô)
+LS -> AC : login({usernameOrEmail, password})
+AC -> API : authApi.login(body)
+API -> CTRL : POST /api/auth/login\n{usernameOrEmail, password}
+CTRL -> SVC : login(request)
+SVC -> SVC : normalize(): trim + chữ thường
+alt có ký tự "@"
+  SVC -> REPO : findByEmail(identifier)
+else không có "@"
+  SVC -> REPO : findByUsername(identifier)
+end
+REPO -> DB : SELECT * FROM users WHERE ...
+DB --> REPO : bản ghi / rỗng
+REPO --> SVC : Optional<User>
+SVC -> PE : matches(password, passwordHash)
+PE --> SVC : true / false
+
+alt Không có tài khoản hoặc sai mật khẩu
+  SVC --> CTRL : ApiException 401
+  CTRL --> API : 401 {status, message:\n"Tên đăng nhập hoặc mật khẩu không đúng", timestamp}
+  API --> AC : ném lỗi Axios
+  AC --> LS : ném lỗi
+  LS -> LS : setServerError(getErrorMessage(e))
+  LS --> U : Hiện câu lỗi
+else Tài khoản bị khoá (user.locked = true)
+  SVC --> CTRL : ApiException 403
+  CTRL --> API : 403 {message: "Tài khoản đã bị khóa"}
+  API --> AC : ném lỗi Axios
+  AC --> LS : ném lỗi
+  LS --> U : Hiện "Tài khoản đã bị khóa"
+else Hợp lệ
+  SVC -> JWT : generateToken(user)
+  JWT --> SVC : JWT (sub = id, role, hạn 7 ngày)
+  SVC --> CTRL : AuthResponse(token, user)
+  CTRL --> API : 200 {token, user}
+  API --> AC : AuthResponse
+  AC -> AC : saveSession():\nSecureStore.setItemAsync("vsa_token", token)\nsetAuthToken(token); setUser(user)
+  AC --> LS : hoàn tất
+  note over AC, LS
+    user khác null → RootNavigator
+    tự chuyển sang MainTabs (Trang chủ)
+  end note
+end
+@enduml

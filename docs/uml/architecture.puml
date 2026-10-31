@@ -1,0 +1,62 @@
+@startuml architecture
+!pragma layout smetana
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam dpi 150
+skinparam shadowing false
+skinparam roundCorner 8
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam ArrowColor #444444
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #555555
+}
+title Kiến trúc tổng thể - Video Sharing App
+
+package "Ứng dụng di động (Expo SDK 58, React Native)" as mobile #F3F8FF {
+  [Màn hình (screens/)\nReact Navigation 7\nnative-stack + bottom-tabs] as screens
+  [AuthContext\n(token lưu expo-secure-store)] as authctx
+  [api/client.ts - Axios\n(gắn Authorization: Bearer)] as axios
+  [api/lives.ts - STOMP client\n(@stomp/stompjs)] as stomp
+  screens --> authctx
+  screens --> axios
+  screens --> stomp
+  authctx --> axios
+}
+
+rectangle "Caddy 2 - reverse proxy\nHTTPS tự động (chỉ khi chạy production)" as caddy #FFF7E6
+
+package "Backend Spring Boot 4 (Java 21) - cổng 8080" as backend #F4FFF4 {
+  [Spring Security\nJwtAuthFilter + JwtService] as security
+  [WebSocketConfig\n(endpoint /ws, broker /topic, /queue,\ninterceptor đọc JWT lúc CONNECT)] as wsconfig
+  [Controllers\nAuth, Video, Interaction, Search,\nUser, Story, Catalog, LiveStream,\nAdmin, Setting, Health,\nLiveWebSocketController] as controllers
+  [Services\nAuthService, VideoService, InteractionService,\nFollowService, StoryService, LiveStreamService,\nAdminService, FileStorageService,\nSystemSettingService ...] as services
+  [Repositories\n(Spring Data JPA, Hibernate 7)] as repos
+  [Entities (14 lớp @Entity)] as entities
+  [WebConfig\nphục vụ file tĩnh /files/**] as webcfg
+  security --> controllers
+  wsconfig --> controllers
+  controllers --> services
+  services --> repos
+  repos --> entities
+}
+
+database "MySQL 8.4\n(Docker, cổng 3307 khi dev)" as mysql #EEF0FF
+folder "Thư mục uploads/\n(videos, thumbnails, avatars,\nstories, products, audios)" as uploads #FFFDE8
+
+axios --> caddy : REST JSON / multipart\n/api/**
+stomp --> caddy : WebSocket STOMP\n/ws
+screens ..> caddy : tải video, ảnh\nGET /files/**
+caddy --> security : /api/**
+caddy --> wsconfig : /ws
+caddy --> webcfg : /files/**
+repos --> mysql : JDBC
+services --> uploads : FileStorageService\nghi / xoá file
+webcfg --> uploads : đọc file
+
+note bottom of caddy
+  Khi dev: app gọi thẳng http://<IP máy>:8080
+  (EXPO_PUBLIC_API_URL), không qua Caddy.
+end note
+@enduml
