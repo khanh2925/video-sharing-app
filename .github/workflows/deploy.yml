@@ -1,0 +1,54 @@
+# Tự động cập nhật VPS Oracle mỗi khi có code mới trên nhánh main.
+#
+# Luồng: push lên main → GitHub Actions SSH vào VPS → VPS chạy deploy/update.sh
+#        (git pull → build lại image backend → khởi động lại container).
+#
+# Secrets cần có (Settings → Secrets and variables → Actions):
+#   VPS_HOST     IP public của VPS
+#   VPS_USER     user SSH (ubuntu)
+#   VPS_SSH_KEY  khoá bí mật riêng cho GitHub Actions
+#
+# Trên VPS, khoá công khai tương ứng được khoá cứng vào lệnh deploy
+# (command="..." trong ~/.ssh/authorized_keys): khoá này chỉ chạy được update.sh,
+# không mở được shell hay làm việc khác.
+#
+# Chạy tay: tab Actions → Deploy VPS → Run workflow.
+
+name: Deploy VPS
+
+on:
+  push:
+    branches: [main,long]
+  workflow_dispatch:
+
+# Hai lần push sát nhau thì deploy lần lượt, không chạy chồng lên nhau
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+    steps:
+      - name: Chuẩn bị khoá SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: SSH vào VPS và chạy deploy/update.sh
+        run: ssh -T -i ~/.ssh/deploy_key -o BatchMode=yes "$VPS_USER@$VPS_HOST"
+
+      - name: Kiểm tra API sau khi deploy
+        run: |
+          URL="https://${VPS_HOST//./-}.sslip.io/api/health"
+          curl -fsS --retry 12 --retry-delay 10 --retry-all-errors "$URL"
+          echo
+          echo "Deploy xong: $URL"

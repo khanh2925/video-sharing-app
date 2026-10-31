@@ -4,10 +4,7 @@ import com.vsa.backend.enums.SettingKey;
 
 import java.time.LocalDateTime;
 
-/**
- * Một thông số hệ thống (UC19).
- * JSON: {"key": "STORY_MAX_DURATION_SEC", "value": "15", "description": "...", "updatedAt": "..."}
- */
+/** Một thông số hệ thống (UC19): khoá, giá trị, mô tả, lần sửa cuối. */
 public record SettingResponse(
         SettingKey key,
         String value,
