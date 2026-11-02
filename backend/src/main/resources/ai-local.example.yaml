@@ -1,0 +1,16 @@
+# =====================================================================
+# MẪU file key AI trên máy mình. Cách dùng:
+#   1. Chép file này thành ai-local.yaml (cùng thư mục). File đó đã nằm trong .gitignore.
+#   2. Điền key (xin riêng Khánh), lưu lại.
+#   3. Chạy backend như bình thường: có file này thì AI tự bật, không cần biến môi trường.
+# Muốn tắt AI: xoá hoặc đổi tên ai-local.yaml.
+# =====================================================================
+spring:
+  profiles:
+    active: ai          # bật application-ai.yaml
+
+GEMINI_API_KEY: "dien-key-gemini"                 # embedding: gợi ý, tìm theo nghĩa, RAG
+AI_CHAT_PROVIDER: openai                          # openai hoặc google-genai
+OPENAI_API_KEY: "dien-key-chat"
+OPENAI_BASE_URL: "http://dia-chi-may-chu/v1"
+OPENAI_CHAT_MODEL: cx/gpt-5.6-luna

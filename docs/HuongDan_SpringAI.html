@@ -65,10 +65,8 @@ nav{background:var(--card);border-radius:10px;padding:10px 16px;position:sticky;
 <p>AI <b>tắt mặc định</b>. Không bật thì backend chạy y như cũ (test, VPS, máy chưa có key đều không sao).</p>
 <ol class="steps">
 <li>Kéo code mới về, ở thư mục gốc chạy <code>docker compose up -d</code> (bật MySQL và thêm container <code>vsa-pgvector</code>).</li>
-<li>IntelliJ → Run → Edit Configurations → BackendApplication:
- <ul><li><b>Active profiles</b>: <code>ai</code></li>
- <li><b>Environment variables</b>: <code>GEMINI_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>OPENAI_BASE_URL</code>, <code>OPENAI_CHAT_MODEL</code>. <b>Xin giá trị riêng từ Khánh</b>, không dán vào file, không đưa lên nhóm chat chung.</li></ul></li>
-<li>Chạy backend. Lần đầu: đăng nhập <code>admin</code> trong Postman, gọi <code>POST /api/admin/ai/reindex</code> để nạp vector cho các video có sẵn (chỉ cần một lần).</li>
+<li><b>Điền key</b>: trong <code>backend/src/main/resources/</code>, chép <code>ai-local.example.yaml</code> thành <code>ai-local.yaml</code>, điền key và địa chỉ máy chủ (<b>xin riêng Khánh</b>). File <code>ai-local.yaml</code> đã nằm trong <code>.gitignore</code> nên không bao giờ lên GitHub. Có file này thì backend <b>tự bật AI</b>; xoá hoặc đổi tên file là tắt.</li>
+<li>Chạy backend như bình thường (IntelliJ bấm Run), log có dòng <code>The following 1 profile is active: "ai"</code>. Lần đầu: đăng nhập <code>admin</code> trong Postman, gọi <code>POST /api/admin/ai/reindex</code> để nạp vector cho các video có sẵn (chỉ cần một lần).</li>
 <li>Kiểm tra nhanh: <code>GET /api/admin/ai/health</code> (admin) trả <code>{"embeddingDimensions":768,"chatReply":"..."}</code>.</li>
 </ol>
 <div class="box warn"><b>Hết lượt lúc demo?</b> Key miễn phí có giới hạn số lần gọi mỗi phút/ngày. Chatbot hết lượt thì đổi biến <code>AI_CHAT_PROVIDER</code> giữa <code>openai</code> và <code>google-genai</code> rồi chạy lại backend, không phải sửa code. App sẽ báo "Trợ lý đang bận hoặc hết lượt" chứ không treo. Trước buổi demo nên hạn chế gọi thử nhiều.</div>

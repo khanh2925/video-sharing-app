@@ -1,6 +1,10 @@
 spring:
   application:
     name: video-sharing-api
+  # Key AI trên máy mình (file không lên Git). Có file → AI tự bật; không có → bỏ qua.
+  # Xem ai-local.example.yaml cùng thư mục.
+  config:
+    import: optional:classpath:ai-local.yaml
   datasource:
     url: jdbc:mysql://localhost:3307/video_sharing
     username: root
