@@ -4,12 +4,13 @@
  *
  * - Đã đăng nhập: avatar, số liệu, nút Sửa hồ sơ, 2 tab "Video của tôi" / "Đã thích".
  *   Ô đầu tiên của tab "Video của tôi" là ô mờ "Bản nháp: N" → mở màn Video nháp.
- *   Menu ☰: "Video nháp", "Phát livestream", "Đăng xuất" (hỏi xác nhận, xong về Trang chủ).
+ *   Tab thứ 3 "Lịch sử": video mình đã xem, mới xem nhất trước.
+ *   Menu ☰: "Video nháp", "Phát livestream", "Cài đặt", "Đăng xuất" (hỏi xác nhận, xong về Trang chủ).
  *   Quay lại tab này thì tải lại số liệu, ô "Bản nháp" và lưới video.
  * - Khách: hiện màn "Đăng ký tài khoản" (R3).
  */
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -31,11 +32,12 @@ import { usePagedList } from '../../hooks/usePagedList';
 import { userApi } from '../../api/catalog';
 import { videoApi } from '../../api/videos';
 import { formatCount } from '../../utils/format';
+import { confirmAsync } from '../../utils/confirm';
 import { mediaUrl } from '../../utils/media';
 import type { TabScreenProps } from '../../navigation/types';
 import type { AuthUser, Video } from '../../types/models';
 
-type Tab = 'mine' | 'liked';
+type Tab = 'mine' | 'liked' | 'history';
 /** Một ô trong lưới: ô "Bản nháp" đặc biệt hoặc một video */
 type Cell = { kind: 'drafts' } | { kind: 'video'; video: Video };
 
@@ -92,7 +94,9 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
   const drafts = useFetch(() => videoApi.myDrafts(0, 1), [user.id]);
   // Video theo tab đang chọn (chủ hồ sơ thấy cả video riêng tư)
   const list = usePagedList(
-    (page, size) => (tab === 'mine' ? userApi.videos(user.id, page, size) : userApi.liked(user.id, page, size)),
+    (page, size) => (tab === 'mine' ? userApi.videos(user.id, page, size)
+      : tab === 'liked' ? userApi.liked(user.id, page, size)
+      : videoApi.myHistory(page, size)),
     [tab, user.id],
     12,
   );
@@ -126,22 +130,16 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
     go();
   };
 
-  // Menu → Đăng xuất → hộp xác nhận → về Trang chủ
+  // Menu → Đăng xuất → hộp xác nhận → về Trang chủ.
+  // confirmAsync: điện thoại dùng Alert, bản web dùng window.confirm (Alert trên web không hiện gì).
   const askLogout = () => {
     setMenuOpen(false);
     // Đợi bảng menu đóng hẳn rồi mới hiện Alert (iOS không hiện Alert khi Modal đang đóng)
-    setTimeout(() => {
-      Alert.alert('Đăng xuất?', undefined, [
-        { text: 'Huỷ', style: 'cancel' },
-        {
-          text: 'Đăng xuất',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            navigation.navigate('Home');
-          },
-        },
-      ]);
+    setTimeout(async () => {
+      if (await confirmAsync('Đăng xuất?', undefined, 'Đăng xuất')) {
+        await logout();
+        navigation.navigate('Home');
+      }
     }, 350);
   };
 
@@ -196,6 +194,7 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
           tabs={[
             { key: 'mine', label: 'Video của tôi' },
             { key: 'liked', label: 'Đã thích' },
+            { key: 'history', label: 'Lịch sử' },
           ]}
         />
       </View>
@@ -212,8 +211,10 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
         <VideoThumb
           video={v}
           width={cellWidth}
-          // Video của mình → màn quản lý video; video đã thích → màn xem
-          onPress={() => (tab === 'mine' ? navigation.navigate('MyVideo', { videoId: v.id }) : navigation.navigate('Watch', { videoId: v.id, source: { kind: 'liked', userId: user.id } }))}
+          // Video của mình → màn quản lý video; đã thích / lịch sử → màn xem, vuốt tiếp trong đúng danh sách đó
+          onPress={() => (tab === 'mine'
+            ? navigation.navigate('MyVideo', { videoId: v.id })
+            : navigation.navigate('Watch', { videoId: v.id, source: tab === 'liked' ? { kind: 'liked', userId: user.id } : { kind: 'history' } }))}
         />
         {tab === 'mine' && v.visibility === 'PRIVATE' && (
           <View style={styles.lock} accessibilityLabel="Chỉ mình tôi">
@@ -249,8 +250,10 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
             <ErrorView message={list.error} onRetry={list.reload} />
           ) : tab === 'mine' ? (
             <EmptyView icon="videocam-outline" title="Chưa có video nào" message="Bấm nút + ở thanh dưới để quay video đầu tiên." />
-          ) : (
+          ) : tab === 'liked' ? (
             <EmptyView icon="heart-outline" title="Chưa thích video nào" />
+          ) : (
+            <EmptyView icon="time-outline" title="Chưa xem video nào" message="Video bạn đã xem sẽ hiện ở đây." />
           )
         }
         ListFooterComponent={list.loadingMore ? <ActivityIndicator color={colors.primary} style={styles.more} /> : undefined}
@@ -260,8 +263,8 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
         onEndReachedThreshold={0.5}
       />
 
-      {/* Menu ☰: Video nháp · Phát livestream · Đăng xuất */}
-      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} heightPercent={34}>
+      {/* Menu ☰: Video nháp · Phát livestream · Cài đặt · Đăng xuất */}
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} heightPercent={42}>
         <Pressable onPress={() => openFromMenu(() => navigation.navigate('Drafts'))} style={styles.menuItem} accessibilityRole="button">
           <Ionicons name="document-outline" size={22} color={colors.text} />
           <AppText weight="semibold">Video nháp</AppText>
@@ -270,6 +273,10 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
         <Pressable onPress={() => openFromMenu(() => navigation.navigate('GoLive'))} style={styles.menuItem} accessibilityRole="button">
           <Ionicons name="radio-outline" size={22} color={colors.text} />
           <AppText weight="semibold">Phát livestream</AppText>
+        </Pressable>
+        <Pressable onPress={() => openFromMenu(() => navigation.navigate('Settings'))} style={styles.menuItem} accessibilityRole="button">
+          <Ionicons name="settings-outline" size={22} color={colors.text} />
+          <AppText weight="semibold">Cài đặt</AppText>
         </Pressable>
         <Pressable onPress={askLogout} style={styles.menuItem} accessibilityRole="button">
           <Ionicons name="log-out-outline" size={22} color={colors.danger} />

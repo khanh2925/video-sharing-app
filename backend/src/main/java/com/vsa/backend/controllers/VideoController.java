@@ -5,6 +5,7 @@ import com.vsa.backend.dtos.request.UpdateVideoRequest;
 import com.vsa.backend.dtos.response.PageResponse;
 import com.vsa.backend.dtos.response.VideoResponse;
 import com.vsa.backend.services.VideoService;
+import com.vsa.backend.services.WatchHistoryService;
 import com.vsa.backend.utils.PageUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class VideoController {
 
     private final VideoService videoService;
+    private final WatchHistoryService watchHistoryService;
 
     @GetMapping("/trending")
     public PageResponse<VideoResponse> getTrending(
@@ -61,7 +63,9 @@ public class VideoController {
 
     @PostMapping("/{id}/view")
     public VideoResponse recordView(@PathVariable Long id) {
-        return videoService.recordView(id);
+        VideoResponse video = videoService.recordView(id);   // kiểm tra quyền xem + tăng lượt xem
+        watchHistoryService.record(id);                      // đã đăng nhập thì ghi vào lịch sử xem
+        return video;
     }
 
     // @ModelAttribute: gom các trường form-data (title, hashtags...) vào record CreateVideoRequest
@@ -76,6 +80,20 @@ public class VideoController {
     @GetMapping("/me/drafts")
     public PageResponse<VideoResponse> getMyDrafts(Pageable pageable) {
         return videoService.getMyDrafts(PageUtils.clamp(pageable));
+    }
+
+    // Lịch sử xem của tôi, mới xem nhất trước: GET /api/videos/me/history?page=0&size=18
+    @GetMapping("/me/history")
+    public PageResponse<VideoResponse> getMyHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "18") int size) {
+        return watchHistoryService.getMine(PageUtils.of(page, size));
+    }
+
+    @DeleteMapping("/me/history")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void clearMyHistory() {
+        watchHistoryService.clearMine();
     }
 
     @PutMapping("/{id}")

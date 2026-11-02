@@ -15,6 +15,7 @@ import com.vsa.backend.utils.AppConstants;
 import com.vsa.backend.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +24,7 @@ import java.util.Map;
 
 /**
  * UC20 Thông báo: tạo khi có người thích, bình luận video của mình, theo dõi mình, chia sẻ video cho mình.
- * App tải lại danh sách khi mở màn Thông báo và đếm số chưa đọc khi về Trang chủ (không đẩy tức thì).
+ * Thông báo mới được đẩy ngay qua WebSocket cho người nhận đang mở app; app cũng tải lại khi mở màn Thông báo.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,6 +34,7 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final VideoAccessPolicy videoAccessPolicy;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /** Tạo thông báo. Tự làm với chính mình (thích video của mình...) thì bỏ qua. */
     @Transactional
@@ -40,13 +42,21 @@ public class NotificationService {
         if (recipient.getId().equals(actorId)) {
             return;
         }
-        notificationRepository.save(Notification.builder()
+        Notification saved = notificationRepository.save(Notification.builder()
                 .recipient(recipient)
                 .actor(userRepository.getReferenceById(actorId))
                 .type(type)
                 .video(video)
                 .text(shorten(text))
                 .build());
+        // Đẩy ngay cho người nhận đang mở app (WebSocket /user/queue/notifications) → app hiện banner, tăng số ở chuông.
+        // Người nhận không mở app thì thôi, lần sau mở màn Thông báo vẫn thấy. Lỗi gửi không làm hỏng thao tác chính.
+        try {
+            messagingTemplate.convertAndSendToUser(String.valueOf(recipient.getId()), "/queue/notifications",
+                    toResponse(saved));
+        } catch (RuntimeException e) {
+            // bỏ qua
+        }
     }
 
     @Transactional(readOnly = true)

@@ -13,19 +13,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText, Avatar, EmptyView, ErrorView, Header, Loading, Screen } from '../../components';
 import { notificationApi } from '../../api/notifications';
 import { usePagedList } from '../../hooks/usePagedList';
+import { NOTIFICATION_ACTION, useNotifications } from '../../context/NotificationContext';
 import { colors, radius, spacing } from '../../constants/theme';
 import { timeAgo } from '../../utils/format';
 import { mediaUrl } from '../../utils/media';
 import type { AppNotification, NotificationType } from '../../types/models';
 import type { RootScreenProps } from '../../navigation/types';
 
-/** Câu hiện sau tên người gây ra thông báo */
-const ACTION: Record<NotificationType, string> = {
-  LIKE: 'đã thích video của bạn',
-  COMMENT: 'đã bình luận video của bạn',
-  FOLLOW: 'đã bắt đầu theo dõi bạn',
-  SHARE: 'đã chia sẻ một video với bạn',
-};
+const ACTION = NOTIFICATION_ACTION;
 
 const ICON: Record<NotificationType, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
   LIKE: { name: 'heart', color: colors.primary },
@@ -36,12 +31,15 @@ const ICON: Record<NotificationType, { name: keyof typeof Ionicons.glyphMap; col
 
 export default function NotificationsScreen({ navigation }: RootScreenProps<'Notifications'>) {
   const list = usePagedList((page, size) => notificationApi.list(page, size), [], 20);
+  const { markAllRead } = useNotifications();
 
   // Tải xong trang đầu thì đánh dấu đã đọc hết (lỗi thì thôi, lần sau mở lại)
   const firstLoaded = !list.loading && !list.error;
   useEffect(() => {
-    if (firstLoaded) notificationApi.readAll().catch(() => {});
-  }, [firstLoaded]);
+    if (!firstLoaded) return;
+    markAllRead();   // số trên chuông về 0 ngay
+    notificationApi.readAll().catch(() => {});
+  }, [firstLoaded, markAllRead]);
 
   const open = (n: AppNotification) => {
     if (n.videoId) navigation.navigate('Watch', { videoId: n.videoId });

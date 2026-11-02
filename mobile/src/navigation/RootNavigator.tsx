@@ -11,6 +11,7 @@ import { NavigationContainerRefContext } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { LoginPromptProvider } from '../context/LoginPromptContext';
+import { NotificationProvider } from '../context/NotificationContext';
 import { Loading } from '../components';
 import type { RootStackParamList } from './types';
 import MainTabs from './MainTabs';
@@ -35,6 +36,8 @@ import LiveHostScreen from '../screens/live/LiveHostScreen';
 import LiveWatchScreen from '../screens/live/LiveWatchScreen';
 import AudioScreen from '../screens/audio/AudioScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
+import SettingsScreen from '../screens/settings/SettingsScreen';
+import WatchHistoryScreen from '../screens/settings/WatchHistoryScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -57,6 +60,7 @@ export default function RootNavigator() {
 
   return (
     <LoginPromptProvider>
+      <NotificationProvider>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="Watch" component={WatchScreen} />
@@ -68,6 +72,8 @@ export default function RootNavigator() {
 
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="WatchHistory" component={WatchHistoryScreen} />
         <Stack.Screen name="StoryCreate" component={StoryCreateScreen} />
         <Stack.Screen name="MyStory" component={MyStoryScreen} options={{ animation: 'fade' }} />
         <Stack.Screen name="Camera" component={CameraScreen} options={{ animation: 'slide_from_bottom' }} />
@@ -85,6 +91,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Register" component={RegisterScreen} />
         </Stack.Group>
       </Stack.Navigator>
+      </NotificationProvider>
     </LoginPromptProvider>
   );
 }

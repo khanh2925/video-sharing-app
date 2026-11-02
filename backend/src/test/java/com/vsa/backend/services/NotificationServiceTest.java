@@ -18,6 +18,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -53,7 +54,7 @@ class NotificationServiceTest {
         videoRepository = mock(VideoRepository.class);
         followRepository = mock(FollowRepository.class);
         notificationService = new NotificationService(notificationRepository, userRepository, new UserMapper(),
-                new VideoAccessPolicy(videoRepository, followRepository));
+                new VideoAccessPolicy(videoRepository, followRepository), mock(SimpMessagingTemplate.class));
         when(userRepository.getReferenceById(any())).thenAnswer(i -> user(i.getArgument(0)));
         when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
     }

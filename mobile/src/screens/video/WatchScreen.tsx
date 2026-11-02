@@ -48,6 +48,7 @@ function fetchSource(source: WatchSource, page: number, size: number): Promise<P
     case 'user': return userApi.videos(source.userId, page, size);
     case 'liked': return userApi.liked(source.userId, page, size);
     case 'audio': return catalogApi.audioVideos(source.audioId, page, size);
+    case 'history': return videoApi.myHistory(page, size);
   }
 }
 
@@ -91,10 +92,12 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
 
   // Video đang mở không có trong trang đầu thì đặt lên đầu. Chỉ quyết định 1 lần,
   // để trang sau có chứa video đó cũng không làm lệch vị trí các video.
-  const [placement, setPlacement] = useState<{ prepend: boolean; startIndex: number } | null>(null);
+  // Gắn với sourceKey: đổi tab (đổi nguồn) thì tính lại từ đầu mà không phải dựng lại cả màn.
+  const [placementState, setPlacement] = useState<{ key: string; prepend: boolean; startIndex: number } | null>(null);
+  const placement = placementState?.key === sourceKey ? placementState : null;
   if (ready && placement === null) {
     const index = list.items.findIndex((v) => v.id === videoId);
-    setPlacement({ prepend: videoId != null && index < 0, startIndex: Math.max(0, index) });
+    setPlacement({ key: sourceKey, prepend: videoId != null && index < 0, startIndex: Math.max(0, index) });
   }
 
   const videos = useMemo(() => {
@@ -106,27 +109,30 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
       : list.items;
     return base.map(withPatch);
   }, [opened.data, list.items, videoId, patches, placement]);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const current = activeIndex ?? placement?.startIndex ?? 0;
+  const [active, setActive] = useState<{ key: string; index: number } | null>(null);
+  const sourceKeyRef = useRef(sourceKey);
+  useEffect(() => { sourceKeyRef.current = sourceKey; }, [sourceKey]);
+  const current = (active?.key === sourceKey ? active.index : null) ?? placement?.startIndex ?? 0;
 
   // Video nào hiện quá 80% màn hình thì là video đang xem
   const viewabilityConfig = useMemo(() => ({ itemVisiblePercentThreshold: 80 }), []);
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: { index?: number | null }[] }) => {
     const first = viewableItems[0];
-    if (first?.index != null) setActiveIndex(first.index);
+    if (first?.index != null) setActive({ key: sourceKeyRef.current, index: first.index });
   }, []);
 
-  // Hai tab ở đầu màn: đổi nguồn danh sách (thay màn hiện tại, không chồng thêm màn)
+  // Hai tab ở đầu màn: đổi nguồn danh sách ngay trên màn này (setParams), thanh trên đứng yên,
+  // chỉ danh sách video tải lại. (Trước đây dùng replace nên cả màn dựng lại, thanh trên bị nháy.)
   const requireAuth = useRequireAuth();
   const insets = useSafeAreaInsets();
   const isFollowingFeed = source?.kind === 'following';
   const openFollowing = () => {
     if (isFollowingFeed) return;
-    requireAuth(() => navigation.replace('Watch', { source: { kind: 'following' } })); // khách → bảng đăng nhập
+    requireAuth(() => navigation.setParams({ videoId: undefined, source: { kind: 'following' } })); // khách → bảng đăng nhập
   };
   const openForYou = () => {
     if (!isFollowingFeed) return;
-    navigation.replace('Watch', { source: { kind: 'trending' } });
+    navigation.setParams({ videoId: undefined, source: { kind: 'trending' } });
   };
 
   // Thanh trên dùng chung cho cả danh sách: quay lại · Đang theo dõi | Dành cho bạn · tìm kiếm
@@ -220,6 +226,7 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
   return (
     <Screen dark edges={[]}>
       <FlatList
+        key={sourceKey}
         data={videos}
         keyExtractor={(v) => String(v.id)}
         renderItem={({ item, index }) => (
@@ -414,7 +421,7 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
 
       {/* Chạm giữa màn: dừng / phát */}
       <Pressable
-        style={[styles.playArea, { top: insets.top + 60 }]}
+        style={styles.playArea}
         onPress={togglePlay}
         accessibilityLabel={isPlaying ? 'Tạm dừng video' : 'Phát video'}
       >
@@ -519,7 +526,8 @@ const styles = StyleSheet.create({
   page: { width: '100%', backgroundColor: colors.black, overflow: 'hidden' },
   topShade: { position: 'absolute', left: 0, right: 0, top: 0, height: 170 },
   bottomShade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 360 },
-  playArea: { position: 'absolute', left: 0, right: 80, bottom: 260, alignItems: 'center', justifyContent: 'center' },
+  // Phủ cả trang để nút ▶ nằm đúng giữa màn hình (cột nút bên phải, chữ phía dưới vẽ sau nên vẫn bấm được)
+  playArea: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   playIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center' },
   topBar: { position: 'absolute', left: 10, right: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },

@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '../../context/LoginPromptContext';
 import { useFetch } from '../../hooks/useFetch';
 import { videoApi } from '../../api/videos';
-import { notificationApi } from '../../api/notifications';
+import { useNotifications } from '../../context/NotificationContext';
 import { catalogApi } from '../../api/catalog';
 import { storyApi } from '../../api/stories';
 import { liveApi } from '../../api/lives';
@@ -62,8 +62,8 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   // Story cần đăng nhập: khách thì trả mảng rỗng, không gọi API
   const stories = useFetch<StoryGroup[]>(() => (user ? storyApi.feed() : Promise.resolve([])), [user?.id]);
 
-  // Số thông báo chưa đọc → chấm đỏ trên chuông (UC20). Mỗi lần về Trang chủ đếm lại.
-  const unread = useFetch(() => (user ? notificationApi.unreadCount() : Promise.resolve(0)), [user?.id]);
+  // Số thông báo chưa đọc → chấm đỏ trên chuông (UC20). Thông báo mới được đẩy qua WebSocket nên số tự tăng.
+  const { unread, refreshUnread } = useNotifications();
 
   // Quay lại Trang chủ (vd sau khi đăng story / xem story) thì tải lại thanh story
   const firstFocus = useRef(true);
@@ -76,7 +76,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
       stories.reload();
       lives.reload();
       trending.reload();
-      unread.reload();
+      refreshUnread();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -84,7 +84,8 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([trending.reload(), topics.reload(), lives.reload(), audios.reload(), stories.reload(), unread.reload()]);
+    await Promise.all([trending.reload(), topics.reload(), lives.reload(), audios.reload(), stories.reload()]);
+    refreshUnread();
     setRefreshing(false);
   };
 
@@ -132,12 +133,12 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
             onPress={() => navigation.navigate('Notifications')}
             style={styles.bell}
             accessibilityRole="button"
-            accessibilityLabel={unread.data ? `Thông báo, ${unread.data} chưa đọc` : 'Thông báo'}
+            accessibilityLabel={unread ? `Thông báo, ${unread} chưa đọc` : 'Thông báo'}
           >
             <Ionicons name="notifications-outline" size={22} color={colors.text} />
-            {!!unread.data && (
+            {unread > 0 && (
               <View style={styles.bellBadge}>
-                <AppText weight="bold" size={10} color={colors.white}>{unread.data > 99 ? '99+' : unread.data}</AppText>
+                <AppText weight="bold" size={10} color={colors.white}>{unread > 99 ? '99+' : unread}</AppText>
               </View>
             )}
           </Pressable>

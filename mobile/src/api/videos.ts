@@ -53,6 +53,10 @@ export const videoApi = {
   },
   myDrafts: (page = 0, size = 10) =>
     api.get<PageResponse<Video>>('/videos/me/drafts', { params: { page, size } }).then((r) => r.data),
+  /** Lịch sử xem của tôi, mới xem nhất trước (ghi lại mỗi lần mở video khi đã đăng nhập) */
+  myHistory: (page = 0, size = 18) =>
+    api.get<PageResponse<Video>>('/videos/me/history', { params: { page, size } }).then((r) => r.data),
+  clearHistory: () => api.delete('/videos/me/history'),
   update: (id: number, body: UpdateVideoBody) => api.put<Video>(`/videos/${id}`, body).then((r) => r.data),
   remove: (id: number) => api.delete(`/videos/${id}`),
 
