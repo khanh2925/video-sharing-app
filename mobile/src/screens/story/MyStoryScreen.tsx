@@ -4,7 +4,7 @@
  *
  * - Xem lại story của chính mình (nhóm có mine = true trong GET /stories/feed).
  * - Nút "Xoá": hỏi xác nhận rồi xoá story đang xem (DELETE /stories/{id}).
- * - Nút "Thêm tin": chọn ảnh / video trong máy rồi sang màn Đăng story.
+ * - Nút "Thêm tin": mở Camera ở chế độ Story (quay trực tiếp hoặc "Tải lên" ảnh / video trong máy).
  * Thanh tiến độ, ảnh/video dùng lại từ StoryViewScreen.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -13,7 +13,6 @@ import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker';
 import { AppText, Avatar, Button, EmptyView, ErrorView, Header, Loading, Screen } from '../../components';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -67,19 +66,8 @@ export default function MyStoryScreen({ navigation }: RootScreenProps<'MyStory'>
   const progress = useStoryProgress(story ? String(story.id) : null, story?.durationSec ?? 0, stopped, goNext);
 
   // ----- Thêm tin: chọn ảnh/video rồi sang màn Đăng story -----
-  const onAdd = async () => {
-    setPaused(true);
-    const result = await ImagePicker.launchImageLibraryAsync({ preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible, mediaTypes: ['images', 'videos'], quality: 0.8 });
-    setPaused(false);
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    navigation.navigate('StoryCreate', {
-      uri: asset.uri,
-      mediaType: asset.type === 'video' ? 'VIDEO' : 'IMAGE',
-      // ImagePicker trả duration theo mili giây (có thể không có)
-      durationSec: asset.duration ? Math.max(1, Math.round(asset.duration / 1000)) : undefined,
-    });
-  };
+  // Thêm tin: mở Camera ở chế độ Story (quay trực tiếp hoặc "Tải lên" từ máy)
+  const onAdd = () => navigation.navigate('Camera', { mode: 'story' });
 
   // ----- Xoá tin đang xem (hỏi xác nhận) -----
   const onDelete = () => {
