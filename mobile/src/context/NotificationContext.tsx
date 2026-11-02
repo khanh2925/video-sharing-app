@@ -43,7 +43,7 @@ const NotificationContext = createContext<NotificationContextValue | null>(null)
 const BANNER_MS = 4000;
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, accountLocked } = useAuth();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [unread, setUnread] = useState(0);
@@ -85,6 +85,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       forceBinaryWSFrames: true,
       appendMissingNULLonIncoming: true,
       onConnect: () => {
+        // Quản trị viên khoá tài khoản này (UC16) → hiện thông báo rồi mới đăng xuất
+        client.subscribe('/user/queue/account', (frame) => {
+          try {
+            const body = JSON.parse(frame.body) as { type?: string; message?: string };
+            if (body.type === 'ACCOUNT_LOCKED') accountLocked(body.message || 'Tài khoản của bạn đã bị khóa');
+          } catch {
+            // bỏ qua tin hỏng
+          }
+        });
         client.subscribe('/user/queue/notifications', (frame) => {
           try {
             const n = JSON.parse(frame.body) as AppNotification;
@@ -100,7 +109,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return () => {
       client.deactivate();
     };
-  }, [user, refreshUnread, showBanner]);
+  }, [user, refreshUnread, showBanner, accountLocked]);
 
   useEffect(() => () => {
     if (hideTimer.current) clearTimeout(hideTimer.current);

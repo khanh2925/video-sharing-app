@@ -9,9 +9,9 @@
  *   Lỗi mạng (máy chủ chưa bật, mất wifi) thì giữ token, lần mở app sau thử lại.
  * - user khác null là đã đăng nhập → RootNavigator tự chuyển sang MainTabs.
  */
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { authApi, LoginBody, RegisterBody } from '../api/auth';
 import { setAuthToken, setOnUnauthorized } from '../api/client';
@@ -40,7 +40,12 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   /** Gọi sau khi sửa hồ sơ để cập nhật user mới mà không cần đăng nhập lại */
   updateUser: (user: AuthUser) => void;
+  /** Tài khoản vừa bị quản trị viên khoá: hiện thông báo, bấm "Đã hiểu" mới đăng xuất (UC16) */
+  accountLocked: (message: string) => void;
 }
+
+/** Câu 401 của backend khi token thuộc tài khoản bị khoá có chữ "khóa" (xem AdminService.LOCKED_MESSAGE) */
+const isLockedMessage = (message?: string) => !!message && message.toLowerCase().includes('khóa');
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -54,10 +59,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await tokenStorage.remove();
   }, []);
 
+  // Có thể nhiều request cùng nhận 401 một lúc → chỉ hiện 1 hộp thông báo
+  const lockedShown = useRef(false);
+  const accountLocked = useCallback((message: string) => {
+    if (lockedShown.current) return;
+    lockedShown.current = true;
+    Alert.alert('Tài khoản bị khóa', message, [
+      {
+        text: 'Đã hiểu',
+        onPress: () => {
+          lockedShown.current = false;
+          logout();
+        },
+      },
+    ], { cancelable: false });
+  }, [logout]);
+
   // Mở app: thử đăng nhập lại bằng token đã lưu
   useEffect(() => {
-    setOnUnauthorized(() => {
-      logout();
+    setOnUnauthorized((message) => {
+      if (isLockedMessage(message)) accountLocked(message!);   // bị khoá: báo trước rồi mới đăng xuất
+      else logout();                                             // token hết hạn / hỏng: đăng xuất luôn
     });
     const isUnauthorized = (e: unknown) => axios.isAxiosError(e) && e.response?.status === 401;
 
@@ -86,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })();
     return () => setOnUnauthorized(null);
-  }, [logout]);
+  }, [logout, accountLocked]);
 
   const saveSession = async (res: AuthResponse) => {
     await tokenStorage.set(res.token);
@@ -104,8 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, isBootstrapping, login, register, logout, updateUser: setUser }),
-    [user, isBootstrapping, login, register, logout],
+    () => ({ user, isBootstrapping, login, register, logout, updateUser: setUser, accountLocked }),
+    [user, isBootstrapping, login, register, logout, accountLocked],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

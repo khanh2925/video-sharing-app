@@ -6,6 +6,7 @@ import com.vsa.backend.entities.Follow;
 import com.vsa.backend.entities.User;
 import com.vsa.backend.exceptions.ApiException;
 import com.vsa.backend.repositories.FollowRepository;
+import com.vsa.backend.repositories.SuggestionDismissalRepository;
 import com.vsa.backend.repositories.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,13 +41,16 @@ class FollowServiceTest {
 
     private FollowRepository followRepository;
     private UserRepository userRepository;
+    private SuggestionDismissalRepository suggestionDismissalRepository;
     private FollowService followService;
 
     @BeforeEach
     void setUp() {
         followRepository = mock(FollowRepository.class);
         userRepository = mock(UserRepository.class);
-        followService = new FollowService(followRepository, userRepository, mock(NotificationService.class));
+        suggestionDismissalRepository = mock(SuggestionDismissalRepository.class);
+        followService = new FollowService(followRepository, userRepository, mock(NotificationService.class),
+                suggestionDismissalRepository);
 
         when(userRepository.findById(MINH)).thenReturn(Optional.of(taoUser(MINH, "minh")));
         when(userRepository.existsById(MINH)).thenReturn(true);
@@ -174,6 +178,52 @@ class FollowServiceTest {
     void getFollowers_nguoiKhongTonTai_bi404() {
         ApiException e = assertThrows(ApiException.class, () -> followService.getFollowers(99L, PAGE));
         assertEquals(HttpStatus.NOT_FOUND, e.getStatus());
+    }
+
+    // ---------- Gợi ý cho bạn ----------
+
+    @Test
+    void getSuggestions_banCuaBanXepTruoc_khongTrung() {
+        dangNhapLa(LAN);
+        // nhóm 1 "bạn của bạn": an; nhóm 2 "theo dõi lại": an (trùng) và minh; nhóm 3 bỏ qua vì đã đủ
+        when(followRepository.findFriendsOfFollowing(eq(LAN), any())).thenReturn(List.<Object[]>of(new Object[]{AN, 2L}));
+        when(followRepository.findFollowersNotFollowedBack(eq(LAN), any())).thenReturn(List.of(AN, MINH));
+        when(userRepository.findAllById(anyCollection()))
+                .thenReturn(List.of(taoUser(MINH, "minh"), taoUser(AN, "an")));    // DB trả lộn thứ tự
+
+        List<FollowUserResponse> result = followService.getSuggestions(2);
+
+        assertEquals(List.of(AN, MINH), result.stream().map(FollowUserResponse::id).toList());
+        verify(userRepository, never()).findSuggestions(any(), any());
+    }
+
+    @Test
+    void dismissSuggestion_luuLai_lanSauKhongGoiY() {
+        dangNhapLa(LAN);
+        when(suggestionDismissalRepository.existsByUserIdAndDismissedUserId(LAN, MINH)).thenReturn(false);
+
+        followService.dismissSuggestion(MINH);
+
+        verify(suggestionDismissalRepository).save(argThat(d -> d.getDismissedUser().getId().equals(MINH)));
+    }
+
+    @Test
+    void dismissSuggestion_bamHaiLan_khongLuuTrung() {
+        dangNhapLa(LAN);
+        when(suggestionDismissalRepository.existsByUserIdAndDismissedUserId(LAN, MINH)).thenReturn(true);
+
+        followService.dismissSuggestion(MINH);
+
+        verify(suggestionDismissalRepository, never()).save(any());
+    }
+
+    @Test
+    void dismissSuggestion_chinhMinh_bao400() {
+        dangNhapLa(LAN);
+
+        ApiException e = assertThrows(ApiException.class, () -> followService.dismissSuggestion(LAN));
+
+        assertEquals(HttpStatus.BAD_REQUEST, e.getStatus());
     }
 
     // ---------- Hàm phụ ----------

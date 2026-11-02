@@ -18,6 +18,9 @@ import { getErrorMessage } from '../../api/client';
 import { fileFromUri } from '../../utils/media';
 import type { RootScreenProps } from '../../navigation/types';
 
+// Khớp app.upload.image-max-size-mb trong application.yaml của backend
+const AVATAR_MAX_MB = 5;
+
 export default function EditProfileScreen({ navigation }: RootScreenProps<'EditProfile'>) {
   const { user, updateUser } = useAuth();
 
@@ -61,10 +64,16 @@ export default function EditProfileScreen({ navigation }: RootScreenProps<'EditP
       aspect: [1, 1],
       quality: 0.8,
     });
-    if (!result.canceled) {
-      setAvatarUri(result.assets[0].uri);
-      setAvatarMime(result.assets[0].mimeType ?? null);
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    // Báo ngay khi chọn ảnh quá lớn (giống giới hạn image-max-size-mb của backend), không đợi bấm Lưu.
+    // Điện thoại thường đã nén khi cắt ảnh nên hiếm gặp; bản web gửi nguyên file nên hay gặp hơn.
+    if (asset.fileSize && asset.fileSize > AVATAR_MAX_MB * 1024 * 1024) {
+      Alert.alert('Ảnh quá lớn', `Ảnh đại diện tối đa ${AVATAR_MAX_MB} MB, ảnh bạn chọn ${(asset.fileSize / 1024 / 1024).toFixed(1)} MB. Chọn ảnh khác nhé.`);
+      return;
     }
+    setAvatarUri(asset.uri);
+    setAvatarMime(asset.mimeType ?? null);
   };
 
   const onSave = async () => {
@@ -104,7 +113,7 @@ export default function EditProfileScreen({ navigation }: RootScreenProps<'EditP
                 <Ionicons name="camera" size={16} color={colors.white} />
               </View>
             </Pressable>
-            <AppText size={12} color={colors.muted}>JPG, PNG, tối đa 5 MB</AppText>
+            <AppText size={12} color={colors.muted}>JPG, PNG, tối đa {AVATAR_MAX_MB} MB</AppText>
           </View>
 
           <View style={styles.form}>

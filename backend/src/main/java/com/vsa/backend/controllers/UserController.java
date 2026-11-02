@@ -31,6 +31,7 @@ import java.util.List;
  *  GET    /api/users/{id}/followers    (công khai)  → 200 + trang người theo dõi
  *  GET    /api/users/{id}/following    (công khai)  → 200 + trang người đang theo dõi
  *  GET    /api/users/suggestions       (đăng nhập)  → 200 + danh sách gợi ý, ?size=10
+ *  POST   /api/users/suggestions/{id}/dismiss (đăng nhập) → 204, bấm X ẩn gợi ý, lần sau không gợi ý nữa
  * Quyền truy cập: GET công khai và /api/users/suggestions cần đăng nhập đã khai báo sẵn trong SecurityConfig;
  * POST, PUT, DELETE mặc định cần đăng nhập.
  */
@@ -108,5 +109,12 @@ public class UserController {
     @GetMapping("/suggestions")
     public List<FollowUserResponse> getSuggestions(@RequestParam(defaultValue = "10") int size) {
         return followService.getSuggestions(Math.clamp(size, 1, PageUtils.MAX_PAGE_SIZE));
+    }
+
+    // POST /api/users/suggestions/5/dismiss → bấm X ẩn gợi ý an, lần sau không gợi ý nữa   USER
+    @PostMapping("/suggestions/{id}/dismiss")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void dismissSuggestion(@PathVariable Long id) {
+        followService.dismissSuggestion(id);
     }
 }

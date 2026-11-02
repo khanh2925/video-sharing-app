@@ -2,6 +2,7 @@ package com.vsa.backend.security;
 
 import com.vsa.backend.entities.User;
 import com.vsa.backend.repositories.UserRepository;
+import com.vsa.backend.services.AdminService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -22,10 +23,14 @@ import java.util.List;
  * thì đánh dấu request là "đã đăng nhập" với principal = id người dùng (Long)
  * và quyền ROLE_USER hoặc ROLE_ADMIN.
  * Token sai, hết hạn, hoặc tài khoản bị khoá → coi như chưa đăng nhập (API cần đăng nhập sẽ trả 401).
+ * Tài khoản bị khoá: ghi lý do vào request (AUTH_ERROR) để 401 báo rõ "đã bị khóa", app hiện cho người dùng biết.
  */
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
+
+    /** Tên thuộc tính request chứa lý do từ chối token; SecurityConfig đọc để ghi vào lỗi 401. */
+    public static final String AUTH_ERROR = "vsa.authError";
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
@@ -46,6 +51,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
                     var authentication = new UsernamePasswordAuthenticationToken(user.getId(), null, authorities);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                } else if (user != null) {
+                    request.setAttribute(AUTH_ERROR, AdminService.LOCKED_MESSAGE);
                 }
             } catch (JwtException | IllegalArgumentException e) {
                 // Token không hợp lệ: bỏ qua, request đi tiếp như khách

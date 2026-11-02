@@ -18,6 +18,7 @@ import com.vsa.backend.repositories.UserRepository;
 import com.vsa.backend.repositories.VideoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.unit.DataSize;
@@ -30,7 +31,7 @@ import java.util.Map;
 
 /**
  * Nghiệp vụ quản trị (chỉ ADMIN, SecurityConfig đã chặn /api/admin/**):
- *  UC15 Kiểm duyệt video   – hideVideo
+ *  UC15 Kiểm duyệt video   – hideVideo, unhideVideo
  *  UC16 Quản lý người dùng – lockUser, unlockUser
  *  UC19 Cấu hình hệ thống  – getSettings, updateSetting (+ getSettingValues cho app, công khai)
  */
@@ -41,6 +42,9 @@ public class AdminService {
     // Trần dung lượng 1 file upload trong application.yaml; VIDEO_MAX_SIZE_MB không được vượt quá
     private static final String MULTIPART_MAX_FILE_SIZE = "spring.servlet.multipart.max-file-size";
 
+    // Câu báo cho người bị khoá (WebSocket lúc bị khoá và 401 ở JwtAuthFilter dùng chung)
+    public static final String LOCKED_MESSAGE = "Tài khoản của bạn đã bị quản trị viên khóa";
+
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
     private final SystemSettingRepository systemSettingRepository;
@@ -48,10 +52,11 @@ public class AdminService {
     private final VideoMapper videoMapper;
     private final AdminMapper adminMapper;
     private final Environment environment;
+    private final SimpMessagingTemplate messagingTemplate;     // báo ngay cho người bị khoá đang mở app
 
     // ===== UC15 – Kiểm duyệt video =====
 
-    /** Ẩn video vi phạm → HIDDEN: biến khỏi trang chủ, tìm kiếm, hồ sơ. Không xoá khỏi DB, không bỏ ẩn được (R15, C4). */
+    /** Ẩn video vi phạm → HIDDEN: biến khỏi trang chủ, tìm kiếm, hồ sơ. Không xoá khỏi DB (R15), bỏ ẩn bằng unhideVideo (C4). */
     @Transactional
     public VideoResponse hideVideo(Long id) {
         Video video = videoRepository.findById(id)
@@ -62,6 +67,19 @@ public class AdminService {
         video.setStatus(VideoStatus.HIDDEN);
         videoRepository.save(video);
         return videoMapper.toResponse(video, false);                // VideoMapper đọc owner, topic... (LAZY) → cần @Transactional
+    }
+
+    /** Bỏ ẩn (C4): ẩn nhầm hoặc đã xem xét lại → video hiện lại ở trang chủ, tìm kiếm, hồ sơ (PUBLISHED). */
+    @Transactional
+    public VideoResponse unhideVideo(Long id) {
+        Video video = videoRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy video id = " + id));
+        if (video.getStatus() != VideoStatus.HIDDEN) {
+            throw ApiException.conflict("Video đang không bị ẩn");
+        }
+        video.setStatus(VideoStatus.PUBLISHED);
+        videoRepository.save(video);
+        return videoMapper.toResponse(video, false);
     }
 
     // ===== UC16 – Quản lý người dùng =====
@@ -78,6 +96,14 @@ public class AdminService {
         }
         user.setLocked(true);
         userRepository.save(user);
+        // Người bị khoá đang mở app: báo ngay qua WebSocket (/user/queue/account) → app hiện thông báo rồi mới đăng xuất.
+        // Không mở app thì lần sau gọi API sẽ nhận 401 "Tài khoản của bạn đã bị khóa". Lỗi gửi không làm hỏng việc khoá.
+        try {
+            messagingTemplate.convertAndSendToUser(String.valueOf(user.getId()), "/queue/account",
+                    Map.of("type", "ACCOUNT_LOCKED", "message", LOCKED_MESSAGE));
+        } catch (RuntimeException e) {
+            // bỏ qua
+        }
         return adminMapper.toAdminUserResponse(user);
     }
 

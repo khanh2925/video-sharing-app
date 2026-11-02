@@ -3,11 +3,12 @@
  *
  * - Hỏi bằng tiếng Việt: tìm video, hỏi quy định của app, hỏi video nào của mình nhiều lượt xem nhất.
  * - POST /api/chat trả { reply, videos }: reply có thể có **chữ đậm**, videos hiện thành thẻ bấm để xem.
- * - Nút làm mới ở góc phải: xoá trí nhớ hội thoại trên máy chủ (DELETE /api/chat), có hỏi xác nhận.
+ * - Nút làm mới ở góc phải: hỏi xác nhận (chạy cả bản web) → xoá trí nhớ hội thoại trên máy chủ (DELETE /api/chat),
+ *   về câu chào và hiện dòng "Đã bắt đầu cuộc trò chuyện mới" để người dùng biết đã làm mới.
  * - Lỗi (vd 503 hết lượt) hiện thành 1 tin nhắn màu đỏ, không văng hộp thoại.
  * Mở từ icon ✨ ở Trang chủ, bọc trong requireAuth (API chat cần đăng nhập).
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View,
 } from 'react-native';
@@ -16,6 +17,7 @@ import { AppText, Chip, Header, Screen } from '../../components';
 import { colors, fonts, radius, spacing } from '../../constants/theme';
 import { aiApi } from '../../api/ai';
 import { getErrorMessage } from '../../api/client';
+import { confirmAsync } from '../../utils/confirm';
 import { mediaUrl } from '../../utils/media';
 import type { Video } from '../../types/models';
 import type { RootScreenProps } from '../../navigation/types';
@@ -65,6 +67,8 @@ export default function ChatbotScreen({ navigation }: RootScreenProps<'Chatbot'>
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);     // dòng báo nhỏ dưới tiêu đề, tự ẩn sau 2,5 giây
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const send = async (raw: string) => {
@@ -83,23 +87,29 @@ export default function ChatbotScreen({ navigation }: RootScreenProps<'Chatbot'>
     }
   };
 
-  // Cuộc trò chuyện mới: hỏi trước, rồi xoá trí nhớ trên máy chủ và trên màn
-  const confirmReset = () =>
-    Alert.alert('Cuộc trò chuyện mới', 'Xoá toàn bộ tin nhắn hiện tại?', [
-      { text: 'Huỷ', style: 'cancel' },
-      {
-        text: 'Xoá',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await aiApi.resetChat();
-            setMessages([WELCOME]);
-          } catch (e) {
-            Alert.alert('Lỗi', getErrorMessage(e));
-          }
-        },
-      },
-    ]);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 2500);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  // Cuộc trò chuyện mới: hỏi trước, rồi xoá trí nhớ trên máy chủ và trên màn.
+  // Luôn gọi máy chủ kể cả khi màn chỉ có câu chào: trí nhớ của bot nằm trên máy chủ, còn từ lần mở trước.
+  const confirmReset = async () => {
+    if (resetting || sending) return;
+    if (!(await confirmAsync('Cuộc trò chuyện mới', 'Xoá toàn bộ tin nhắn, trợ lý sẽ không nhớ các câu trước nữa?', 'Làm mới'))) return;
+    setResetting(true);
+    try {
+      await aiApi.resetChat();
+      setMessages([{ ...WELCOME, id: newId() }]);
+      setInput('');
+      setNotice('Đã bắt đầu cuộc trò chuyện mới');
+    } catch (e) {
+      Alert.alert('Không làm mới được', getErrorMessage(e));
+    } finally {
+      setResetting(false);
+    }
+  };
 
   const openVideo = (v: Video) => navigation.navigate('Watch', { videoId: v.id });
 
@@ -160,11 +170,17 @@ export default function ChatbotScreen({ navigation }: RootScreenProps<'Chatbot'>
       <Header
         title="Trợ lý AI"
         right={
-          <Pressable onPress={confirmReset} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Cuộc trò chuyện mới">
-            <Ionicons name="refresh" size={22} color={colors.text} />
+          <Pressable onPress={confirmReset} disabled={resetting} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Cuộc trò chuyện mới">
+            {resetting ? <ActivityIndicator size="small" color={colors.text} /> : <Ionicons name="refresh" size={22} color={colors.text} />}
           </Pressable>
         }
       />
+      {!!notice && (
+        <View style={styles.notice} accessibilityLiveRegion="polite">
+          <Ionicons name="checkmark-circle" size={16} color={colors.white} />
+          <AppText size={13} color={colors.white}>{notice}</AppText>
+        </View>
+      )}
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <FlatList
           ref={listRef}
@@ -216,6 +232,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   flexShrink: { flexShrink: 1 },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  notice: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    paddingVertical: spacing.sm, backgroundColor: colors.text,
+  },
   list: { padding: spacing.lg, gap: spacing.md },
   bubble: { maxWidth: '82%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.lg },
   userBubble: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 4 },

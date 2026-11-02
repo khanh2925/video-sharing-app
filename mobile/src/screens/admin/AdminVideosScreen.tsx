@@ -2,7 +2,8 @@
  * Kiểm duyệt video — UC15 (chỉ ADMIN).
  * - Ô tìm (tiêu đề hoặc tên tác giả, gõ xong 400ms mới tìm) + 3 bộ lọc: Tất cả / Đang hiện / Đã ẩn.
  * - Mỗi dòng: ảnh bìa, tiêu đề, tác giả, lượt xem, trạng thái. Bấm dòng video đang hiện → xem thử.
- * - "Ẩn" hỏi xác nhận rồi gọi PUT /api/admin/videos/{id}/hide. Ẩn rồi không bỏ ẩn được (R15, C4).
+ * - "Ẩn" hỏi xác nhận rồi gọi PUT /api/admin/videos/{id}/hide.
+ * - Video đã ẩn có nút "Hiện lại" (ẩn nhầm, đã xem xét lại) → PUT /api/admin/videos/{id}/unhide (C4).
  */
 import { useEffect, useState } from 'react';
 import { Alert, FlatList, Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -37,7 +38,7 @@ export default function AdminVideosScreen({ navigation, route }: RootScreenProps
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const hide = async (v: Video) => {
-    if (!(await confirmAsync(`Ẩn video “${v.title}”?`, 'Video sẽ biến khỏi trang chủ, tìm kiếm và hồ sơ. Không bỏ ẩn được.', 'Ẩn'))) return;
+    if (!(await confirmAsync(`Ẩn video “${v.title}”?`, 'Video sẽ biến khỏi trang chủ, tìm kiếm và hồ sơ. Có thể hiện lại sau.', 'Ẩn'))) return;
     setBusyId(v.id);
     try {
       const updated = await adminApi.hideVideo(v.id);
@@ -45,6 +46,20 @@ export default function AdminVideosScreen({ navigation, route }: RootScreenProps
       list.setItems((items) => filter === 'PUBLISHED' ? items.filter((x) => x.id !== v.id) : items.map((x) => (x.id === v.id ? updated : x)));
     } catch (e) {
       Alert.alert('Ẩn thất bại', getErrorMessage(e));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const unhide = async (v: Video) => {
+    if (!(await confirmAsync(`Hiện lại video “${v.title}”?`, 'Video sẽ xuất hiện lại ở trang chủ, tìm kiếm và hồ sơ.', 'Hiện lại', false))) return;
+    setBusyId(v.id);
+    try {
+      const updated = await adminApi.unhideVideo(v.id);
+      // Đang lọc "Đã ẩn" thì bỏ dòng đó đi, còn lại đổi nhãn thành Đang hiện
+      list.setItems((items) => filter === 'HIDDEN' ? items.filter((x) => x.id !== v.id) : items.map((x) => (x.id === v.id ? updated : x)));
+    } catch (e) {
+      Alert.alert('Hiện lại thất bại', getErrorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -82,6 +97,7 @@ export default function AdminVideosScreen({ navigation, route }: RootScreenProps
               onOpen={() => item.status === 'PUBLISHED' && navigation.navigate('Watch', { videoId: item.id })}
               onOpenOwner={() => navigation.navigate('Profile', { userId: item.owner.id })}
               onHide={() => hide(item)}
+              onUnhide={() => unhide(item)}
             />
           )}
           refreshing={list.refreshing}
@@ -99,7 +115,9 @@ export default function AdminVideosScreen({ navigation, route }: RootScreenProps
   );
 }
 
-function Row({ v, busy, onOpen, onOpenOwner, onHide }: { v: Video; busy: boolean; onOpen: () => void; onOpenOwner: () => void; onHide: () => void }) {
+function Row({ v, busy, onOpen, onOpenOwner, onHide, onUnhide }: {
+  v: Video; busy: boolean; onOpen: () => void; onOpenOwner: () => void; onHide: () => void; onUnhide: () => void;
+}) {
   const hidden = v.status === 'HIDDEN';
   return (
     <View style={styles.row}>
@@ -120,7 +138,9 @@ function Row({ v, busy, onOpen, onOpenOwner, onHide }: { v: Video; busy: boolean
           <AppText size={11} weight="semibold" color={hidden ? colors.danger : '#047857'}>{hidden ? 'Đã ẩn' : 'Đang hiện'}</AppText>
         </View>
       </View>
-      {!hidden && <Button title="Ẩn" size="sm" variant="danger" icon="eye-off-outline" loading={busy} onPress={onHide} />}
+      {hidden
+        ? <Button title="Hiện lại" size="sm" variant="secondary" icon="eye-outline" loading={busy} onPress={onUnhide} />
+        : <Button title="Ẩn" size="sm" variant="danger" icon="eye-off-outline" loading={busy} onPress={onHide} />}
     </View>
   );
 }

@@ -130,12 +130,24 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
     switch (tab) {
       case 'video': {
         const v = item as Video;
-        return <VideoCard video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id, source: { kind: 'search', q: keyword } })} />;
+        return (
+          <VideoCard
+            video={v}
+            onPress={() => navigation.navigate('Watch', { videoId: v.id, source: { kind: 'search', q: keyword } })}
+            onOpenOwner={() => navigation.navigate('Profile', { userId: v.owner.id })}
+          />
+        );
       }
       case 'ai': {
         // Kết quả AI không phân trang → mở xem riêng video đó
         const v = item as Video;
-        return <VideoCard video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id })} />;
+        return (
+          <VideoCard
+            video={v}
+            onPress={() => navigation.navigate('Watch', { videoId: v.id })}
+            onOpenOwner={() => navigation.navigate('Profile', { userId: v.owner.id })}
+          />
+        );
       }
       case 'user': {
         const u = item as FollowUser;
@@ -301,7 +313,7 @@ async function semanticPage(q: string): Promise<PageResponse<SearchItem>> {
 }
 
 /** Ô video 2 cột: ảnh bìa + lượt xem/thích, tiêu đề 2 dòng, người đăng */
-function VideoCard({ video, onPress }: { video: Video; onPress: () => void }) {
+function VideoCard({ video, onPress, onOpenOwner }: { video: Video; onPress: () => void; onOpenOwner: () => void }) {
   return (
     <Pressable style={styles.card} onPress={onPress} accessibilityLabel={video.title}>
       <View style={styles.cardThumb}>
@@ -318,10 +330,11 @@ function VideoCard({ video, onPress }: { video: Video; onPress: () => void }) {
         </LinearGradient>
       </View>
       <AppText weight="semibold" size={14} numberOfLines={2}>{video.title}</AppText>
-      <View style={styles.cardOwner}>
+      {/* Bấm tác giả → hồ sơ người đó (bấm chỗ khác trên thẻ → xem video) */}
+      <Pressable style={styles.cardOwner} onPress={onOpenOwner} hitSlop={4} accessibilityRole="button" accessibilityLabel={`Hồ sơ ${video.owner.displayName}`}>
         <Avatar uri={video.owner.avatarUrl} name={video.owner.displayName} size={22} />
         <AppText size={12} color={colors.muted} numberOfLines={1} style={styles.flex}>{video.owner.displayName}</AppText>
-      </View>
+      </Pressable>
     </Pressable>
   );
 }
