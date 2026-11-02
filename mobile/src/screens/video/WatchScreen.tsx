@@ -3,7 +3,8 @@
  * Phụ trách: Thanh
  *
  * - Lướt video toàn màn hình như TikTok: vuốt lên sang video kế, vuốt xuống về video trước (UC05).
- * - 2 tab ở đầu màn: "Dành cho bạn" (video thịnh hành) và "Đang theo dõi" (video của người mình theo dõi).
+ * - 3 tab ở đầu màn: "Trending" (nhiều lượt xem nhất, mặc định khi mở app), "Theo dõi" (video của người
+ *   mình theo dõi) và "Dành cho bạn" (AI gợi ý theo gu). Hai tab sau cần đăng nhập.
  *   Danh sách lấy theo chỗ mở (route.params.source): trending, chủ đề, kết quả tìm kiếm, video của 1 người...
  *   Gần hết danh sách thì tự tải thêm trang (usePagedList).
  * - Chỉ video đang hiện trên màn mới phát (cùng nhạc nền); lượt xem tăng 1 lần cho mỗi video khi nó được phát.
@@ -38,6 +39,14 @@ import { mediaUrl } from '../../utils/media';
 import type { PageResponse, Video } from '../../types/models';
 import type { RootScreenProps, SearchTab, WatchSource } from '../../navigation/types';
 
+/** 3 tab ở đầu màn Xem video */
+type FeedKind = 'trending' | 'following' | 'forYou';
+const FEEDS: { kind: FeedKind; label: string }[] = [
+  { kind: 'trending', label: 'Trending' },
+  { kind: 'following', label: 'Theo dõi' },
+  { kind: 'forYou', label: 'Dành cho bạn' },
+];
+
 const EMPTY_PAGE: PageResponse<Video> = { content: [], page: 0, size: 0, totalElements: 0, totalPages: 0, last: true };
 
 /** Gọi đúng API theo nguồn danh sách */
@@ -45,6 +54,11 @@ function fetchSource(source: WatchSource, page: number, size: number): Promise<P
   switch (source.kind) {
     case 'trending': return videoApi.trending(page, size);
     case 'following': return videoApi.following(page, size);
+    // AI trả 1 danh sách duy nhất → gói thành 1 trang cuối cùng
+    case 'forYou':
+      return page > 0
+        ? Promise.resolve(EMPTY_PAGE)
+        : aiApi.forYou().then((content) => ({ ...EMPTY_PAGE, content, size: content.length, totalElements: content.length, totalPages: 1 }));
     case 'topic': return videoApi.byTopic(source.topicId, page, size);
     case 'search': return searchApi.search<Video>(source.q, 'videos', page, size);
     case 'user': return userApi.videos(source.userId, page, size);
@@ -137,33 +151,41 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
     if (first?.index != null) setActive({ key: sourceKeyRef.current, index: first.index });
   }, []);
 
-  // Hai tab ở đầu màn: đổi nguồn danh sách ngay trên màn này (setParams), thanh trên đứng yên,
+  // Các tab ở đầu màn: đổi nguồn danh sách ngay trên màn này (setParams), thanh trên đứng yên,
   // chỉ danh sách video tải lại. (Trước đây dùng replace nên cả màn dựng lại, thanh trên bị nháy.)
   const requireAuth = useRequireAuth();
   const insets = useSafeAreaInsets();
   const isFollowingFeed = source?.kind === 'following';
-  const openFollowing = () => {
-    if (isFollowingFeed) return;
-    requireAuth(() => navigation.setParams({ videoId: undefined, source: { kind: 'following' } })); // khách → bảng đăng nhập
-  };
-  const openForYou = () => {
-    if (!isFollowingFeed) return;
-    navigation.setParams({ videoId: undefined, source: { kind: 'trending' } });
+  const isForYouFeed = source?.kind === 'forYou';
+  // Mở từ chủ đề, tìm kiếm, hồ sơ... thì không tab nào sáng
+  const activeFeed = FEEDS.find((f) => f.kind === source?.kind)?.kind;
+  const openFeed = (kind: FeedKind) => {
+    if (kind === activeFeed) return;
+    const go = () => navigation.setParams({ videoId: undefined, source: { kind } });
+    if (kind === 'trending') go();
+    else requireAuth(go); // khách → bảng đăng nhập
   };
 
-  // Thanh trên dùng chung cho cả danh sách: quay lại · Đang theo dõi | Dành cho bạn · tìm kiếm
+  // Thanh trên dùng chung cho cả danh sách: quay lại · Trending | Theo dõi | Dành cho bạn · tìm kiếm
   const topBar = (
     <View style={[styles.topBar, { top: insets.top + spacing.xs }]}>
       <Pressable style={styles.iconBtn} onPress={navigation.goBack} accessibilityLabel="Quay lại">
         <Ionicons name="chevron-back" size={26} color={colors.white} />
       </Pressable>
       <View style={styles.feeds}>
-        <Pressable style={styles.feedTab} onPress={openFollowing} accessibilityRole="tab" accessibilityState={{ selected: isFollowingFeed }}>
-          <AppText weight="semibold" color={colors.white} style={isFollowingFeed ? styles.feedActive : styles.feedIdle}>Đang theo dõi</AppText>
-        </Pressable>
-        <Pressable style={styles.feedTab} onPress={openForYou} accessibilityRole="tab" accessibilityState={{ selected: !isFollowingFeed }}>
-          <AppText weight="semibold" color={colors.white} style={isFollowingFeed ? styles.feedIdle : styles.feedActive}>Dành cho bạn</AppText>
-        </Pressable>
+        {FEEDS.map((f) => (
+          <Pressable
+            key={f.kind}
+            style={styles.feedTab}
+            onPress={() => openFeed(f.kind)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeFeed === f.kind }}
+          >
+            <AppText weight="semibold" size={15} color={colors.white} numberOfLines={1} style={activeFeed === f.kind ? styles.feedActive : styles.feedIdle}>
+              {f.label}
+            </AppText>
+          </Pressable>
+        ))}
       </View>
       <Pressable
         style={styles.iconBtn}
@@ -219,15 +241,24 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
     );
   }
 
-  // Feed "Đang theo dõi" trống: chưa theo dõi ai hoặc họ chưa đăng video
+  // Danh sách trống: chưa theo dõi ai / AI chưa đủ dữ liệu để gợi ý / chưa có video
   if (videos.length === 0) {
     return (
       <Screen dark edges={[]}>
         <View style={styles.emptyFeed}>
           <Ionicons name="people-outline" size={48} color={colors.white} />
           <AppText weight="bold" size={18} color={colors.white} align="center">
-            {isFollowingFeed ? 'Chưa có video từ người bạn theo dõi' : 'Chưa có video nào'}
+            {isFollowingFeed
+              ? 'Chưa có video từ người bạn theo dõi'
+              : isForYouFeed
+                ? 'Chưa đủ dữ liệu để gợi ý'
+                : 'Chưa có video nào'}
           </AppText>
+          {isForYouFeed && (
+            <Pressable style={styles.emptyBtn} onPress={() => openFeed('trending')} accessibilityRole="button">
+              <AppText weight="semibold" color={colors.white}>Xem Trending</AppText>
+            </Pressable>
+          )}
           {isFollowingFeed && (
             <Pressable style={styles.emptyBtn} onPress={() => navigation.popTo('MainTabs', { screen: 'Friends' })}>
               <AppText weight="semibold" color={colors.white}>Tìm người để theo dõi</AppText>
@@ -598,8 +629,8 @@ const styles = StyleSheet.create({
   playIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center' },
   topBar: { position: 'absolute', left: 10, right: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  feeds: { flexDirection: 'row', gap: 6 },
-  feedTab: { height: 40, paddingHorizontal: spacing.sm, justifyContent: 'center' },
+  feeds: { flexDirection: 'row', gap: 2, flexShrink: 1 },
+  feedTab: { height: 40, paddingHorizontal: 6, justifyContent: 'center' },
   feedIdle: { opacity: 0.7, paddingBottom: spacing.xs, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   feedActive: { paddingBottom: spacing.xs, borderBottomWidth: 2, borderBottomColor: colors.white },
   emptyFeed: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, padding: spacing.xxl },

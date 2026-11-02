@@ -196,7 +196,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hRow}>
               {forYouVideos.map((v) => (
-                <TrendingCard key={v.id} video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id })} />
+                <TrendingCard key={v.id} video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id, source: { kind: 'forYou' } })} />
               ))}
             </ScrollView>
           )
