@@ -38,6 +38,7 @@ import AudioScreen from '../screens/audio/AudioScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import WatchHistoryScreen from '../screens/settings/WatchHistoryScreen';
+import ChatbotScreen from '../screens/ai/ChatbotScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -74,6 +75,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="WatchHistory" component={WatchHistoryScreen} />
+        <Stack.Screen name="Chatbot" component={ChatbotScreen} />
         <Stack.Screen name="StoryCreate" component={StoryCreateScreen} />
         <Stack.Screen name="MyStory" component={MyStoryScreen} options={{ animation: 'fade' }} />
         <Stack.Screen name="Camera" component={CameraScreen} options={{ animation: 'slide_from_bottom' }} />

@@ -24,6 +24,7 @@ import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '../../context/LoginPromptContext';
 import { videoApi } from '../../api/videos';
+import { aiApi } from '../../api/ai';
 import { catalogApi, searchApi, userApi } from '../../api/catalog';
 import { getErrorMessage } from '../../api/client';
 import { useFetch } from '../../hooks/useFetch';
@@ -337,6 +338,47 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
       videoApi.recordView(video.id).catch(() => {});
     }
   }, [active, isFocused, isPlaying, video.id]);
+
+  // ----- Ghi hành vi xem cho AI gợi ý ("Dành cho bạn") -----
+  // Chỉ cộng thời gian video thật sự đang phát trên màn (dừng, mở Bình luận, ra nền thì không tính)
+  const watching = active && isFocused && appActive && isPlaying;
+  const watchedMs = useRef(0);
+  const watchingSince = useRef<number | null>(null);
+  useEffect(() => {
+    if (!watching) return;
+    watchingSince.current = Date.now();
+    return () => {
+      if (watchingSince.current != null) watchedMs.current += Date.now() - watchingSince.current;
+      watchingSince.current = null;
+    };
+  }, [watching]);
+
+  // Nhớ độ dài video (ms) để gửi kèm; lúc rời màn trình phát có thể đã bị giải phóng
+  const durationMs = useRef(0);
+  useEffect(() => {
+    if (player.duration > 0) durationMs.current = Math.round(player.duration * 1000);
+  }, [player, timeUpdate]);
+
+  // Mỗi lần xem = từ lúc video thành video đang xem tới lúc vuốt đi hoặc đóng màn → gửi đúng 1 sự kiện.
+  // Xem dưới 2 giây là lướt qua (SKIP), còn lại là WATCH kèm thời gian đã xem.
+  useEffect(() => {
+    if (!active) return;
+    watchedMs.current = 0;
+    return () => {
+      const running = watchingSince.current != null ? Date.now() - watchingSince.current : 0;
+      const ms = watchedMs.current + running;
+      if (ms < 2000) {
+        aiApi.trackEvent({ videoId: video.id, type: 'SKIP' });
+      } else {
+        aiApi.trackEvent({
+          videoId: video.id,
+          type: 'WATCH',
+          watchMs: ms,
+          durationMs: durationMs.current > 0 ? durationMs.current : undefined,
+        });
+      }
+    };
+  }, [active, video.id]);
 
   // Rời màn thì huỷ hẹn giờ ẩn thông báo
   useEffect(() => () => {

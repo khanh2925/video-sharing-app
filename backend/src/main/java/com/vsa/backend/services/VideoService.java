@@ -1,5 +1,6 @@
 package com.vsa.backend.services;
 
+import com.vsa.backend.ai.recommend.VideoEmbeddingService;
 import com.vsa.backend.dtos.request.CreateVideoRequest;
 import com.vsa.backend.dtos.request.UpdateVideoRequest;
 import com.vsa.backend.dtos.response.PageResponse;
@@ -55,6 +56,7 @@ public class VideoService {
     private final FileStorageService fileStorageService;
     private final VideoMapper videoMapper;
     private final VideoAccessPolicy videoAccessPolicy;
+    private final VideoEmbeddingService videoEmbeddingService;
 
     // ===================== UC05: xem video =====================
 
@@ -155,6 +157,7 @@ public class VideoService {
                     .hashtags(findOrCreateHashtags(hashtagNames))
                     .build();
             videoRepository.saveAndFlush(video);
+            videoEmbeddingService.index(video);
 
             return videoMapper.toResponse(video, false);
         } catch (RuntimeException e) {
@@ -201,6 +204,7 @@ public class VideoService {
             video.setStatus(VideoStatus.PUBLISHED);
         }
         // Không cần gọi save: video đang được JPA theo dõi, hết hàm @Transactional sẽ tự UPDATE
+        videoEmbeddingService.index(video);
 
         boolean liked = videoLikeRepository.existsByVideoIdAndUserId(videoId, currentUserId);
         return videoMapper.toResponse(video, liked);
@@ -225,6 +229,7 @@ public class VideoService {
 
         fileStorageService.delete(videoUrl);
         fileStorageService.delete(thumbnailUrl);
+        videoEmbeddingService.remove(videoId);
     }
 
     // ===================== hàm phụ =====================

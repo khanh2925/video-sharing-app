@@ -1,5 +1,7 @@
 package com.vsa.backend.controllers;
 
+import com.vsa.backend.ai.tracking.EventType;
+import com.vsa.backend.ai.tracking.TrackingService;
 import com.vsa.backend.dtos.request.CommentCreateRequest;
 import com.vsa.backend.dtos.response.CommentResponse;
 import com.vsa.backend.dtos.response.PageResponse;
@@ -14,17 +16,20 @@ import org.springframework.web.bind.annotation.*;
 public class InteractionController {
 
     private final InteractionService interactionService;
+    private final TrackingService trackingService;   // ghi hành vi cho gợi ý video (AI)
 
     @PostMapping("/api/videos/{videoId}/like")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void likeVideo(@PathVariable Long videoId) {
         interactionService.likeVideo(videoId);
+        trackingService.videoEvent(EventType.LIKE, videoId);
     }
 
     @DeleteMapping("/api/videos/{videoId}/like")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void unlikeVideo(@PathVariable Long videoId) {
         interactionService.unlikeVideo(videoId);
+        trackingService.videoEvent(EventType.UNLIKE, videoId);
     }
 
     @GetMapping("/api/videos/{videoId}/comments")
@@ -37,7 +42,9 @@ public class InteractionController {
     @ResponseStatus(HttpStatus.CREATED)
     public CommentResponse createComment(@PathVariable Long videoId,
                                          @Valid @RequestBody CommentCreateRequest request) {
-        return interactionService.createComment(videoId, request);
+        CommentResponse comment = interactionService.createComment(videoId, request);
+        trackingService.videoEvent(EventType.COMMENT, videoId);
+        return comment;
     }
 
     @DeleteMapping("/api/comments/{commentId}")

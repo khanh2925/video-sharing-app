@@ -3,6 +3,8 @@
  * Phụ trách: Thanh
  *
  * - Ô tìm kiếm + 4 tab: Video · Tài khoản · Live · Âm thanh (GET /api/search?type=...).
+ * - Tab "Theo ý nghĩa (AI)": tìm video theo nội dung câu mô tả (GET /api/search/semantic).
+ *   Tốn lượt AI nên chỉ tìm khi bấm Tìm trên bàn phím, không tự tìm khi đang gõ.
  * - Chưa gõ gì: tab Video hiện video "Thịnh hành" (backend tự trả video nhiều lượt xem nhất).
  * - "Có thể bạn quan tâm": hashtag gợi ý từ GET /api/search/suggestions, bấm vào thì tìm theo hashtag.
  * - Màn khác mở tab này kèm từ khoá: navigation.popTo('MainTabs', { screen: 'Search', params: { q: '#meo', nonce: Date.now() } })
@@ -17,15 +19,17 @@ import { colors, fonts, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '../../context/LoginPromptContext';
 import { searchApi, userApi } from '../../api/catalog';
+import { aiApi } from '../../api/ai';
 import { getErrorMessage } from '../../api/client';
 import { useFetch } from '../../hooks/useFetch';
 import { usePagedList } from '../../hooks/usePagedList';
 import { followLabel, formatCount } from '../../utils/format';
 import { mediaUrl } from '../../utils/media';
-import type { Audio, FollowUser, LiveStream, SearchType, Video } from '../../types/models';
+import type { Audio, FollowUser, LiveStream, PageResponse, SearchType, Video } from '../../types/models';
 import type { SearchTab, TabScreenProps } from '../../navigation/types';
 
-type TabKey = SearchTab;
+/** 'ai': tìm theo ý nghĩa, chỉ có trong màn này (màn khác không mở sẵn tab này) */
+type TabKey = SearchTab | 'ai';
 type SearchItem = Video | FollowUser | LiveStream | Audio;
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -33,10 +37,11 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'user', label: 'Tài khoản' },
   { key: 'live', label: 'Live' },
   { key: 'audio', label: 'Âm thanh' },
+  { key: 'ai', label: 'Theo ý nghĩa (AI)' },
 ];
 
 /** Tab trên màn → giá trị ?type= của API */
-const TYPE_OF: Record<TabKey, SearchType> = { video: 'videos', user: 'accounts', live: 'streaming', audio: 'audio' };
+const TYPE_OF: Record<SearchTab, SearchType> = { video: 'videos', user: 'accounts', live: 'streaming', audio: 'audio' };
 
 /** Tab Video tải mỗi lần 4 video, bấm "Xem thêm video" tải tiếp (giống design) */
 const VIDEO_PAGE_SIZE = 4;
@@ -65,10 +70,17 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
 
   // "#meo" → tìm "meo"
   const keyword = debouncedQ.trim().replace(/^#/, '');
+  // Câu tìm theo ý nghĩa: chỉ đặt khi bấm Tìm (hoặc lúc chuyển sang tab AI)
+  const [aiQuery, setAiQuery] = useState('');
+  const aiKeyword = aiQuery.trim();
+  const changeTab = (key: TabKey) => {
+    if (key === 'ai') setAiQuery(q);
+    setTab(key);
+  };
 
   // Danh sách đang hiện thuộc tab + từ khoá nào. Đổi tab thì list.items vẫn là kết quả của tab cũ
   // cho tới khi tải xong → phải chờ, không thì vẽ Video bằng LiveCard sẽ lỗi.
-  const queryKey = `${tab}|${keyword}`;
+  const queryKey = tab === 'ai' ? `ai|${aiKeyword}` : `${tab}|${keyword}`;
   const latestKey = useRef(queryKey);
   useEffect(() => { latestKey.current = queryKey; }, [queryKey]);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
@@ -76,7 +88,10 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
   const list = usePagedList<SearchItem>(
     async (page, size) => {
       const reqKey = queryKey;
-      const res = await searchApi.search<SearchItem>(keyword, TYPE_OF[tab], page, size);
+      const res: PageResponse<SearchItem> =
+        tab === 'ai'
+          ? await semanticPage(aiKeyword)
+          : await searchApi.search<SearchItem>(keyword, TYPE_OF[tab], page, size);
       if (reqKey === latestKey.current) setLoadedKey(reqKey);
       return res;
     },
@@ -116,6 +131,11 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
       case 'video': {
         const v = item as Video;
         return <VideoCard video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id, source: { kind: 'search', q: keyword } })} />;
+      }
+      case 'ai': {
+        // Kết quả AI không phân trang → mở xem riêng video đó
+        const v = item as Video;
+        return <VideoCard video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id })} />;
       }
       case 'user': {
         const u = item as FollowUser;
@@ -200,7 +220,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
     );
   };
 
-  const isGrid = tab === 'video' || tab === 'live';
+  const isGrid = tab === 'video' || tab === 'live' || tab === 'ai';
 
   return (
     <Screen>
@@ -217,7 +237,10 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
-            onSubmitEditing={() => setDebouncedQ(q)}
+            onSubmitEditing={() => {
+              setDebouncedQ(q);
+              if (tab === 'ai') setAiQuery(q);
+            }}
             style={styles.searchInput}
           />
           {q.length > 0 && (
@@ -230,7 +253,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
 
       {/* Loại kết quả */}
       <View style={styles.tabs}>
-        <SegmentedTabs variant="pill" tabs={TABS} value={tab} onChange={setTab} />
+        <SegmentedTabs variant="pill" tabs={TABS} value={tab} onChange={changeTab} />
       </View>
 
       {list.loading || (!listReady && !list.error) ? (
@@ -257,12 +280,24 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
               <AppText weight="bold" size={16} style={styles.sectionTitle}>Thịnh hành</AppText>
             ) : undefined
           }
-          ListEmptyComponent={<EmptyView icon="search-outline" title="Không tìm thấy kết quả" message="Thử từ khoá khác" />}
+          ListEmptyComponent={
+            tab === 'ai' && aiKeyword.length === 0 ? (
+              <EmptyView icon="sparkles-outline" title="Tìm video theo ý nghĩa" message="Gõ mô tả nội dung (vd: cảnh biển lúc hoàng hôn) rồi bấm Tìm" />
+            ) : (
+              <EmptyView icon="search-outline" title="Không tìm thấy kết quả" message="Thử từ khoá khác" />
+            )
+          }
           ListFooterComponent={renderFooter() ?? undefined}
         />
       )}
     </Screen>
   );
+}
+
+/** Tìm theo ý nghĩa trả 1 mảng (không phân trang) → gói lại thành 1 trang cho usePagedList. Câu rỗng thì không gọi API. */
+async function semanticPage(q: string): Promise<PageResponse<SearchItem>> {
+  const videos = q ? await aiApi.semanticSearch(q) : [];
+  return { content: videos, page: 0, size: videos.length, totalElements: videos.length, totalPages: 1, last: true };
 }
 
 /** Ô video 2 cột: ảnh bìa + lượt xem/thích, tiêu đề 2 dòng, người đăng */

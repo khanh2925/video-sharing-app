@@ -1,0 +1,11 @@
+# =====================================================================
+# MẪU file bật AI trên máy mình. Cách dùng:
+#   1. Chép file này thành ai-local.yaml (cùng thư mục). File đó nằm trong .gitignore.
+#   2. Chạy backend như bình thường: có file ai-local.yaml thì AI tự bật.
+#   Trước đó nhớ: docker compose up -d (cần container vector-db).
+# Key đã ghi sẵn trong application-ai.yaml, không cần điền gì thêm.
+# Muốn tắt AI: xoá hoặc đổi tên ai-local.yaml.
+# =====================================================================
+spring:
+  profiles:
+    active: ai

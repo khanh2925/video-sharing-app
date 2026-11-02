@@ -10,5 +10,20 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  # Kho vector cho Spring AI (gợi ý video, tìm kiếm theo nghĩa, chatbot).
+  # Chỉ lưu vector; dữ liệu nghiệp vụ vẫn ở MySQL phía trên.
+  vector-db:
+    image: pgvector/pgvector:pg17
+    container_name: vsa-pgvector
+    environment:
+      POSTGRES_USER: vsa
+      POSTGRES_PASSWORD: vsa
+      POSTGRES_DB: vsa_vectors
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+
 volumes:
   mysql_data:
+  pgvector_data:

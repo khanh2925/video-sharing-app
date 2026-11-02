@@ -72,7 +72,8 @@ class VideoServiceTest {
         videoService = new VideoService(videoRepository, userRepository, topicRepository,
                 mock(AudioRepository.class), hashtagRepository, videoLikeRepository,
                 commentRepository, commentLikeRepository, fileStorageService, videoMapper,
-                new VideoAccessPolicy(videoRepository, followRepository));
+                new VideoAccessPolicy(videoRepository, followRepository),
+                mock(com.vsa.backend.ai.recommend.VideoEmbeddingService.class));
 
         // Giả lập "đã đăng nhập" giống JwtAuthFilter: principal là id người dùng
         SecurityContextHolder.getContext().setAuthentication(

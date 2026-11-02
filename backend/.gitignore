@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Key AI trên máy mình (không đưa lên Git), xem ai-local.example.yaml
+src/main/resources/ai-local.yaml

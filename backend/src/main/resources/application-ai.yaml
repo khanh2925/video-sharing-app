@@ -1,0 +1,62 @@
+# =====================================================================
+# CẤU HÌNH SPRING AI. Chỉ được đọc khi chạy với profile "ai":
+#   IntelliJ: Run → Edit Configurations → Active profiles: ai
+#   Dòng lệnh: SPRING_PROFILES_ACTIVE=ai ./mvnw spring-boot:run
+# Trước khi chạy: docker compose up -d (bật cả MySQL và vector-db).
+#
+# Key của nhóm ghi sẵn bên dưới làm giá trị mặc định (repo riêng tư, chỉ nhóm xem).
+# Muốn dùng key khác thì đặt biến môi trường cùng tên, biến môi trường sẽ được ưu tiên:
+#   GEMINI_API_KEY     bắt buộc: embedding (gợi ý, tìm theo nghĩa, RAG) luôn dùng Gemini
+#   AI_CHAT_PROVIDER   model chat cho chatbot: openai (mặc định) hoặc google-genai
+#   OPENAI_API_KEY     key của máy chủ chat tương thích OpenAI (khi AI_CHAT_PROVIDER=openai)
+#   OPENAI_BASE_URL    địa chỉ máy chủ đó, có /v1 ở cuối
+#   OPENAI_CHAT_MODEL  tên model chat trên máy chủ đó
+# Một bên hết lượt lúc demo thì đổi AI_CHAT_PROVIDER rồi chạy lại backend, không phải sửa code.
+# =====================================================================
+spring:
+  ai:
+    model:
+      chat: ${AI_CHAT_PROVIDER:openai}   # bên nào trả lời chatbot
+      embedding:
+        text: google-genai               # đổi chữ thành vector: luôn là Gemini
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:AQ.Ab8RN6J6fc5Wv8SIbiobv60PTWC_3CWXPUqrYoU73DhQJ4Mjfg}
+        chat:
+          model: gemini-3.5-flash        # dùng khi AI_CHAT_PROVIDER=google-genai
+          temperature: 0.3               # thấp → trả lời ổn định, ít "sáng tác"
+        embedding:
+          api-key: ${GEMINI_API_KEY:AQ.Ab8RN6J6fc5Wv8SIbiobv60PTWC_3CWXPUqrYoU73DhQJ4Mjfg}
+          text:
+            model: gemini-embedding-001
+            dimensions: 768              # độ dài mỗi vector; phải khớp app.ai.vector-db.dimensions
+    openai:
+      api-key: ${OPENAI_API_KEY:sk-8c57e8b469e67aeb-0uqx3n-3bdce705}
+      base-url: ${OPENAI_BASE_URL:http://221.132.19.207:20128/v1}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL:cx/gpt-5.6-luna}
+          temperature: 0.3
+    # Giới hạn thử lại khi bên AI lỗi: mặc định Spring AI thử tới 10 lần, app treo cả phút
+    retry:
+      max-attempts: 2
+      on-client-errors: false            # lỗi 4xx (hết lượt, sai key) thì báo ngay, không thử lại
+  autoconfigure:
+    # Gói OpenAI còn có embedding, ảnh, giọng nói, kiểm duyệt: không dùng, tắt cho khỏi đòi cấu hình.
+    # Embedding phải tắt ở đây, nếu không sẽ có 2 model embedding và Spring không biết chọn cái nào.
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
+
+# Thông số kỹ thuật của phần AI (đọc qua lớp AiProperties)
+app:
+  ai:
+    vector-db:
+      url: jdbc:postgresql://localhost:5433/vsa_vectors
+      username: vsa
+      password: vsa
+      table: video_vectors               # bảng chứa vector của video
+      dimensions: 768

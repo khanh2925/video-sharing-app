@@ -29,7 +29,20 @@
 	<properties>
 		<java.version>21</java.version>
 		<jjwt.version>0.12.6</jjwt.version>
+		<spring-ai.version>2.0.0</spring-ai.version>
 	</properties>
+	<!-- Spring AI: khai báo một lần phiên bản cho mọi module spring-ai-* bên dưới -->
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.ai</groupId>
+				<artifactId>spring-ai-bom</artifactId>
+				<version>${spring-ai.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -75,6 +88,39 @@
 		<dependency>
 			<groupId>com.mysql</groupId>
 			<artifactId>mysql-connector-j</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- ===== Spring AI (chỉ bật khi chạy profile "ai", xem application-ai.yaml) ===== -->
+		<!-- Gemini: model chat (chatbot) -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-google-genai</artifactId>
+		</dependency>
+		<!-- OpenAI (hoặc máy chủ tương thích OpenAI): model chat thay thế, chọn bằng AI_CHAT_PROVIDER -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-openai</artifactId>
+		</dependency>
+		<!-- Gemini: model embedding (đổi chữ thành vector) -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-model-google-genai-embedding</artifactId>
+		</dependency>
+		<!-- Kho vector PostgreSQL + pgvector. Dùng module thường, không dùng starter,
+		     vì starter sẽ lấy nhầm DataSource MySQL. Tự dựng ở ai/config/AiConfig. -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-pgvector-store</artifactId>
+		</dependency>
+		<!-- RAG cho chatbot: QuestionAnswerAdvisor -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-vector-store-advisor</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>

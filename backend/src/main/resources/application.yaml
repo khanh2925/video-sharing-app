@@ -1,6 +1,10 @@
 spring:
   application:
     name: video-sharing-api
+  # Key AI trên máy mình (file không lên Git). Có file → AI tự bật; không có → bỏ qua.
+  # Xem ai-local.example.yaml cùng thư mục.
+  config:
+    import: optional:classpath:ai-local.yaml
   datasource:
     url: jdbc:mysql://localhost:3307/video_sharing
     username: root
@@ -49,3 +53,25 @@ app:
     comment-page-size: 20      # số bình luận mỗi lần tải
     trending-size: 10          # số video ở mục Top trending
     suggestion-size: 10        # số tài khoản gợi ý
+
+---
+# =====================================================================
+# Spring AI mặc định TẮT để backend chạy được khi chưa có API key (test, VPS).
+# Khối này chỉ áp dụng khi KHÔNG chạy profile "ai": bỏ hẳn phần tự cấu hình Gemini và OpenAI,
+# vì nó đòi key ngay lúc khởi động. Muốn bật AI: chạy profile "ai" (xem application-ai.yaml).
+# =====================================================================
+spring:
+  config:
+    activate:
+      on-profile: "!ai"
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.google.genai.autoconfigure.chat.GoogleGenAiChatAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiEmbeddingConnectionAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiTextEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration

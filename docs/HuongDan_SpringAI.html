@@ -1,0 +1,1547 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spring AI trong Video Sharing App</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<style>
+:root{--bg:#fff;--fg:#1d1a22;--mut:#6d6577;--card:#f6f3f7;--line:#ece7ee;--pink:#db2766;--warn:#fff4e5;--warnl:#e0a040;--t:#2b7de9;--k:#db2766;--l:#14a37f}
+@media (prefers-color-scheme:dark){:root{--bg:#121016;--fg:#eee9f3;--mut:#9c95a8;--card:#1d1a25;--line:#2c2838;--warn:#2a2116;--warnl:#a8792f}}
+*{box-sizing:border-box}body{background:var(--bg);color:var(--fg);font:16px/1.65 -apple-system,system-ui,"Segoe UI",sans-serif;margin:0}
+main{max-width:980px;margin:0 auto;padding:24px 16px 80px}h1{font-size:30px;margin:8px 0 4px}
+h2{border-top:2px solid var(--line);padding-top:28px;margin-top:48px;color:var(--pink)}h3{margin-top:28px}
+code{font:14px ui-monospace,Menlo,monospace;background:var(--card);padding:1px 5px;border-radius:5px}
+.code{margin:10px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.code summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:12px;background:var(--card);padding:8px 12px}
+.code summary::-webkit-details-marker{display:none}.fn{font:13px ui-monospace,Menlo,monospace;color:var(--mut);word-break:break-all}
+.code.open .fn{display:block;background:var(--card);padding:8px 12px;border-bottom:1px solid var(--line)}
+.hint{font-size:12px;color:var(--pink);white-space:nowrap}details[open] .hint{display:none}
+pre{margin:0;overflow-x:auto}pre code{display:block;padding:12px;font-size:13px;line-height:1.5;background:transparent}
+pre.cmd{border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.notes{background:var(--card);border-radius:10px;padding:12px 16px 12px 34px;margin:10px 0 18px}.notes li{margin:6px 0}
+table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;margin:12px 0}th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}th{background:var(--card)}
+table.mini{width:auto;margin:8px 0}
+.box{border-left:4px solid var(--pink);background:var(--card);padding:12px 16px;border-radius:8px;margin:14px 0}.box.warn{border-color:var(--warnl);background:var(--warn)}
+.steps li{margin:10px 0}.qa dt{font-weight:700;margin-top:14px}.qa dd{margin:4px 0 0 0}
+nav{background:var(--card);border-radius:10px;padding:10px 16px;position:sticky;top:0;z-index:5}nav a{color:var(--pink);margin-right:14px;white-space:nowrap;line-height:2}
+.sub{color:var(--mut)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:16px 0}
+.card{border:1px solid var(--line);border-radius:12px;padding:14px 16px}.card h3{margin:6px 0}.card p{margin:6px 0}
+.tag{display:inline-block;font-size:12px;font-weight:700;color:#fff;border-radius:99px;padding:2px 10px}.tag.t{background:var(--t)}.tag.k{background:var(--k)}.tag.l{background:var(--l)}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0}.node{border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--card);text-align:center;font-weight:600}
+.node small{font-weight:400;color:var(--mut)}.node.t{border-color:var(--t)}.node.k{border-color:var(--k)}.node.l{border-color:var(--l)}.arr{color:var(--mut);font-size:20px}
+</style></head><body><main>
+<h1>Spring AI trong Video Sharing App</h1>
+<p class="sub">Tài liệu cho cả nhóm · Spring AI 2.0 · PostgreSQL + pgvector · cập nhật 02/11/2026</p>
+<nav><a href="#tong">1. Tổng quan</a><a href="#chay">2. Cách chạy</a><a href="#chung">3. Phần chung</a><a href="#thanh">4. Thanh</a><a href="#khanh">5. Khánh</a><a href="#long">6. Long</a><a href="#mobile">7. App</a><a href="#demo">8. Demo</a><a href="#gioihan">9. Giới hạn</a></nav>
+
+<section id="tong">
+<h2>1. Bức tranh chung</h2>
+<p>App được thêm 3 khả năng AI bằng <b>Spring AI 2.0</b>. Cô hỏi từng người phần của người đó, nên mỗi người đọc kỹ phần mình + phần chung.</p>
+<div class="cards">
+ <div class="card"><div class="tag t">Thanh</div><h3>User tracking</h3><p>Ghi lại người dùng xem gì, xem bao lâu, lướt qua, thích, bình luận, tìm gì. Là <b>nguyên liệu</b> cho gợi ý.</p><code>ai/tracking</code></div>
+ <div class="card"><div class="tag k">Khánh</div><h3>Vector DB + gợi ý</h3><p>Biến nội dung video thành vector, lưu trong pgvector. Tab <b>"Dành cho bạn"</b> và <b>tìm theo nghĩa</b>.</p><code>ai/recommend</code></div>
+ <div class="card"><div class="tag l">Long</div><h3>Chatbot hỏi đáp</h3><p>Trợ lý trả lời bằng dữ liệu thật của app: tìm video (RAG), hỏi quy định, hỏi về video của mình (tool).</p><code>ai/chat</code></div>
+</div>
+<div class="box"><b>Một câu tóm tắt cho cô:</b> app ghi lại hành vi xem của người dùng, dùng AI biến nội dung video thành vector lưu trong PostgreSQL + pgvector để gợi ý video hợp sở thích và tìm kiếm theo nghĩa, và có chatbot trả lời dựa trên dữ liệu thật của app.</div>
+
+<h3>Luồng dữ liệu</h3>
+<div class="flow">
+ <div class="node">Người dùng<br><small>xem, thích, tìm</small></div><div class="arr">→</div>
+ <div class="node t">user_events<br><small>MySQL · Thanh</small></div><div class="arr">→</div>
+ <div class="node k">Gợi ý<br><small>"gu" → vector · Khánh</small></div><div class="arr">→</div>
+ <div class="node k">pgvector<br><small>video_vectors</small></div><div class="arr">→</div>
+ <div class="node">Tab Dành cho bạn</div>
+</div>
+<div class="flow">
+ <div class="node">Câu hỏi chat</div><div class="arr">→</div>
+ <div class="node k">pgvector<br><small>tìm 5 video gần nghĩa (RAG)</small></div><div class="arr">→</div>
+ <div class="node l">Model chat<br><small>+ tool đọc DB · Long</small></div><div class="arr">→</div>
+ <div class="node">Câu trả lời + thẻ video</div>
+</div>
+
+<h3>Mấy khái niệm cần nói được</h3>
+<dl class='qa'><dt>Vector (embedding) là gì?</dt><dd>Model AI đọc một đoạn chữ rồi trả về một dãy <b>768 con số</b>, như "toạ độ ý nghĩa". Hai đoạn cùng nghĩa ("món ăn miền Tây" và "lẩu mắm Cần Thơ") có toạ độ gần nhau dù khác chữ. Tìm cái giống nhau = tìm toạ độ gần nhau.</dd><dt>Vector database là gì?</dt><dd>Cơ sở dữ liệu lưu các dãy số đó và tìm "toạ độ gần nhất" thật nhanh. Nhóm dùng <b>PostgreSQL + pgvector</b>, so độ giống bằng <b>cosine</b> (góc giữa 2 vector), chỉ mục <b>HNSW</b> để tìm nhanh.</dd><dt>RAG là gì?</dt><dd>Retrieval-Augmented Generation: <b>tìm trước, hỏi sau</b>. Trước khi hỏi model chat, app tìm các video liên quan trong kho vector và nhét vào câu hỏi, để model trả lời bằng video có thật thay vì bịa.</dd><dt>Tool calling là gì?</dt><dd>Cho model quyền tự gọi hàm Java khi cần dữ liệu thật. Ví dụ hỏi "story tồn tại bao lâu", model tự gọi <code>getAppRules()</code> đọc bảng <code>system_settings</code> rồi mới trả lời.</dd><dt>Spring AI là gì?</dt><dd>Thư viện của Spring giúp gọi model AI bằng code Java thống nhất: đổi nhà cung cấp (Gemini, OpenAI…) chỉ cần đổi cấu hình, không sửa code.</dd></dl></section>
+<section id="chay">
+<h2>2. Cách chạy trên máy</h2>
+<p>AI <b>tắt mặc định</b>. Không bật thì backend chạy y như cũ (test, VPS, máy chưa có key đều không sao).</p>
+<ol class="steps">
+<li>Kéo code mới về, ở thư mục gốc chạy <code>docker compose up -d</code> (bật MySQL và thêm container <code>vsa-pgvector</code>).</li>
+<li><b>Bật AI</b>: trong <code>backend/src/main/resources/</code>, chép <code>ai-local.example.yaml</code> thành <code>ai-local.yaml</code>. Không cần điền gì: key của nhóm đã ghi sẵn trong <code>application-ai.yaml</code>. Có file <code>ai-local.yaml</code> thì backend <b>tự bật AI</b>; xoá hoặc đổi tên là tắt. (Trên VPS không có file này nên AI vẫn tắt, backend chung không bị ảnh hưởng.)</li>
+<li>Chạy backend như bình thường (IntelliJ bấm Run), log có dòng <code>The following 1 profile is active: "ai"</code>. Lần đầu: đăng nhập <code>admin</code> trong Postman, gọi <code>POST /api/admin/ai/reindex</code> để nạp vector cho các video có sẵn (chỉ cần một lần).</li>
+<li>Kiểm tra nhanh: <code>GET /api/admin/ai/health</code> (admin) trả <code>{"embeddingDimensions":768,"chatReply":"..."}</code>.</li>
+</ol>
+<div class="box warn"><b>Hết lượt lúc demo?</b> Key miễn phí có giới hạn số lần gọi mỗi phút/ngày. Chatbot hết lượt thì đổi biến <code>AI_CHAT_PROVIDER</code> giữa <code>openai</code> và <code>google-genai</code> rồi chạy lại backend, không phải sửa code. App sẽ báo "Trợ lý đang bận hoặc hết lượt" chứ không treo. Trước buổi demo nên hạn chế gọi thử nhiều.</div>
+<table>
+<tr><th>API</th><th>Ai dùng</th><th>Làm gì</th></tr>
+<tr><td><code>POST /api/events</code></td><td>Khách + đăng nhập</td><td>App gửi WATCH / SKIP khi rời một video</td></tr>
+<tr><td><code>GET /api/videos/me/for-you</code></td><td>Đăng nhập</td><td>Danh sách "Dành cho bạn"</td></tr>
+<tr><td><code>GET /api/search/semantic?q=</code></td><td>Khách + đăng nhập</td><td>Tìm theo nghĩa</td></tr>
+<tr><td><code>POST /api/chat</code>, <code>DELETE /api/chat</code></td><td>Đăng nhập</td><td>Hỏi trợ lý, xoá trí nhớ hội thoại</td></tr>
+<tr><td><code>POST /api/admin/ai/reindex</code>, <code>GET /api/admin/ai/health</code></td><td>Admin</td><td>Nạp lại vector, kiểm tra cấu hình</td></tr>
+</table>
+</section>
+
+<section id="chung">
+<h2>3. Phần chung: hạ tầng (cả nhóm nắm)</h2>
+<p>Cô hỏi <b>"cấu hình AI nằm ở đâu"</b> thì chỉ 3 chỗ: <code>application-ai.yaml</code>, khối cuối <code>application.yaml</code>, và package <code>ai/config</code>.</p>
+<div class="code open"><div class="fn">backend/src/main/resources/application-ai.yaml</div><pre><code class="yaml"># =====================================================================
+# CẤU HÌNH SPRING AI. Chỉ được đọc khi chạy với profile &quot;ai&quot;:
+#   IntelliJ: Run → Edit Configurations → Active profiles: ai
+#   Dòng lệnh: SPRING_PROFILES_ACTIVE=ai ./mvnw spring-boot:run
+# Trước khi chạy: docker compose up -d (bật cả MySQL và vector-db).
+#
+# Key của nhóm ghi sẵn bên dưới làm giá trị mặc định (repo riêng tư, chỉ nhóm xem).
+# Muốn dùng key khác thì đặt biến môi trường cùng tên, biến môi trường sẽ được ưu tiên:
+#   GEMINI_API_KEY     bắt buộc: embedding (gợi ý, tìm theo nghĩa, RAG) luôn dùng Gemini
+#   AI_CHAT_PROVIDER   model chat cho chatbot: openai (mặc định) hoặc google-genai
+#   OPENAI_API_KEY     key của máy chủ chat tương thích OpenAI (khi AI_CHAT_PROVIDER=openai)
+#   OPENAI_BASE_URL    địa chỉ máy chủ đó, có /v1 ở cuối
+#   OPENAI_CHAT_MODEL  tên model chat trên máy chủ đó
+# Một bên hết lượt lúc demo thì đổi AI_CHAT_PROVIDER rồi chạy lại backend, không phải sửa code.
+# =====================================================================
+spring:
+  ai:
+    model:
+      chat: ${AI_CHAT_PROVIDER:openai}   # bên nào trả lời chatbot
+      embedding:
+        text: google-genai               # đổi chữ thành vector: luôn là Gemini
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:&lt;key Gemini của nhóm&gt;}
+        chat:
+          model: gemini-3.5-flash        # dùng khi AI_CHAT_PROVIDER=google-genai
+          temperature: 0.3               # thấp → trả lời ổn định, ít &quot;sáng tác&quot;
+        embedding:
+          api-key: ${GEMINI_API_KEY:&lt;key Gemini của nhóm&gt;}
+          text:
+            model: gemini-embedding-001
+            dimensions: 768              # độ dài mỗi vector; phải khớp app.ai.vector-db.dimensions
+    openai:
+      api-key: ${OPENAI_API_KEY:&lt;key chat của nhóm&gt;}
+      base-url: ${OPENAI_BASE_URL:&lt;địa chỉ máy chủ chat&gt;}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL:cx/gpt-5.6-luna}
+          temperature: 0.3
+    # Giới hạn thử lại khi bên AI lỗi: mặc định Spring AI thử tới 10 lần, app treo cả phút
+    retry:
+      max-attempts: 2
+      on-client-errors: false            # lỗi 4xx (hết lượt, sai key) thì báo ngay, không thử lại
+  autoconfigure:
+    # Gói OpenAI còn có embedding, ảnh, giọng nói, kiểm duyệt: không dùng, tắt cho khỏi đòi cấu hình.
+    # Embedding phải tắt ở đây, nếu không sẽ có 2 model embedding và Spring không biết chọn cái nào.
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
+
+# Thông số kỹ thuật của phần AI (đọc qua lớp AiProperties)
+app:
+  ai:
+    vector-db:
+      url: jdbc:postgresql://localhost:5433/vsa_vectors
+      username: vsa
+      password: vsa
+      table: video_vectors               # bảng chứa vector của video
+      dimensions: 768</code></pre></div>
+<ul class='notes'><li>Spring Boot tự đọc thêm <code>application-ai.yaml</code> khi chạy profile <code>ai</code>.</li><li><b>Embedding luôn dùng Gemini</b> (<code>gemini-embedding-001</code>, 768 chiều). <b>Chat</b> chọn bằng <code>AI_CHAT_PROVIDER</code>: máy chủ tương thích OpenAI hoặc Gemini. Code Java không đổi, đây chính là lợi ích của Spring AI.</li><li>Key của nhóm ghi sẵn làm giá trị mặc định (<code>${{TEN_BIEN:gia-tri}}</code>). Đặt biến môi trường cùng tên thì biến môi trường được ưu tiên, dùng khi muốn thay key khác. Tài liệu này che key đi vì có thể gửi ra ngoài.</li><li><code>retry.max-attempts: 2</code>: mặc định Spring AI thử lại tới 10 lần khi lỗi, app treo cả phút. Hết lượt (lỗi 4xx) thì báo ngay.</li><li><code>temperature: 0.3</code>: thấp để trả lời ổn định, ít "sáng tác".</li></ul>
+<details class="code"><summary><span class="fn">backend/src/main/resources/application.yaml (khối cuối)</span><span class="hint">bấm để xem code</span></summary><pre><code class="yaml">---
+# =====================================================================
+# Spring AI mặc định TẮT để backend chạy được khi chưa có API key (test, VPS).
+# Khối này chỉ áp dụng khi KHÔNG chạy profile &quot;ai&quot;: bỏ hẳn phần tự cấu hình Gemini và OpenAI,
+# vì nó đòi key ngay lúc khởi động. Muốn bật AI: chạy profile &quot;ai&quot; (xem application-ai.yaml).
+# =====================================================================
+spring:
+  config:
+    activate:
+      on-profile: &quot;!ai&quot;
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.google.genai.autoconfigure.chat.GoogleGenAiChatAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiEmbeddingConnectionAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiTextEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration</code></pre></details>
+<ul class='notes'><li>Khối có <code>on-profile: "!ai"</code> chỉ áp dụng khi KHÔNG bật AI: bỏ hẳn phần tự cấu hình Gemini và OpenAI, vì chúng đòi key ngay lúc khởi động. Nhờ vậy máy chưa có key vẫn chạy được.</li></ul>
+<details class="code"><summary><span class="fn">docker-compose.yml</span><span class="hint">bấm để xem code</span></summary><pre><code class="yaml">services:
+  db:
+    image: mysql:8.4
+    container_name: vsa-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: video_sharing
+    ports:
+      - &quot;3307:3306&quot;
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  # Kho vector cho Spring AI (gợi ý video, tìm kiếm theo nghĩa, chatbot).
+  # Chỉ lưu vector; dữ liệu nghiệp vụ vẫn ở MySQL phía trên.
+  vector-db:
+    image: pgvector/pgvector:pg17
+    container_name: vsa-pgvector
+    environment:
+      POSTGRES_USER: vsa
+      POSTGRES_PASSWORD: vsa
+      POSTGRES_DB: vsa_vectors
+    ports:
+      - &quot;5433:5432&quot;
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+
+volumes:
+  mysql_data:
+  pgvector_data:</code></pre></details>
+<ul class='notes'><li>Thêm container <code>vector-db</code> (PostgreSQL 17 có pgvector, cổng 5433). Dữ liệu nghiệp vụ vẫn ở MySQL; Postgres chỉ chứa vector. Lý do: Spring AI không có kho vector cho MySQL.</li></ul>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/config/AiConfig.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.config;
+
+import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgDistanceType.COSINE_DISTANCE;
+import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.HNSW;
+
+/**
+ * Bật phần AI khi chạy profile &quot;ai&quot;.
+ *
+ * Tạo bean VectorStore (kho vector) trên PostgreSQL + pgvector. Các phần khác chỉ cần tiêm VectorStore vào:
+ *   vectorStore.add(...)               lưu vector của video (Khánh, gợi ý)
+ *   vectorStore.similaritySearch(...)  tìm video gần nghĩa nhất (Khánh, Long chatbot)
+ * EmbeddingModel (Gemini) do Spring AI tự tạo từ application-ai.yaml.
+ *
+ * Vì sao tự dựng mà không dùng starter pgvector: app đã có DataSource MySQL cho JPA.
+ * Starter sẽ dùng luôn DataSource đó và tạo bảng vector trong MySQL (không chạy được).
+ * Ở đây kết nối Postgres được tạo riêng, KHÔNG đăng ký thành bean, nên JPA, HealthController
+ * và mọi chỗ đang dùng MySQL không bị ảnh hưởng.
+ */
+@Configuration
+@Profile(&quot;ai&quot;)
+@EnableConfigurationProperties(AiProperties.class)
+public class AiConfig {
+
+    @Bean
+    public VectorStore vectorStore(AiProperties props, EmbeddingModel embeddingModel) {
+        AiProperties.VectorDb db = props.vectorDb();
+
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setJdbcUrl(db.url());
+        dataSource.setUsername(db.username());
+        dataSource.setPassword(db.password());
+        dataSource.setPoolName(&quot;vector-db&quot;);
+        dataSource.setMaximumPoolSize(5);
+
+        return PgVectorStore.builder(new JdbcTemplate(dataSource), embeddingModel)
+                .vectorTableName(db.table())
+                .dimensions(db.dimensions())
+                .distanceType(COSINE_DISTANCE)   // so độ giống theo góc giữa 2 vector
+                .indexType(HNSW)                 // chỉ mục tìm gần đúng, nhanh khi nhiều video
+                .initializeSchema(true)          // tự cài extension vector và tạo bảng lần đầu chạy
+                .build();
+    }
+}</code></pre></details>
+<ul class='notes'><li>Tạo <b>một</b> bean <code>VectorStore</code> dùng chung, ai cần thì tiêm vào như repository.</li><li>Kết nối Postgres tạo riêng bên trong, không khai báo thành bean, để không đè DataSource MySQL của JPA.</li><li><code>initializeSchema(true)</code>: lần đầu chạy tự tạo bảng <code>video_vectors</code> (id, content, metadata JSON, embedding vector(768)).</li></ul>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/config/AiProperties.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.config;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+/**
+ * Thông số kỹ thuật phần AI, đọc từ &quot;app.ai&quot; trong application-ai.yaml.
+ * (Key Gemini và tên model nằm ở &quot;spring.ai&quot; cùng file, do Spring AI tự đọc.)
+ */
+@ConfigurationProperties(prefix = &quot;app.ai&quot;)
+public record AiProperties(VectorDb vectorDb) {
+
+    /** Kết nối tới PostgreSQL + pgvector (container vector-db trong docker-compose.yml). */
+    public record VectorDb(String url, String username, String password, String table, int dimensions) {
+    }
+}</code></pre></details>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/config/AiHealthController.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.config;
+
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.context.annotation.Profile;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+/**
+ * Kiểm tra nhanh phần AI đã cấu hình đúng chưa (chỉ quản trị viên, chỉ khi chạy profile &quot;ai&quot;).
+ *   GET /api/admin/ai/health
+ * Gọi Gemini 2 lần: đổi một câu thành vector, và hỏi một câu ngắn.
+ * Trả {embeddingDimensions, chatReply}. Lỗi key hay mạng sẽ hiện ngay ở đây.
+ */
+@RestController
+@Profile(&quot;ai&quot;)
+@RequestMapping(&quot;/api/admin/ai&quot;)
+public class AiHealthController {
+
+    private final EmbeddingModel embeddingModel;
+    private final ChatClient chatClient;
+
+    public AiHealthController(EmbeddingModel embeddingModel, ChatClient.Builder chatClientBuilder) {
+        this.embeddingModel = embeddingModel;
+        this.chatClient = chatClientBuilder.build();
+    }
+
+    @GetMapping(&quot;/health&quot;)
+    public Map&lt;String, Object&gt; health() {
+        float[] vector = embeddingModel.embed(&quot;Video hướng dẫn nấu phở bò Hà Nội&quot;);
+        String reply = chatClient.prompt()
+                .user(&quot;Trả lời đúng một từ: xin chào&quot;)
+                .call()
+                .content();
+        return Map.of(&quot;embeddingDimensions&quot;, vector.length, &quot;chatReply&quot;, reply == null ? &quot;&quot; : reply.trim());
+    }
+}</code></pre></details>
+<details class="code"><summary><span class="fn">backend/pom.xml (phần thêm)</span><span class="hint">bấm để xem code</span></summary><pre><code class="xml">&lt;!-- ===== Spring AI (chỉ bật khi chạy profile &quot;ai&quot;, xem application-ai.yaml) ===== --&gt;
+		&lt;!-- Gemini: model chat (chatbot) --&gt;
+		&lt;dependency&gt;
+			&lt;groupId&gt;org.springframework.ai&lt;/groupId&gt;
+			&lt;artifactId&gt;spring-ai-starter-model-google-genai&lt;/artifactId&gt;
+		&lt;/dependency&gt;
+		&lt;!-- OpenAI (hoặc máy chủ tương thích OpenAI): model chat thay thế, chọn bằng AI_CHAT_PROVIDER --&gt;
+		&lt;dependency&gt;
+			&lt;groupId&gt;org.springframework.ai&lt;/groupId&gt;
+			&lt;artifactId&gt;spring-ai-starter-model-openai&lt;/artifactId&gt;
+		&lt;/dependency&gt;
+		&lt;!-- Gemini: model embedding (đổi chữ thành vector) --&gt;
+		&lt;dependency&gt;
+			&lt;groupId&gt;org.springframework.ai&lt;/groupId&gt;
+			&lt;artifactId&gt;spring-ai-starter-model-google-genai-embedding&lt;/artifactId&gt;
+		&lt;/dependency&gt;
+		&lt;!-- Kho vector PostgreSQL + pgvector. Dùng module thường, không dùng starter,
+		     vì starter sẽ lấy nhầm DataSource MySQL. Tự dựng ở ai/config/AiConfig. --&gt;
+		&lt;dependency&gt;
+			&lt;groupId&gt;org.springframework.ai&lt;/groupId&gt;
+			&lt;artifactId&gt;spring-ai-pgvector-store&lt;/artifactId&gt;
+		&lt;/dependency&gt;
+		&lt;!-- RAG cho chatbot: QuestionAnswerAdvisor --&gt;
+		&lt;dependency&gt;
+			&lt;groupId&gt;org.springframework.ai&lt;/groupId&gt;
+			&lt;artifactId&gt;spring-ai-vector-store-advisor&lt;/artifactId&gt;
+		&lt;/dependency&gt;
+		&lt;dependency&gt;
+			&lt;groupId&gt;org.postgresql&lt;/groupId&gt;
+			&lt;artifactId&gt;postgresql&lt;/artifactId&gt;</code></pre></details>
+</section>
+
+<section id="thanh">
+<h2>4. Thanh: User tracking</h2>
+<p><b>Thu thập gì:</b> mọi hành vi liên quan tới video của người dùng, lưu vào bảng <code>user_events</code> (MySQL). Mỗi dòng là một hành vi.</p>
+<table><tr><th>Trường</th><th>Kiểu</th><th>Để làm gì (cô sẽ hỏi)</th></tr><tr><td><code>id</code></td><td>khoá</td><td>Định danh dòng</td></tr><tr><td><code>user_id</code></td><td>số, null được</td><td>Ai làm. Khách thì null: vẫn đếm thống kê nhưng không cá nhân hoá</td></tr><tr><td><code>video_id</code></td><td>số, null được</td><td>Video nào. Null với SEARCH</td></tr><tr><td><code>event_type</code></td><td>VIEW, WATCH, SKIP, LIKE, UNLIKE, COMMENT, SEARCH</td><td>Mỗi loại một trọng số khi tính sở thích</td></tr><tr><td><code>watch_ms</code></td><td>số</td><td>Đã xem bao lâu (mili giây)</td></tr><tr><td><code>duration_ms</code></td><td>số</td><td>Video dài bao lâu. watch_ms / duration_ms = tỉ lệ xem hết: xem gần hết là thích thật</td></tr><tr><td><code>query</code></td><td>chữ ≤ 100</td><td>Từ khoá tìm kiếm: cho biết đang quan tâm gì</td></tr><tr><td><code>created_at</code></td><td>thời gian</td><td>Sự kiện gần đây tính nặng hơn sự kiện cũ</td></tr></table>
+<div class="box">Không có <code>updated_at</code> vì sự kiện <b>chỉ ghi thêm, không bao giờ sửa</b>. <code>user_id</code>, <code>video_id</code> không đặt khoá ngoại: xoá video không phải xoá lịch sử trước, và ghi sự kiện không bao giờ làm hỏng thao tác chính vì lỗi ràng buộc. Có 2 chỉ mục: (user_id, created_at) để lấy nhanh hành vi mới nhất của một người, và video_id.</div>
+<h3>Ghi ở đâu</h3>
+<table>
+<tr><th>Hành vi</th><th>Ai ghi</th><th>Chỗ trong code</th></tr>
+<tr><td>VIEW</td><td>Backend tự ghi</td><td><code>VideoController.recordView</code></td></tr>
+<tr><td>LIKE, UNLIKE, COMMENT</td><td>Backend tự ghi</td><td><code>InteractionController</code></td></tr>
+<tr><td>SEARCH</td><td>Backend tự ghi (chỉ trang đầu)</td><td><code>SearchController</code></td></tr>
+<tr><td>WATCH, SKIP</td><td>App gửi</td><td><code>POST /api/events</code> từ <code>WatchScreen</code></td></tr>
+</table>
+<p>Ở app, màn Xem video (<code>WatchScreen.tsx</code>) gửi <code>POST /api/events</code> khi người dùng rời một video: xem dưới 2 giây là <b>SKIP</b>, còn lại là <b>WATCH</b> kèm thời gian đã xem và độ dài video. Thời gian chỉ được cộng khi video <b>đang thật sự phát</b> trên màn: tạm dừng, mở Bình luận, ra màn hình chính thì không tính. Code ở mục 7.</p>
+<ul class='notes'><li>Ghi ở <b>controller sau khi thao tác chính xong</b>, và nuốt lỗi: tracking hỏng không bao giờ làm hỏng việc thích, bình luận.</li><li>App chỉ được gửi VIEW, WATCH, SKIP. Gửi LIKE giả sẽ bị trả 400 "Loại sự kiện không hợp lệ": lượt thích phải đi qua API thích thật.</li><li>Khác với bảng <code>watch_history</code> có sẵn: bảng đó chỉ giữ <b>một dòng mỗi video</b> để hiện màn Lịch sử xem. <code>user_events</code> là nhật ký đầy đủ cho AI.</li></ul>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/tracking/UserEvent.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.tracking;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
+
+/**
+ * Một hành vi của người dùng, dùng làm dữ liệu cho gợi ý video.
+ * Chỉ ghi thêm, không bao giờ sửa → không có updated_at.
+ *
+ * user_id, video_id để số thường, KHÔNG đặt khoá ngoại: xoá video thì không phải xoá lịch sử trước,
+ * và ghi sự kiện không bao giờ làm hỏng thao tác chính (thích, bình luận...) vì lỗi ràng buộc.
+ */
+@Entity
+@Table(name = &quot;user_events&quot;, indexes = {
+        @Index(name = &quot;idx_user_events_user_time&quot;, columnList = &quot;user_id, created_at&quot;),
+        @Index(name = &quot;idx_user_events_video&quot;, columnList = &quot;video_id&quot;)})
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class UserEvent {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    /** Ai làm. Khách thì null: vẫn đếm cho thống kê, nhưng không dùng để cá nhân hoá. */
+    @Column(name = &quot;user_id&quot;)
+    private Long userId;
+
+    /** Video nào. Null với SEARCH. */
+    @Column(name = &quot;video_id&quot;)
+    private Long videoId;
+
+    /** Loại hành vi; mỗi loại một trọng số khi tính sở thích. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 15)
+    private EventType eventType;
+
+    /** Đã xem bao nhiêu mili giây. Chia cho durationMs ra tỉ lệ xem hết: xem gần hết = thích thật. */
+    private Integer watchMs;
+
+    /** Video dài bao nhiêu mili giây (app gửi kèm WATCH). */
+    private Integer durationMs;
+
+    /** Từ khoá tìm kiếm (chỉ với SEARCH): cho biết người dùng đang quan tâm gì. */
+    @Column(length = 100)
+    private String query;
+
+    /** Lúc xảy ra: sự kiện gần đây được tính nặng hơn sự kiện cũ. */
+    @CreationTimestamp
+    @Column(name = &quot;created_at&quot;, nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+}</code></pre></details>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/tracking/EventType.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.tracking;
+
+/**
+ * Loại hành vi người dùng được ghi lại (User tracking) — Thanh.
+ * Mỗi loại có một trọng số khi tính sở thích (xem RecommendationService.WEIGHTS).
+ */
+public enum EventType {
+    VIEW,       // mở xem một video
+    WATCH,      // rời video sau khi xem, kèm thời gian đã xem
+    SKIP,       // lướt qua nhanh (xem chưa tới 2 giây) → tín hiệu &quot;không thích&quot;
+    LIKE,
+    UNLIKE,
+    COMMENT,
+    SEARCH      // gõ tìm kiếm, kèm từ khoá
+}</code></pre></details>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/tracking/TrackingService.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.tracking;
+
+import com.vsa.backend.exceptions.ApiException;
+import com.vsa.backend.utils.SecurityUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.Set;
+
+/**
+ * Ghi lại hành vi người dùng (User tracking) — Thanh.
+ * Được gọi ở controller SAU KHI thao tác chính đã xong, và nuốt lỗi: tracking hỏng KHÔNG được làm hỏng
+ * thao tác chính (thích, bình luận, tìm kiếm...).
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class TrackingService {
+
+    /** Loại app được tự gửi qua POST /api/events. LIKE, COMMENT, SEARCH do backend tự ghi, app không giả được. */
+    private static final Set&lt;EventType&gt; CLIENT_TYPES = Set.of(EventType.VIEW, EventType.WATCH, EventType.SKIP);
+
+    private final UserEventRepository userEventRepository;
+
+    /** POST /api/events */
+    public void recordFromClient(TrackEventRequest request) {
+        if (!CLIENT_TYPES.contains(request.type())) {
+            throw ApiException.badRequest(&quot;Loại sự kiện không hợp lệ&quot;);
+        }
+        record(request.type(), request.videoId(), request.watchMs(), request.durationMs(), null);
+    }
+
+    public void videoEvent(EventType type, Long videoId) {
+        record(type, videoId, null, null, null);
+    }
+
+    public void search(String query) {
+        if (query == null || query.isBlank()) {
+            return;
+        }
+        String q = query.trim();
+        record(EventType.SEARCH, null, null, null, q.length() &gt; 100 ? q.substring(0, 100) : q);
+    }
+
+    public void record(EventType type, Long videoId, Integer watchMs, Integer durationMs, String query) {
+        try {
+            userEventRepository.save(UserEvent.builder()
+                    .userId(SecurityUtils.getCurrentUserIdOrNull())
+                    .videoId(videoId)
+                    .eventType(type)
+                    .watchMs(watchMs)
+                    .durationMs(durationMs)
+                    .query(query)
+                    .build());
+        } catch (RuntimeException e) {
+            log.warn(&quot;Không ghi được sự kiện {}: {}&quot;, type, e.getMessage());
+        }
+    }
+}</code></pre></details>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/tracking/TrackingController.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.tracking;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * POST /api/events  {videoId, type: VIEW|WATCH|SKIP, watchMs, durationMs} → 204
+ * Khách cũng gửi được (SecurityConfig mở), sự kiện của khách lưu user_id null.
+ */
+@RestController
+@RequiredArgsConstructor
+public class TrackingController {
+
+    private final TrackingService trackingService;
+
+    @PostMapping(&quot;/api/events&quot;)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void track(@Valid @RequestBody TrackEventRequest request) {
+        trackingService.recordFromClient(request);
+    }
+}</code></pre></details>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/controllers/InteractionController.java (chỗ ghi sự kiện)</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">    @PostMapping(&quot;/api/videos/{videoId}/like&quot;)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void likeVideo(@PathVariable Long videoId) {
+        interactionService.likeVideo(videoId);
+        trackingService.videoEvent(EventType.LIKE, videoId);
+    }
+
+    @DeleteMapping(&quot;/api/videos/{videoId}/like&quot;)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unlikeVideo(@PathVariable Long videoId) {
+        interactionService.unlikeVideo(videoId);
+        trackingService.videoEvent(EventType.UNLIKE, videoId);
+    }
+
+    @GetMapping(&quot;/api/videos/{videoId}/comments&quot;)
+    public PageResponse&lt;CommentResponse&gt; getComments(@PathVariable Long videoId,
+                                                      @RequestParam(defaultValue = &quot;0&quot;) int page) {
+        return interactionService.getComments(videoId, Math.max(page, 0));   // page âm → trang đầu
+    }
+
+    @PostMapping(&quot;/api/videos/{videoId}/comments&quot;)
+    @ResponseStatus(HttpStatus.CREATED)
+    public CommentResponse createComment(@PathVariable Long videoId,
+                                         @Valid @RequestBody CommentCreateRequest request) {
+        CommentResponse comment = interactionService.createComment(videoId, request);
+        trackingService.videoEvent(EventType.COMMENT, videoId);
+        return comment;
+    }</code></pre></details>
+<h3>Câu cô dễ hỏi Thanh</h3>
+<dl class='qa'><dt>User tracking thu thập những gì?</dt><dd>Xem (VIEW), xem bao lâu (WATCH kèm thời gian), lướt qua (SKIP), thích, bỏ thích, bình luận, từ khoá tìm kiếm. Lưu trong bảng user_events.</dd><dt>Sao cần watch_ms và duration_ms?</dt><dd>Để tính tỉ lệ xem hết. Bấm tim có thể vô tình, còn xem 14/15 giây là thích thật; lướt qua sau 1 giây là không thích.</dd><dt>Khách có bị ghi không?</dt><dd>Có nhưng user_id null: dùng cho thống kê lượt xem, không dùng để cá nhân hoá ai cả.</dd><dt>Dữ liệu này dùng vào đâu?</dt><dd>Phần gợi ý của Khánh đọc 200 hành vi gần nhất, chấm điểm từng video theo trọng số để biết gu người dùng.</dd><dt>Ghi sự kiện lỗi thì sao?</dt><dd>Chỉ ghi log, thao tác chính (thích, bình luận) vẫn thành công.</dd></dl></section>
+<section id="khanh">
+<h2>5. Khánh: Vector database và gợi ý</h2>
+<h3>5.1 Đưa video vào kho vector</h3>
+<p>Mỗi video khi đăng, sửa, đăng nháp: ghép tiêu đề + chủ đề + mô tả + hashtag thành một đoạn chữ → Gemini đổi thành vector 768 số → lưu vào <code>video_vectors</code>. Xoá video, đổi sang riêng tư thì xoá vector.</p>
+<ul class='notes'><li>Chỉ video <b>đã đăng và công khai</b> mới có vector, nên không bao giờ gợi ý nhầm video riêng tư.</li><li>Mỗi video luôn có cùng một id vector (UUID sinh từ "video-&lt;id&gt;"), sửa video thì ghi đè chứ không trùng.</li><li>AI lỗi (hết lượt, mất mạng) thì chỉ ghi log, <b>việc đăng video vẫn thành công</b>. Chạy reindex sau để bù.</li><li>AI <b>không xem hình</b>, chỉ đọc chữ. Video mô tả càng đủ ý gợi ý càng đúng.</li></ul>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/recommend/VideoEmbeddingService.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.recommend;
+
+import com.vsa.backend.entities.Hashtag;
+import com.vsa.backend.entities.Video;
+import com.vsa.backend.enums.VideoStatus;
+import com.vsa.backend.enums.Visibility;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+/**
+ * Đưa video vào kho vector (UC Gợi ý video) — Khánh.
+ * Chưa bật AI (không chạy profile &quot;ai&quot;) thì mọi hàm ở đây không làm gì.
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class VideoEmbeddingService {
+
+    private final ObjectProvider&lt;VectorStore&gt; vectorStoreProvider;
+
+    /** Lưu (hoặc cập nhật) vector của video. Video không công khai hay chưa đăng thì xoá vector đi. */
+    public void index(Video video) {
+        VectorStore store = vectorStoreProvider.getIfAvailable();
+        if (store == null) {
+            return;
+        }
+        if (video.getStatus() != VideoStatus.PUBLISHED || video.getVisibility() != Visibility.PUBLIC) {
+            remove(video.getId());
+            return;
+        }
+        try {
+            store.add(List.of(toDocument(video)));
+        } catch (RuntimeException e) {
+            // Gemini lỗi (hết lượt, mất mạng) thì chỉ ghi log, KHÔNG làm hỏng việc đăng video
+            log.warn(&quot;Không tạo được vector cho video {}: {}&quot;, video.getId(), e.getMessage());
+        }
+    }
+
+    public void remove(Long videoId) {
+        VectorStore store = vectorStoreProvider.getIfAvailable();
+        if (store == null) {
+            return;
+        }
+        try {
+            store.delete(List.of(documentId(videoId)));
+        } catch (RuntimeException e) {
+            log.warn(&quot;Không xoá được vector của video {}: {}&quot;, videoId, e.getMessage());
+        }
+    }
+
+    /** Mỗi video luôn ra cùng một id → đăng lại hay sửa thì ghi đè, không bị trùng. */
+    public static String documentId(Long videoId) {
+        return UUID.nameUUIDFromBytes((&quot;video-&quot; + videoId).getBytes(StandardCharsets.UTF_8)).toString();
+    }
+
+    /** Đoạn chữ mô tả video. Gemini đọc đoạn này để tạo vector, nên càng đủ ý gợi ý càng đúng. */
+    public static String contentOf(Video video) {
+        List&lt;String&gt; parts = new ArrayList&lt;&gt;();
+        parts.add(video.getTitle());
+        if (video.getTopic() != null) {
+            parts.add(&quot;Chủ đề: &quot; + video.getTopic().getName());
+        }
+        if (video.getDescription() != null) {
+            parts.add(video.getDescription());
+        }
+        if (!video.getHashtags().isEmpty()) {
+            parts.add(video.getHashtags().stream()
+                    .map(Hashtag::getName)
+                    .map(name -&gt; &quot;#&quot; + name)
+                    .collect(Collectors.joining(&quot; &quot;)));
+        }
+        return String.join(&quot;\n&quot;, parts);
+    }
+
+    private Document toDocument(Video video) {
+        return Document.builder()
+                .id(documentId(video.getId()))
+                .text(contentOf(video))
+                .metadata(Map.of(
+                        &quot;videoId&quot;, video.getId(),
+                        &quot;ownerId&quot;, video.getOwner().getId()))
+                .build();
+    }
+}</code></pre></details>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/services/VideoService.java (4 chỗ gọi)</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">videoRepository.saveAndFlush(video);
+videoEmbeddingService.index(video);      // đăng video
+...
+videoEmbeddingService.index(video);      // sửa video / đăng bản nháp
+...
+videoEmbeddingService.remove(videoId);   // xoá video</code></pre></details>
+
+<h3>5.2 Gợi ý "Dành cho bạn": AI gợi ý dựa trên dữ liệu như thế nào</h3>
+<ol class="steps">
+<li><b>Chấm điểm sở thích</b>: đọc 200 hành vi gần nhất trong <code>user_events</code> (+ lượt thích có sẵn). Mỗi video cộng điểm theo trọng số, nhân hệ số độ mới (hôm nay = 1, một tuần trước ≈ 0.5).
+<table class="mini"><tr><th>Hành vi</th><th>Điểm</th></tr><tr><td>Thích</td><td>+3</td></tr><tr><td>Bình luận</td><td>+2</td></tr><tr><td>Xem</td><td>+2 × tỉ lệ xem hết</td></tr><tr><td>Mở xem</td><td>+0.5</td></tr><tr><td>Lướt qua</td><td>−1</td></tr><tr><td>Bỏ thích</td><td>−3</td></tr></table></li>
+<li><b>Tạo "gu"</b>: lấy nội dung 5 video điểm cao nhất + 3 từ khoá tìm gần nhất, ghép thành một đoạn, Gemini đổi thành <b>vector sở thích</b>.</li>
+<li><b>Tìm gần nhất</b>: pgvector tìm video có vector gần vector sở thích nhất (cosine), bỏ video của chính mình và video đã xem.</li>
+</ol>
+<div class="box"><b>Đã thử thật:</b> tài khoản <code>minh</code> ban đầu được gợi ý toàn video "Chiều mưa Sài Gòn". Sau khi xem hết và thích 3 video thể thao, "Dành cho bạn" chuyển sang "Thể thao cuối tuần 2, 4, 7, 8…". Đây là cảnh demo cho cô.</div>
+<p>Chưa có dữ liệu (người mới) thì trả rỗng, app hiện lời nhắc xem thêm vài video ("khởi động lạnh").</p>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/recommend/RecommendationService.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.recommend;
+
+import com.vsa.backend.ai.tracking.EventType;
+import com.vsa.backend.ai.tracking.UserEvent;
+import com.vsa.backend.ai.tracking.UserEventRepository;
+import com.vsa.backend.dtos.response.VideoResponse;
+import com.vsa.backend.entities.Video;
+import com.vsa.backend.entities.VideoLike;
+import com.vsa.backend.enums.VideoStatus;
+import com.vsa.backend.enums.Visibility;
+import com.vsa.backend.exceptions.ApiException;
+import com.vsa.backend.mappers.VideoMapper;
+import com.vsa.backend.repositories.VideoLikeRepository;
+import com.vsa.backend.repositories.VideoRepository;
+import com.vsa.backend.utils.SecurityUtils;
+import lombok.RequiredArgsConstructor;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * Tìm kiếm theo nghĩa và gợi ý &quot;Dành cho bạn&quot; — Khánh.
+ * Dữ liệu đầu vào là nhật ký hành vi user_events (phần tracking của Thanh).
+ */
+@Service
+@RequiredArgsConstructor
+public class RecommendationService {
+
+    private static final int SEARCH_SIZE = 10;
+    private static final int FOR_YOU_SIZE = 10;
+    private static final int EVENT_LIMIT = 200;         // xét 200 hành vi gần nhất
+    private static final int TASTE_SIZE = 5;            // 5 video điểm cao nhất làm &quot;gu&quot;
+    private static final int QUERY_LIMIT = 3;           // + 3 từ khoá tìm gần nhất
+    private static final double WEIGHT_LIKE = 3.0;
+
+    private final ObjectProvider&lt;VectorStore&gt; vectorStoreProvider;
+    private final VideoRepository videoRepository;
+    private final VideoLikeRepository videoLikeRepository;
+    private final UserEventRepository userEventRepository;
+    private final VideoMapper videoMapper;
+
+    /** GET /api/search/semantic?q=... */
+    @Transactional(readOnly = true)
+    public List&lt;VideoResponse&gt; semanticSearch(String query) {
+        if (query == null || query.isBlank()) {
+            throw ApiException.badRequest(&quot;Nhập nội dung cần tìm&quot;);
+        }
+        List&lt;Document&gt; docs = search(SearchRequest.builder()
+                .query(query.trim())
+                .topK(SEARCH_SIZE)
+                .similarityThreshold(0.6)               // dưới 0.6 coi như không liên quan
+                .build());
+        return toVideos(docs, Set.of(), SEARCH_SIZE);
+    }
+
+    /**
+     * GET /api/videos/me/for-you
+     * 1. Chấm điểm từng video người dùng đã tương tác (bảng user_events + lượt thích), theo trọng số và độ mới.
+     * 2. Ghép nội dung 5 video điểm cao nhất + từ khoá tìm gần đây thành &quot;gu&quot;, Gemini đổi thành một vector.
+     * 3. Tìm video gần vector đó nhất, bỏ video của mình và video đã xem.
+     */
+    @Transactional(readOnly = true)
+    public List&lt;VideoResponse&gt; forYou() {
+        Long me = SecurityUtils.getCurrentUserId();
+        List&lt;UserEvent&gt; events = userEventRepository.findByUserIdOrderByCreatedAtDesc(me, PageRequest.of(0, EVENT_LIMIT));
+        List&lt;VideoLike&gt; likes = videoLikeRepository.findVisibleLikes(me, me, VideoStatus.PUBLISHED,
+                Visibility.PUBLIC, Visibility.FOLLOWERS, PageRequest.of(0, EVENT_LIMIT)).getContent();
+
+        // 1. Điểm sở thích của từng video
+        Map&lt;Long, Double&gt; score = new HashMap&lt;&gt;();
+        Set&lt;Long&gt; seen = new HashSet&lt;&gt;();
+        List&lt;String&gt; recentQueries = new ArrayList&lt;&gt;();
+        for (UserEvent e : events) {
+            if (e.getEventType() == EventType.SEARCH) {
+                if (recentQueries.size() &lt; QUERY_LIMIT) {
+                    recentQueries.add(e.getQuery());
+                }
+                continue;
+            }
+            if (e.getVideoId() == null) {
+                continue;
+            }
+            seen.add(e.getVideoId());
+            score.merge(e.getVideoId(), weightOf(e) * recency(e.getCreatedAt()), Double::sum);
+        }
+        for (VideoLike like : likes) {            // lượt thích có từ trước khi có tracking (dữ liệu mẫu)
+            Long id = like.getVideo().getId();
+            seen.add(id);
+            score.putIfAbsent(id, WEIGHT_LIKE * recency(like.getCreatedAt()));
+        }
+
+        List&lt;Long&gt; top = score.entrySet().stream()
+                .filter(en -&gt; en.getValue() &gt; 0)  // video bị lướt qua, bỏ thích thì điểm âm → bỏ
+                .sorted(Map.Entry.&lt;Long, Double&gt;comparingByValue().reversed())
+                .limit(TASTE_SIZE)
+                .map(Map.Entry::getKey)
+                .toList();
+        if (top.isEmpty() &amp;&amp; recentQueries.isEmpty()) {
+            return List.of();                     // chưa có dữ liệu → app hiện Trending thay thế
+        }
+
+        // 2. &quot;Gu&quot; của người dùng thành một đoạn chữ, Gemini đổi thành vector khi tìm
+        Map&lt;Long, Video&gt; byId = videoRepository.findAllById(top).stream()
+                .collect(Collectors.toMap(Video::getId, Function.identity()));
+        List&lt;String&gt; parts = new ArrayList&lt;&gt;();
+        top.stream().map(byId::get).filter(Objects::nonNull)
+                .map(VideoEmbeddingService::contentOf)
+                .forEach(parts::add);
+        if (!recentQueries.isEmpty()) {
+            parts.add(&quot;Gần đây tìm: &quot; + String.join(&quot;, &quot;, recentQueries));
+        }
+
+        // 3. Tìm video gần nhất, trừ video của mình
+        List&lt;Document&gt; docs = search(SearchRequest.builder()
+                .query(String.join(&quot;\n\n&quot;, parts))
+                .topK(FOR_YOU_SIZE * 4)                 // lấy dư vì sẽ bỏ video đã xem
+                .filterExpression(&quot;ownerId != &quot; + me)
+                .build());
+        List&lt;VideoResponse&gt; result = toVideos(docs, seen, FOR_YOU_SIZE);
+        // Xem gần hết kho rồi thì cho xem lại video cũ còn hơn trống
+        return result.isEmpty() ? toVideos(docs, Set.of(), FOR_YOU_SIZE) : result;
+    }
+
+    /** Trọng số: thích mạnh hơn xem; xem hết mạnh hơn xem lướt; lướt qua và bỏ thích là tín hiệu âm. */
+    private static double weightOf(UserEvent e) {
+        return switch (e.getEventType()) {
+            case LIKE -&gt; WEIGHT_LIKE;
+            case COMMENT -&gt; 2.0;
+            case WATCH -&gt; 2.0 * watchRatio(e);
+            case VIEW -&gt; 0.5;
+            case SKIP -&gt; -1.0;
+            case UNLIKE -&gt; -WEIGHT_LIKE;
+            case SEARCH -&gt; 0;
+        };
+    }
+
+    /** Tỉ lệ xem hết, từ 0 tới 1. */
+    private static double watchRatio(UserEvent e) {
+        if (e.getWatchMs() == null || e.getDurationMs() == null || e.getDurationMs() &lt;= 0) {
+            return 0.5;
+        }
+        return Math.min(1.0, (double) e.getWatchMs() / e.getDurationMs());
+    }
+
+    /** Hôm nay = 1, một tuần trước ≈ 0.5, càng cũ càng nhẹ. */
+    private static double recency(LocalDateTime at) {
+        if (at == null) {
+            return 1.0;
+        }
+        double days = Math.max(0, Duration.between(at, LocalDateTime.now()).toHours() / 24.0);
+        return 1.0 / (1.0 + days / 7.0);
+    }
+
+    /** Gọi kho vector (cần Gemini đổi câu tìm thành vector); lỗi hết lượt, mất mạng → báo dễ hiểu. */
+    private List&lt;Document&gt; search(SearchRequest request) {
+        try {
+            return store().similaritySearch(request);
+        } catch (ApiException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw ApiException.unavailable(&quot;Tính năng gợi ý đang bận hoặc hết lượt, thử lại sau ít phút&quot;);
+        }
+    }
+
+    private VectorStore store() {
+        VectorStore store = vectorStoreProvider.getIfAvailable();
+        if (store == null) {
+            throw ApiException.badRequest(&quot;Tính năng AI chưa được bật&quot;);
+        }
+        return store;
+    }
+
+    /** Đổi kết quả trong kho vector thành video thật trong MySQL, giữ đúng thứ tự gần nhất trước. */
+    private List&lt;VideoResponse&gt; toVideos(List&lt;Document&gt; docs, Set&lt;Long&gt; exclude, int limit) {
+        List&lt;Long&gt; ids = docs.stream()
+                .map(d -&gt; ((Number) d.getMetadata().get(&quot;videoId&quot;)).longValue())
+                .filter(id -&gt; !exclude.contains(id))
+                .distinct()
+                .toList();
+        Map&lt;Long, Video&gt; byId = videoRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Video::getId, Function.identity(), (a, b) -&gt; a, LinkedHashMap::new));
+        return ids.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .filter(v -&gt; v.getStatus() == VideoStatus.PUBLISHED &amp;&amp; v.getVisibility() == Visibility.PUBLIC)
+                .limit(limit)
+                .map(v -&gt; videoMapper.toResponse(v, false))
+                .toList();
+    }
+}</code></pre></details>
+<h3>5.3 Tìm kiếm theo nghĩa</h3>
+<p>Câu tìm → Gemini đổi thành vector → tìm 10 video gần nhất, bỏ kết quả có độ giống dưới 0.6. Gõ "đi du lịch ngắm núi" ra "Du lịch Đà Lạt", "Nhật ký du lịch" dù không trùng chữ nào.</p>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/recommend/RecommendationController.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.recommend;
+
+import com.vsa.backend.dtos.response.VideoResponse;
+import com.vsa.backend.entities.Video;
+import com.vsa.backend.repositories.VideoRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * API phần gợi ý — Khánh.
+ *  GET  /api/search/semantic?q=...   tìm theo nghĩa (khách cũng dùng được)
+ *  GET  /api/videos/me/for-you       &quot;Dành cho bạn&quot; (cần đăng nhập)
+ *  POST /api/admin/ai/reindex        nạp lại vector cho mọi video (quản trị viên)
+ */
+@RestController
+@RequiredArgsConstructor
+public class RecommendationController {
+
+    private final RecommendationService recommendationService;
+    private final VideoEmbeddingService videoEmbeddingService;
+    private final VideoRepository videoRepository;
+
+    @GetMapping(&quot;/api/search/semantic&quot;)
+    public List&lt;VideoResponse&gt; semanticSearch(@RequestParam String q) {
+        return recommendationService.semanticSearch(q);
+    }
+
+    @GetMapping(&quot;/api/videos/me/for-you&quot;)
+    public List&lt;VideoResponse&gt; forYou() {
+        return recommendationService.forYou();
+    }
+
+    @PostMapping(&quot;/api/admin/ai/reindex&quot;)
+    @Transactional(readOnly = true)
+    public Map&lt;String, Integer&gt; reindex() {
+        List&lt;Video&gt; videos = videoRepository.findAll();
+        videos.forEach(videoEmbeddingService::index);
+        return Map.of(&quot;videos&quot;, videos.size());
+    }
+}</code></pre></details>
+<h3>Câu cô dễ hỏi Khánh</h3>
+<dl class='qa'><dt>Vector lưu ở đâu, gồm gì?</dt><dd>Bảng video_vectors trong PostgreSQL + pgvector: id, content (đoạn chữ của video), metadata (videoId, ownerId), embedding (768 số). Có chỉ mục HNSW.</dd><dt>AI gợi ý thế nào?</dt><dd>Chấm điểm video theo hành vi (trọng số + độ mới) → 5 video điểm cao nhất thành vector sở thích → tìm video có vector gần nhất theo cosine.</dd><dt>Sao không lưu vector trong MySQL?</dt><dd>Spring AI không có kho vector cho MySQL; pgvector có kiểu vector và chỉ mục tìm nhanh. Tách riêng nên không phải đổi cả app.</dd><dt>Video riêng tư có bị gợi ý không?</dt><dd>Không: chỉ video đã đăng và công khai mới có vector, và lúc trả kết quả còn kiểm tra lại trạng thái trong MySQL.</dd><dt>Gemini lỗi lúc đăng video?</dt><dd>Đăng video vẫn thành công, chỉ ghi log; reindex sau để bù.</dd></dl></section>
+<section id="long">
+<h2>6. Long: Chatbot hỏi đáp</h2>
+<p>Một câu hỏi đi qua 3 kỹ thuật của Spring AI:</p>
+<ol class="steps">
+<li><b>Nhớ hội thoại</b> (<code>MessageChatMemoryAdvisor</code>): gửi kèm 10 tin gần nhất của người đó, nên hỏi nối tiếp được ("cái đầu tiên bạn vừa nói").</li>
+<li><b>RAG</b> (<code>QuestionAnswerAdvisor</code>): tìm 5 video gần nghĩa nhất trong pgvector (kho của Khánh), chèn vào câu hỏi. Model chỉ được giới thiệu video trong danh sách đó.</li>
+<li><b>Tool calling</b> (<code>ChatTools</code>): model tự gọi <code>getAppRules()</code> (đọc <code>system_settings</code>) hoặc <code>getMyVideos()</code> (video của người đang hỏi) khi cần.</li>
+</ol>
+<table>
+<tr><th>Câu đã hỏi thử</th><th>Trả lời thật</th><th>Kỹ thuật</th></tr>
+<tr><td>Có video nào về du lịch Đà Lạt không?</td><td>Có, video "Du lịch Đà Lạt" săn mây đồi chè Cầu Đất (kèm thẻ video)</td><td>RAG</td></tr>
+<tr><td>Story tồn tại bao lâu thì tự ẩn?</td><td>Story sẽ tự ẩn sau 24 giờ</td><td>Tool getAppRules</td></tr>
+<tr><td>Video nào của tôi nhiều lượt xem nhất?</td><td>"Mèo con dễ thương", 7.043 lượt xem</td><td>Tool getMyVideos</td></tr>
+<tr><td>Còn video nào giống cái đầu tiên bạn vừa giới thiệu?</td><td>Hiểu đó là "Du lịch Đà Lạt"</td><td>Nhớ hội thoại</td></tr>
+<tr><td>Thời tiết Hà Nội hôm nay?</td><td>Lịch sự từ chối, chỉ hỗ trợ về app</td><td>System prompt</td></tr>
+</table>
+<ul class='notes'><li>Đổi <code>STORY_LIFETIME_HOURS</code> trong trang quản trị rồi hỏi lại: bot trả lời số mới. Đây là cảnh chứng minh bot đọc dữ liệu thật, không học thuộc.</li><li><code>ChatTools</code> tạo mới cho mỗi câu hỏi và giữ sẵn id người hỏi, nên không thể hỏi lộ video của người khác.</li><li>Mẫu RAG mặc định của Spring AI là tiếng Anh và bắt "không có trong ngữ cảnh thì nói không biết", làm model không dám gọi tool. Nhóm thay bằng mẫu tiếng Việt cho phép dùng tool.</li><li>Trí nhớ để trong RAM: khởi động lại backend thì mất, đủ cho demo. Nút "Cuộc trò chuyện mới" trên app gọi <code>DELETE /api/chat</code>.</li><li>Bên AI hết lượt, sai key, mất mạng → trả 503 "Trợ lý đang bận hoặc hết lượt" thay vì lỗi hệ thống.</li></ul>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/chat/ChatbotService.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.chat;
+
+import com.vsa.backend.dtos.response.VideoResponse;
+import com.vsa.backend.entities.Video;
+import com.vsa.backend.enums.VideoStatus;
+import com.vsa.backend.enums.Visibility;
+import com.vsa.backend.exceptions.ApiException;
+import com.vsa.backend.mappers.VideoMapper;
+import com.vsa.backend.repositories.VideoRepository;
+import com.vsa.backend.services.SystemSettingService;
+import com.vsa.backend.utils.SecurityUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.ChatClientResponse;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * Trợ lý hỏi đáp (chatbot) — Long.
+ * Ba kỹ thuật Spring AI:
+ *  - RAG (QuestionAnswerAdvisor): trước khi hỏi Gemini, tìm 5 video gần nghĩa nhất trong kho vector
+ *    và nhét vào câu hỏi, để Gemini trả lời bằng video THẬT của app thay vì bịa.
+ *  - Tool calling (ChatTools): Gemini tự gọi hàm Java khi cần quy định app hay video của người hỏi.
+ *  - Nhớ hội thoại (MessageChatMemoryAdvisor): giữ 10 tin gần nhất của mỗi người, hỏi nối tiếp được.
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ChatbotService {
+
+    private static final String SYSTEM_PROMPT = &quot;&quot;&quot;
+            Bạn là trợ lý của ứng dụng chia sẻ video ngắn Video Sharing App (giống TikTok).
+            Luôn trả lời bằng tiếng Việt, ngắn gọn, thân thiện, tối đa khoảng 5 câu.
+            Chỉ trả lời về app và các video trong app. Câu hỏi ngoài lề thì lịch sự từ chối.
+            Khi người dùng muốn tìm video: chỉ giới thiệu video có trong phần ngữ cảnh được cung cấp,
+            nhắc ĐÚNG tiêu đề video. Không có video phù hợp thì nói thật là chưa có.
+            Khi hỏi về quy định, giới hạn của app: gọi công cụ getAppRules, không tự đoán số.
+            Khi hỏi về video của chính họ: gọi công cụ getMyVideos.
+            &quot;&quot;&quot;;
+
+    /** Thay mẫu mặc định (tiếng Anh, bắt &quot;không có trong ngữ cảnh thì nói không biết&quot;, chặn mất tool). */
+    private static final PromptTemplate RAG_TEMPLATE = new PromptTemplate(&quot;&quot;&quot;
+            {query}
+
+            Các video trong app có thể liên quan (mỗi video cách nhau bằng dòng trống, dòng đầu là tiêu đề):
+            ---------------------
+            {question_answer_context}
+            ---------------------
+            Nếu câu hỏi là tìm video thì chỉ dùng các video ở trên. Câu hỏi khác thì bỏ qua danh sách này.
+            &quot;&quot;&quot;);
+
+    private final ObjectProvider&lt;ChatClient.Builder&gt; chatClientBuilderProvider;
+    private final ObjectProvider&lt;VectorStore&gt; vectorStoreProvider;
+    private final SystemSettingService systemSettingService;
+    private final VideoRepository videoRepository;
+    private final VideoMapper videoMapper;
+
+    /** Bộ nhớ hội thoại trong RAM: khởi động lại backend thì mất, đủ cho demo. */
+    private final ChatMemory chatMemory = MessageWindowChatMemory.builder()
+            .chatMemoryRepository(new InMemoryChatMemoryRepository())
+            .maxMessages(10)
+            .build();
+
+    /** POST /api/chat */
+    @Transactional(readOnly = true)
+    public ChatReply ask(String message) {
+        Long me = SecurityUtils.getCurrentUserId();
+        ChatClient.Builder builder = chatClientBuilderProvider.getIfAvailable();
+        VectorStore store = vectorStoreProvider.getIfAvailable();
+        if (builder == null || store == null) {
+            throw ApiException.badRequest(&quot;Tính năng AI chưa được bật&quot;);
+        }
+
+        ChatClientResponse response;
+        try {
+            response = builder.build().prompt()
+                .system(SYSTEM_PROMPT)
+                .user(message.trim())
+                .advisors(
+                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
+                        QuestionAnswerAdvisor.builder(store)
+                                .searchRequest(SearchRequest.builder().topK(5).similarityThreshold(0.55).build())
+                                .promptTemplate(RAG_TEMPLATE)
+                                .build())
+                .advisors(a -&gt; a.param(ChatMemory.CONVERSATION_ID, conversationId(me)))
+                .tools(new ChatTools(me, systemSettingService, videoRepository))
+                .call()
+                .chatClientResponse();
+        } catch (ApiException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            // Hết lượt miễn phí (429), sai key, mất mạng... → báo dễ hiểu thay vì &quot;Lỗi hệ thống&quot;
+            log.warn(&quot;Chatbot lỗi: {}&quot;, e.getMessage());
+            throw ApiException.unavailable(&quot;Trợ lý đang bận hoặc hết lượt, thử lại sau ít phút&quot;);
+        }
+
+        String reply = response.chatResponse() == null ? &quot;&quot; : response.chatResponse().getResult().getOutput().getText();
+        return new ChatReply(reply == null ? &quot;&quot; : reply.trim(), mentionedVideos(reply, response.context()));
+    }
+
+    /** DELETE /api/chat: bắt đầu cuộc trò chuyện mới. */
+    public void reset() {
+        chatMemory.clear(conversationId(SecurityUtils.getCurrentUserId()));
+    }
+
+    private static String conversationId(Long userId) {
+        return &quot;user-&quot; + userId;
+    }
+
+    /** Trong các video RAG đã tìm, giữ những video có tiêu đề xuất hiện trong câu trả lời. */
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private List&lt;VideoResponse&gt; mentionedVideos(String reply, Map&lt;String, Object&gt; context) {
+        Object raw = context.get(QuestionAnswerAdvisor.RETRIEVED_DOCUMENTS);
+        if (reply == null || !(raw instanceof List&lt;?&gt; list) || list.isEmpty()) {
+            return List.of();
+        }
+        String lowerReply = reply.toLowerCase(Locale.ROOT);
+        List&lt;Long&gt; ids = ((List&lt;Document&gt;) list).stream()
+                .filter(d -&gt; {
+                    String text = d.getText() == null ? &quot;&quot; : d.getText();
+                    String title = text.split(&quot;\n&quot;, 2)[0].trim().toLowerCase(Locale.ROOT);
+                    return !title.isEmpty() &amp;&amp; lowerReply.contains(title);
+                })
+                .map(d -&gt; ((Number) d.getMetadata().get(&quot;videoId&quot;)).longValue())
+                .distinct()
+                .toList();
+        Map&lt;Long, Video&gt; byId = videoRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(Video::getId, Function.identity()));
+        return ids.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .filter(v -&gt; v.getStatus() == VideoStatus.PUBLISHED &amp;&amp; v.getVisibility() == Visibility.PUBLIC)
+                .map(v -&gt; videoMapper.toResponse(v, false))
+                .toList();
+    }
+}</code></pre></details>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/chat/ChatTools.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.chat;
+
+import com.vsa.backend.entities.SystemSetting;
+import com.vsa.backend.entities.Video;
+import com.vsa.backend.enums.VideoStatus;
+import com.vsa.backend.repositories.VideoRepository;
+import com.vsa.backend.services.SystemSettingService;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.data.domain.PageRequest;
+
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Các &quot;công cụ&quot; Gemini được phép tự gọi khi cần dữ liệu thật (function calling) — Long.
+ * Mô tả trong @Tool là thứ Gemini đọc để quyết định lúc nào gọi hàm nào, nên viết rõ ràng.
+ * Tạo mới cho mỗi câu hỏi, giữ sẵn id người đang hỏi để không lộ dữ liệu của người khác.
+ */
+public class ChatTools {
+
+    private final Long userId;
+    private final SystemSettingService systemSettingService;
+    private final VideoRepository videoRepository;
+
+    public ChatTools(Long userId, SystemSettingService systemSettingService, VideoRepository videoRepository) {
+        this.userId = userId;
+        this.systemSettingService = systemSettingService;
+        this.videoRepository = videoRepository;
+    }
+
+    @Tool(description = &quot;Lấy các quy định hiện tại của app do quản trị viên cấu hình: &quot;
+            + &quot;story dài tối đa bao nhiêu giây, story tồn tại bao nhiêu giờ, video tối đa bao nhiêu MB. &quot;
+            + &quot;Dùng khi người dùng hỏi về giới hạn, quy định, thời gian, dung lượng.&quot;)
+    public Map&lt;String, String&gt; getAppRules() {
+        Map&lt;String, String&gt; rules = new LinkedHashMap&lt;&gt;();
+        for (SystemSetting s : systemSettingService.getAll()) {
+            rules.put(s.getDescription(), s.getSettingValue());
+        }
+        rules.put(&quot;Video quay trong app dài tối đa (giây)&quot;, &quot;60&quot;);
+        return rules;
+    }
+
+    @Tool(description = &quot;Lấy danh sách video ĐÃ ĐĂNG của chính người đang hỏi, kèm lượt xem, lượt thích, &quot;
+            + &quot;số bình luận, sắp theo lượt xem giảm dần. Dùng khi người dùng hỏi về video của họ.&quot;)
+    public List&lt;Map&lt;String, Object&gt;&gt; getMyVideos() {
+        return videoRepository.findByOwnerIdAndStatusOrderByCreatedAtDesc(userId, VideoStatus.PUBLISHED,
+                        PageRequest.of(0, 50))
+                .getContent().stream()
+                .sorted(Comparator.comparingLong(Video::getViewCount).reversed())
+                .limit(10)
+                .map(v -&gt; Map.&lt;String, Object&gt;of(
+                        &quot;tieuDe&quot;, v.getTitle(),
+                        &quot;luotXem&quot;, v.getViewCount(),
+                        &quot;luotThich&quot;, v.getLikeCount(),
+                        &quot;binhLuan&quot;, v.getCommentCount()))
+                .toList();
+    }
+}</code></pre></details>
+<details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/chat/ChatbotController.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.chat;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * Trợ lý hỏi đáp — Long. Cần đăng nhập (mỗi người một cuộc hội thoại).
+ *  POST   /api/chat  {message} → {reply, videos[]}
+ *  DELETE /api/chat            → xoá trí nhớ, bắt đầu cuộc trò chuyện mới
+ */
+@RestController
+@RequiredArgsConstructor
+public class ChatbotController {
+
+    private final ChatbotService chatbotService;
+
+    @PostMapping(&quot;/api/chat&quot;)
+    public ChatReply ask(@Valid @RequestBody ChatRequest request) {
+        return chatbotService.ask(request.message());
+    }
+
+    @DeleteMapping(&quot;/api/chat&quot;)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reset() {
+        chatbotService.reset();
+    }
+}</code></pre></details>
+<h3>Câu cô dễ hỏi Long</h3>
+<dl class='qa'><dt>Chatbot lấy dữ liệu từ đâu?</dt><dd>Hai nguồn: kho vector (RAG, để tìm video) và tool đọc thẳng database (quy định trong system_settings, video của người hỏi).</dd><dt>Làm sao bot không bịa?</dt><dd>System prompt bắt chỉ giới thiệu video có trong ngữ cảnh RAG; số liệu quy định thì bắt gọi tool chứ không tự đoán.</dd><dt>Bot nhớ hội thoại thế nào?</dt><dd>MessageChatMemoryAdvisor giữ 10 tin gần nhất theo conversationId = user-&lt;id&gt;, mỗi người một cuộc hội thoại riêng.</dd><dt>Cấu hình model chat ở đâu?</dt><dd>application-ai.yaml, khối spring.ai.openai và spring.ai.google.genai; chọn bằng biến AI_CHAT_PROVIDER.</dd></dl></section>
+<section id="mobile">
+<h2>7. Trên app</h2>
+<ul>
+<li><b>Trang chủ</b>: thêm tab <b>"Dành cho bạn"</b> và icon <b>Trợ lý AI</b> ở đầu trang (khách bấm thì hiện bảng mời đăng nhập).</li>
+<li><b>Tìm kiếm</b>: thêm lựa chọn <b>"Theo ý nghĩa (AI)"</b>.</li>
+<li><b>Xem video</b>: rời video thì gửi WATCH / SKIP (người dùng không thấy gì).</li>
+<li><b>Màn Trợ lý AI</b>: chat, câu hỏi gợi ý, thẻ video bấm vào xem được, nút cuộc trò chuyện mới.</li>
+</ul>
+<details class="code"><summary><span class="fn">mobile/src/api/ai.ts — Gọi 5 API AI.</span><span class="hint">bấm để xem code</span></summary><pre><code class="typescript">/**
+ * API tính năng AI: ghi hành vi xem, feed &quot;Dành cho bạn&quot;, tìm kiếm theo ý nghĩa, trợ lý chat.
+ * Lỗi 400 = AI chưa bật (hoặc thiếu từ khoá), 503 = AI hết lượt / đang bận → hiện getErrorMessage(e).
+ */
+import { api } from &#x27;./client&#x27;;
+import type { Video } from &#x27;../types/models&#x27;;
+
+/** WATCH: xem từ 2 giây trở lên · SKIP: lướt qua nhanh · VIEW: backend tự ghi khi gọi /videos/{id}/view */
+export type WatchEventType = &#x27;WATCH&#x27; | &#x27;SKIP&#x27; | &#x27;VIEW&#x27;;
+
+export interface WatchEvent {
+  videoId: number;
+  type: WatchEventType;
+  /** đã xem bao nhiêu mili giây */
+  watchMs?: number;
+  /** video dài bao nhiêu mili giây */
+  durationMs?: number;
+}
+
+export interface ChatReply {
+  /** câu trả lời, có thể có **chữ đậm** */
+  reply: string;
+  /** video trợ lý gợi ý kèm câu trả lời (có thể rỗng) */
+  videos: Video[];
+}
+
+export const aiApi = {
+  /** Ghi 1 lần xem. Không bao giờ ném lỗi: ghi hụt 1 sự kiện thì thôi, không làm hỏng màn hình. */
+  trackEvent: (event: WatchEvent): Promise&lt;void&gt; =&gt;
+    api.post(&#x27;/events&#x27;, event).then(() =&gt; undefined).catch(() =&gt; undefined),
+  /** Video AI gợi ý theo gu của tôi. Cần đăng nhập. Mảng rỗng = chưa đủ dữ liệu. */
+  forYou: () =&gt; api.get&lt;Video[]&gt;(&#x27;/videos/me/for-you&#x27;).then((r) =&gt; r.data),
+  /** Tìm video theo ý nghĩa câu mô tả, không cần trùng từ khoá. Khách dùng được. */
+  semanticSearch: (q: string) =&gt; api.get&lt;Video[]&gt;(&#x27;/search/semantic&#x27;, { params: { q } }).then((r) =&gt; r.data),
+  /** Gửi 1 câu cho trợ lý (tối đa 500 ký tự). Cần đăng nhập. */
+  chat: (message: string) =&gt; api.post&lt;ChatReply&gt;(&#x27;/chat&#x27;, { message }).then((r) =&gt; r.data),
+  /** Xoá trí nhớ hội thoại, bắt đầu cuộc trò chuyện mới */
+  resetChat: () =&gt; api.delete(&#x27;/chat&#x27;).then(() =&gt; undefined),
+};</code></pre></details><details class="code"><summary><span class="fn">mobile/src/screens/video/WatchScreen.tsx — đoạn gửi WATCH / SKIP (Thanh)</span><span class="hint">bấm để xem code</span></summary><pre><code class="typescript">  // ----- Ghi hành vi xem cho AI gợi ý (&quot;Dành cho bạn&quot;) -----
+  // Chỉ cộng thời gian video thật sự đang phát trên màn (dừng, mở Bình luận, ra nền thì không tính)
+  const watching = active &amp;&amp; isFocused &amp;&amp; appActive &amp;&amp; isPlaying;
+  const watchedMs = useRef(0);
+  const watchingSince = useRef&lt;number | null&gt;(null);
+  useEffect(() =&gt; {
+    if (!watching) return;
+    watchingSince.current = Date.now();
+    return () =&gt; {
+      if (watchingSince.current != null) watchedMs.current += Date.now() - watchingSince.current;
+      watchingSince.current = null;
+    };
+  }, [watching]);
+
+  // Nhớ độ dài video (ms) để gửi kèm; lúc rời màn trình phát có thể đã bị giải phóng
+  const durationMs = useRef(0);
+  useEffect(() =&gt; {
+    if (player.duration &gt; 0) durationMs.current = Math.round(player.duration * 1000);
+  }, [player, timeUpdate]);
+
+  // Mỗi lần xem = từ lúc video thành video đang xem tới lúc vuốt đi hoặc đóng màn → gửi đúng 1 sự kiện.
+  // Xem dưới 2 giây là lướt qua (SKIP), còn lại là WATCH kèm thời gian đã xem.
+  useEffect(() =&gt; {
+    if (!active) return;
+    watchedMs.current = 0;
+    return () =&gt; {
+      const running = watchingSince.current != null ? Date.now() - watchingSince.current : 0;
+      const ms = watchedMs.current + running;
+      if (ms &lt; 2000) {
+        aiApi.trackEvent({ videoId: video.id, type: &#x27;SKIP&#x27; });
+      } else {
+        aiApi.trackEvent({
+          videoId: video.id,
+          type: &#x27;WATCH&#x27;,
+          watchMs: ms,
+          durationMs: durationMs.current &gt; 0 ? durationMs.current : undefined,
+        });
+      }
+    };
+  }, [active, video.id]);</code></pre></details><details class="code"><summary><span class="fn">mobile/src/screens/ai/ChatbotScreen.tsx — Màn Trợ lý AI.</span><span class="hint">bấm để xem code</span></summary><pre><code class="typescript">/**
+ * Trợ lý AI (chatbot)
+ *
+ * - Hỏi bằng tiếng Việt: tìm video, hỏi quy định của app, hỏi video nào của mình nhiều lượt xem nhất.
+ * - POST /api/chat trả { reply, videos }: reply có thể có **chữ đậm**, videos hiện thành thẻ bấm để xem.
+ * - Nút làm mới ở góc phải: xoá trí nhớ hội thoại trên máy chủ (DELETE /api/chat), có hỏi xác nhận.
+ * - Lỗi (vd 503 hết lượt) hiện thành 1 tin nhắn màu đỏ, không văng hộp thoại.
+ * Mở từ icon ✨ ở Trang chủ, bọc trong requireAuth (API chat cần đăng nhập).
+ */
+import { useRef, useState } from &#x27;react&#x27;;
+import {
+  ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View,
+} from &#x27;react-native&#x27;;
+import { Ionicons } from &#x27;@expo/vector-icons&#x27;;
+import { AppText, Chip, Header, Screen } from &#x27;../../components&#x27;;
+import { colors, fonts, radius, spacing } from &#x27;../../constants/theme&#x27;;
+import { aiApi } from &#x27;../../api/ai&#x27;;
+import { getErrorMessage } from &#x27;../../api/client&#x27;;
+import { mediaUrl } from &#x27;../../utils/media&#x27;;
+import type { Video } from &#x27;../../types/models&#x27;;
+import type { RootScreenProps } from &#x27;../../navigation/types&#x27;;
+
+/** user: mình gửi · bot: trợ lý trả lời · error: lỗi khi gửi */
+interface ChatMessage {
+  id: string;
+  role: &#x27;user&#x27; | &#x27;bot&#x27; | &#x27;error&#x27;;
+  text: string;
+  videos?: Video[];
+}
+
+const MAX_LENGTH = 500;
+
+const WELCOME: ChatMessage = {
+  id: &#x27;welcome&#x27;,
+  role: &#x27;bot&#x27;,
+  text: &#x27;Chào bạn! Mình có thể tìm video, trả lời về quy định của app, hoặc xem video nào của bạn nhiều lượt xem nhất.&#x27;,
+};
+
+const SUGGESTIONS = [
+  &#x27;Có video nào về du lịch Đà Lạt không?&#x27;,
+  &#x27;Story được đăng dài tối đa bao lâu?&#x27;,
+  &#x27;Video nào của tôi nhiều lượt xem nhất?&#x27;,
+];
+
+let nextId = 0;
+const newId = () =&gt; `m${Date.now()}-${nextId++}`;
+
+/** &quot;Xin **chào** bạn&quot; → [Xin ][chào (đậm)][ bạn]. Tách theo cặp ** đơn giản, không xử lý markdown khác. */
+function RichText({ text, color }: { text: string; color: string }) {
+  const parts = text.split(/\*\*(.+?)\*\*/g); // phần ở vị trí lẻ là chữ nằm giữa 2 cặp **
+  return (
+    &lt;AppText size={15} color={color}&gt;
+      {parts.map((part, i) =&gt;
+        i % 2 === 1 ? (
+          &lt;AppText key={i} weight=&quot;bold&quot; size={15} color={color}&gt;{part}&lt;/AppText&gt;
+        ) : (
+          part
+        ),
+      )}
+    &lt;/AppText&gt;
+  );
+}
+
+export default function ChatbotScreen({ navigation }: RootScreenProps&lt;&#x27;Chatbot&#x27;&gt;) {
+  const [messages, setMessages] = useState&lt;ChatMessage[]&gt;([WELCOME]);
+  const [input, setInput] = useState(&#x27;&#x27;);
+  const [sending, setSending] = useState(false);
+  const listRef = useRef&lt;FlatList&lt;ChatMessage&gt;&gt;(null);
+
+  const send = async (raw: string) =&gt; {
+    const text = raw.trim();
+    if (!text || sending) return;
+    setInput(&#x27;&#x27;);
+    setMessages((prev) =&gt; [...prev, { id: newId(), role: &#x27;user&#x27;, text }]);
+    setSending(true);
+    try {
+      const res = await aiApi.chat(text);
+      setMessages((prev) =&gt; [...prev, { id: newId(), role: &#x27;bot&#x27;, text: res.reply, videos: res.videos }]);
+    } catch (e) {
+      setMessages((prev) =&gt; [...prev, { id: newId(), role: &#x27;error&#x27;, text: getErrorMessage(e) }]);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Cuộc trò chuyện mới: hỏi trước, rồi xoá trí nhớ trên máy chủ và trên màn
+  const confirmReset = () =&gt;
+    Alert.alert(&#x27;Cuộc trò chuyện mới&#x27;, &#x27;Xoá toàn bộ tin nhắn hiện tại?&#x27;, [
+      { text: &#x27;Huỷ&#x27;, style: &#x27;cancel&#x27; },
+      {
+        text: &#x27;Xoá&#x27;,
+        style: &#x27;destructive&#x27;,
+        onPress: async () =&gt; {
+          try {
+            await aiApi.resetChat();
+            setMessages([WELCOME]);
+          } catch (e) {
+            Alert.alert(&#x27;Lỗi&#x27;, getErrorMessage(e));
+          }
+        },
+      },
+    ]);
+
+  const openVideo = (v: Video) =&gt; navigation.navigate(&#x27;Watch&#x27;, { videoId: v.id });
+
+  const renderItem = ({ item }: { item: ChatMessage }) =&gt; {
+    if (item.role === &#x27;user&#x27;) {
+      return (
+        &lt;View style={[styles.bubble, styles.userBubble]}&gt;
+          &lt;AppText size={15} color={colors.white}&gt;{item.text}&lt;/AppText&gt;
+        &lt;/View&gt;
+      );
+    }
+    if (item.role === &#x27;error&#x27;) {
+      return (
+        &lt;View style={[styles.bubble, styles.errorBubble]}&gt;
+          &lt;Ionicons name=&quot;alert-circle-outline&quot; size={18} color={colors.danger} /&gt;
+          &lt;AppText size={14} color={colors.danger} style={styles.flexShrink}&gt;{item.text}&lt;/AppText&gt;
+        &lt;/View&gt;
+      );
+    }
+    return (
+      &lt;View style={styles.botBlock}&gt;
+        &lt;View style={[styles.bubble, styles.botBubble]}&gt;
+          &lt;RichText text={item.text} color={colors.text} /&gt;
+        &lt;/View&gt;
+        {/* Thẻ video trợ lý gợi ý */}
+        {!!item.videos?.length &amp;&amp; (
+          &lt;ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.videoRow}&gt;
+            {item.videos.map((v) =&gt; (
+              &lt;Pressable key={v.id} style={styles.videoCard} onPress={() =&gt; openVideo(v)} accessibilityLabel={`Xem video ${v.title}`}&gt;
+                {v.thumbnailUrl ? (
+                  &lt;Image source={{ uri: mediaUrl(v.thumbnailUrl) }} style={styles.thumb} /&gt;
+                ) : (
+                  &lt;View style={[styles.thumb, styles.noThumb]}&gt;
+                    &lt;Ionicons name=&quot;videocam-outline&quot; size={24} color={colors.placeholder} /&gt;
+                  &lt;/View&gt;
+                )}
+                &lt;AppText weight=&quot;semibold&quot; size={12} numberOfLines={2}&gt;{v.title}&lt;/AppText&gt;
+              &lt;/Pressable&gt;
+            ))}
+          &lt;/ScrollView&gt;
+        )}
+        {/* Câu hỏi gợi ý dưới tin chào (ẩn khi đã bắt đầu hỏi) */}
+        {item.id === WELCOME.id &amp;&amp; messages.length === 1 &amp;&amp; (
+          &lt;View style={styles.suggestions}&gt;
+            {SUGGESTIONS.map((s) =&gt; (
+              &lt;Chip key={s} label={s} tone=&quot;pink&quot; onPress={() =&gt; send(s)} /&gt;
+            ))}
+          &lt;/View&gt;
+        )}
+      &lt;/View&gt;
+    );
+  };
+
+  const canSend = input.trim().length &gt; 0 &amp;&amp; !sending;
+
+  return (
+    &lt;Screen edges={[&#x27;top&#x27;, &#x27;bottom&#x27;]}&gt;
+      &lt;Header
+        title=&quot;Trợ lý AI&quot;
+        right={
+          &lt;Pressable onPress={confirmReset} style={styles.iconBtn} accessibilityRole=&quot;button&quot; accessibilityLabel=&quot;Cuộc trò chuyện mới&quot;&gt;
+            &lt;Ionicons name=&quot;refresh&quot; size={22} color={colors.text} /&gt;
+          &lt;/Pressable&gt;
+        }
+      /&gt;
+      &lt;KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === &#x27;ios&#x27; ? &#x27;padding&#x27; : undefined}&gt;
+        &lt;FlatList
+          ref={listRef}
+          data={messages}
+          keyExtractor={(m) =&gt; m.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps=&quot;handled&quot;
+          // Có tin mới thì cuộn xuống cuối
+          onContentSizeChange={() =&gt; listRef.current?.scrollToEnd({ animated: true })}
+          ListFooterComponent={
+            sending ? (
+              &lt;View style={[styles.bubble, styles.botBubble, styles.typing]}&gt;
+                &lt;ActivityIndicator size=&quot;small&quot; color={colors.muted} /&gt;
+                &lt;AppText size={14} color={colors.muted}&gt;Đang trả lời…&lt;/AppText&gt;
+              &lt;/View&gt;
+            ) : undefined
+          }
+        /&gt;
+
+        {/* Ô nhập + nút gửi */}
+        &lt;View style={styles.inputRow}&gt;
+          &lt;TextInput
+            value={input}
+            onChangeText={setInput}
+            placeholder=&quot;Hỏi trợ lý…&quot;
+            placeholderTextColor={colors.placeholder}
+            accessibilityLabel=&quot;Nội dung câu hỏi&quot;
+            maxLength={MAX_LENGTH}
+            multiline
+            style={styles.input}
+          /&gt;
+          &lt;Pressable
+            onPress={() =&gt; send(input)}
+            disabled={!canSend}
+            style={[styles.sendBtn, !canSend &amp;&amp; styles.sendDisabled]}
+            accessibilityRole=&quot;button&quot;
+            accessibilityLabel=&quot;Gửi&quot;
+          &gt;
+            &lt;Ionicons name=&quot;send&quot; size={18} color={colors.white} /&gt;
+          &lt;/Pressable&gt;
+        &lt;/View&gt;
+      &lt;/KeyboardAvoidingView&gt;
+    &lt;/Screen&gt;
+  );
+}
+
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  flexShrink: { flexShrink: 1 },
+  iconBtn: { width: 44, height: 44, alignItems: &#x27;center&#x27;, justifyContent: &#x27;center&#x27; },
+  list: { padding: spacing.lg, gap: spacing.md },
+  bubble: { maxWidth: &#x27;82%&#x27;, paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.lg },
+  userBubble: { alignSelf: &#x27;flex-end&#x27;, backgroundColor: colors.primary, borderBottomRightRadius: 4 },
+  botBubble: { alignSelf: &#x27;flex-start&#x27;, backgroundColor: colors.surface, borderBottomLeftRadius: 4 },
+  errorBubble: {
+    alignSelf: &#x27;flex-start&#x27;, flexDirection: &#x27;row&#x27;, alignItems: &#x27;flex-start&#x27;, gap: 6,
+    backgroundColor: colors.primarySoft, borderBottomLeftRadius: 4,
+  },
+  botBlock: { gap: spacing.sm },
+  typing: { flexDirection: &#x27;row&#x27;, alignItems: &#x27;center&#x27;, gap: spacing.sm, marginTop: spacing.md },
+  videoRow: { gap: spacing.sm },
+  videoCard: { width: 108, gap: 6 },
+  thumb: { width: 108, height: 150, borderRadius: radius.md, backgroundColor: colors.surface },
+  noThumb: { alignItems: &#x27;center&#x27;, justifyContent: &#x27;center&#x27; },
+  suggestions: { gap: spacing.sm },
+  inputRow: {
+    flexDirection: &#x27;row&#x27;, alignItems: &#x27;flex-end&#x27;, gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  input: {
+    flex: 1, minHeight: 44, maxHeight: 120, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 11,
+    borderRadius: radius.xl, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
+    fontFamily: fonts.regular, fontSize: 15, color: colors.text,
+  },
+  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, alignItems: &#x27;center&#x27;, justifyContent: &#x27;center&#x27; },
+  sendDisabled: { opacity: 0.4 },
+});</code></pre></details>
+</section>
+
+<section id="demo">
+<h2>8. Kịch bản demo cho cô (khoảng 5 phút)</h2>
+<ol class="steps">
+<li><b>Lý thuyết ngắn (1 phút)</b>: 3 phần, luồng dữ liệu ở mục 1, mở <code>application-ai.yaml</code> chỉ chỗ cấu hình.</li>
+<li><b>Thanh – tracking</b>: đăng nhập một tài khoản, xem hết 3 video cùng chủ đề (ví dụ thể thao), lướt nhanh qua 1 video khác. Mở bảng <code>user_events</code> trong MySQL cho cô thấy các dòng WATCH, SKIP, LIKE vừa ghi.</li>
+<li><b>Khánh – gợi ý</b>: mở tab "Dành cho bạn" thấy toàn video cùng chủ đề vừa xem. Đổi sang tài khoản khác thích chủ đề khác, danh sách khác hẳn. Tìm theo ý nghĩa "đi du lịch ngắm núi". Mở bảng <code>video_vectors</code> trong pgvector cho cô thấy vector 768 số.</li>
+<li><b>Long – chatbot</b>: hỏi 4 câu trong bảng mục 6. Đổi STORY_LIFETIME_HOURS ở trang quản trị rồi hỏi lại.</li>
+</ol>
+<div class="box warn">Dữ liệu mẫu có 8 chủ đề: Art, Health, News, Pets, Podcasts, Sports, Travel, Weather, <b>không có video món ăn</b>. Demo nên dùng du lịch, thú cưng, thể thao. Hạn chế gọi thử nhiều trước buổi demo để còn lượt miễn phí.</div>
+<p>Lệnh xem dữ liệu khi demo:</p>
+<pre class="cmd"><code>docker exec vsa-mysql mysql -uroot -proot video_sharing -e "SELECT event_type, video_id, watch_ms, duration_ms, query, created_at FROM user_events ORDER BY id DESC LIMIT 10"
+docker exec vsa-pgvector psql -U vsa -d vsa_vectors -c "SELECT content, metadata, left(embedding::text, 60) FROM video_vectors LIMIT 3"</code></pre>
+</section>
+
+<section id="gioihan">
+<h2>9. AI làm được và không làm được</h2>
+<table>
+<tr><th>Làm được</th><th>Không làm được</th></tr>
+<tr><td>Gợi ý theo nội dung chữ của video và hành vi xem</td><td>Hiểu hình ảnh trong video (chỉ đọc tiêu đề, mô tả, hashtag)</td></tr>
+<tr><td>Tìm kiếm theo nghĩa</td><td>Gợi ý cho người mới chưa có hành vi nào (hiện lời nhắc thay thế)</td></tr>
+<tr><td>Trả lời về video, quy định, video của chính mình</td><td>Trả lời chuyện ngoài app (bị từ chối có chủ đích)</td></tr>
+<tr><td>Đổi nhà cung cấp AI bằng cấu hình</td><td>Chạy khi hết lượt miễn phí (báo lỗi dễ hiểu, không treo)</td></tr>
+<tr><td></td><td>Kiểm duyệt nội dung (nhóm đã quyết không làm)</td></tr>
+</table>
+</section>
+
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+</body></html>

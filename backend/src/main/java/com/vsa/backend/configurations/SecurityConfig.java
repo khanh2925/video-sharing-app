@@ -67,6 +67,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
                         // Tăng lượt xem: khách xem video cũng được tính (VideoService.recordView xử lý khách)
                         .requestMatchers(HttpMethod.POST, "/api/videos/*/view").permitAll()
+                        // Ghi hành vi xem (AI tracking): khách cũng gửi được, lưu user_id null
+                        .requestMatchers(HttpMethod.POST, "/api/events").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
