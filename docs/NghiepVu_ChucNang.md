@@ -386,9 +386,15 @@ Mỗi use case ghi: **Actor**, **Mục đích**, **Điều kiện trước**, **
 - **Luồng chính**: có người **thích** hoặc **bình luận** video của mình, **theo dõi** mình, hoặc **chia sẻ** video cho mình → hệ thống tạo một thông báo → nút chuông ở Trang chủ có chấm đỏ đếm số chưa đọc → bấm chuông → màn Thông báo (mới nhất trước, dòng chưa đọc nền hồng nhạt) → mở màn là đánh dấu đã đọc hết → bấm một dòng: có video thì mở Xem video, theo dõi thì mở hồ sơ người đó.
 - **Chia sẻ**: ở Xem video bấm "Chia sẻ" → bảng chọn bạn bè (những người mình đang theo dõi, có ô tìm) → chọn tối đa 20 người, viết lời nhắn (không bắt buộc, ≤ 150 ký tự) → "Gửi" → mỗi người nhận một thông báo loại chia sẻ.
 - **Luồng phụ**: tự thích / bình luận video của mình → không tạo thông báo; người nhận không xem được video (vd video "Người theo dõi" mà họ chưa theo dõi) → bỏ qua người đó, báo "Đã gửi cho x/y người"; không ai nhận được → 400 "Không gửi được cho ai: người nhận không xem được video này". Sao chép liên kết, Facebook, Instagram → báo tính năng sau (R16).
-- **Quy tắc**: thông báo chỉ người nhận xem được; xoá video hoặc tài khoản thì thông báo liên quan tự xoá (ON DELETE CASCADE). App tải lại khi mở màn và đếm lại khi về Trang chủ, không đẩy tức thì.
+- **Hiện ngay**: người nhận đang mở app thì thông báo được đẩy qua WebSocket STOMP (`/user/queue/notifications`): số trên chuông tăng ngay và một banner trượt từ trên xuống 4 giây, bấm banner thì mở video / hồ sơ. Không mở app thì lần sau mở màn Thông báo vẫn thấy.
+- **Quy tắc**: thông báo chỉ người nhận xem được; xoá video hoặc tài khoản thì thông báo liên quan tự xoá (ON DELETE CASCADE).
 - **API**: `GET /api/notifications`, `GET /api/notifications/unread-count`, `PUT /api/notifications/read-all`, `PUT /api/notifications/{id}/read`, `POST /api/videos/{id}/share` (`{userIds, message}`).
 - **Dữ liệu**: Notification (`type` = `LIKE` / `COMMENT` / `FOLLOW` / `SHARE`, `recipient`, `actor`, `video`, `text`, `read`).
+
+#### Lịch sử xem và Cài đặt (thêm 02/11/2026)
+- **Lịch sử xem**: người đã đăng nhập mở một video (cùng lúc tăng lượt xem) thì hệ thống ghi vào bảng `watch_history`, mỗi người một dòng cho mỗi video, xem lại thì đưa lên đầu. Xem ở tab **"Lịch sử"** của Hồ sơ của tôi hoặc Cài đặt → Lịch sử xem; bấm video thì vuốt tiếp trong đúng danh sách lịch sử; nút "Xoá" xoá toàn bộ (có hỏi xác nhận). Chỉ hiện video còn xem được (đã đăng, không phải riêng tư của người khác). Khách không ghi lịch sử. API `GET /api/videos/me/history`, `DELETE /api/videos/me/history`.
+- **Cài đặt**: menu ☰ ở Hồ sơ của tôi → "Cài đặt": Sửa hồ sơ, Lịch sử xem, Video nháp, Thông báo, Đăng xuất; Đổi mật khẩu, Quyền riêng tư, Tài khoản đã chặn, Ngôn ngữ, Giao diện tối → báo tính năng sau (R16).
+- Hộp xác nhận (đăng xuất, xoá lịch sử) dùng hộp thoại của trình duyệt khi chạy bản web, vì `Alert` của React Native không hiện trên web.
 
 ### 5.7 Nhóm quản trị
 
