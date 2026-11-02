@@ -59,7 +59,7 @@ class InteractionServiceTest {
 
         interactionService = new InteractionService(videoRepository, videoLikeRepository, commentRepository,
                 commentLikeRepository, userRepository, new UserMapper(), appProperties,
-                new VideoAccessPolicy(videoRepository, followRepository));
+                new VideoAccessPolicy(videoRepository, followRepository), mock(NotificationService.class));
 
         when(userRepository.getReferenceById(LAN)).thenReturn(user(LAN));
         when(commentRepository.findByVideoIdOrderByCreatedAtDesc(eq(VIDEO_ID), any(Pageable.class)))

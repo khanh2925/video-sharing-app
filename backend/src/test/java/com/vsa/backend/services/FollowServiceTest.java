@@ -46,7 +46,7 @@ class FollowServiceTest {
     void setUp() {
         followRepository = mock(FollowRepository.class);
         userRepository = mock(UserRepository.class);
-        followService = new FollowService(followRepository, userRepository);
+        followService = new FollowService(followRepository, userRepository, mock(NotificationService.class));
 
         when(userRepository.findById(MINH)).thenReturn(Optional.of(taoUser(MINH, "minh")));
         when(userRepository.existsById(MINH)).thenReturn(true);

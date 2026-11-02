@@ -145,7 +145,12 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
       case 'audio': {
         const m = item as Audio;
         return (
-          <View style={styles.audioRow}>
+          <Pressable
+            style={styles.audioRow}
+            onPress={() => navigation.navigate('Audio', { audioId: m.id })}
+            accessibilityRole="button"
+            accessibilityLabel={`Âm thanh ${m.title} – ${m.artist}`}
+          >
             {m.coverUrl ? (
               <Image source={{ uri: mediaUrl(m.coverUrl) }} style={styles.audioCover} />
             ) : (
@@ -163,7 +168,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
               variant="outline"
               onPress={() => requireAuth(() => navigation.navigate('Camera', { audio: m }))}
             />
-          </View>
+          </Pressable>
         );
       }
     }

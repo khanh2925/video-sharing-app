@@ -182,3 +182,20 @@ export interface FollowUser extends UserSummary {
   followsMe: boolean;
   me: boolean;
 }
+
+/** UC20 Thông báo: ai đó thích / bình luận video của mình, theo dõi mình, chia sẻ video cho mình */
+export type NotificationType = 'LIKE' | 'COMMENT' | 'FOLLOW' | 'SHARE';
+
+export interface AppNotification {
+  id: number;
+  type: NotificationType;
+  actor: UserSummary;
+  /** null khi là thông báo theo dõi */
+  videoId: number | null;
+  videoTitle: string | null;
+  videoThumbnailUrl: string | null;
+  /** Nội dung bình luận hoặc lời nhắn khi chia sẻ */
+  text: string | null;
+  read: boolean;
+  createdAt: string;
+}

@@ -18,6 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '../../context/LoginPromptContext';
 import { useFetch } from '../../hooks/useFetch';
 import { videoApi } from '../../api/videos';
+import { notificationApi } from '../../api/notifications';
 import { catalogApi } from '../../api/catalog';
 import { storyApi } from '../../api/stories';
 import { liveApi } from '../../api/lives';
@@ -47,7 +48,6 @@ function topicIcon(icon: string | null): IconName {
   return 'pricetag';
 }
 
-const soon = () => Alert.alert('Thông báo', 'Tính năng sẽ có ở phiên bản sau');
 
 export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const { user } = useAuth();
@@ -62,6 +62,9 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   // Story cần đăng nhập: khách thì trả mảng rỗng, không gọi API
   const stories = useFetch<StoryGroup[]>(() => (user ? storyApi.feed() : Promise.resolve([])), [user?.id]);
 
+  // Số thông báo chưa đọc → chấm đỏ trên chuông (UC20). Mỗi lần về Trang chủ đếm lại.
+  const unread = useFetch(() => (user ? notificationApi.unreadCount() : Promise.resolve(0)), [user?.id]);
+
   // Quay lại Trang chủ (vd sau khi đăng story / xem story) thì tải lại thanh story
   const firstFocus = useRef(true);
   useFocusEffect(
@@ -73,6 +76,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
       stories.reload();
       lives.reload();
       trending.reload();
+      unread.reload();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
@@ -80,7 +84,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([trending.reload(), topics.reload(), lives.reload(), audios.reload(), stories.reload()]);
+    await Promise.all([trending.reload(), topics.reload(), lives.reload(), audios.reload(), stories.reload(), unread.reload()]);
     setRefreshing(false);
   };
 
@@ -124,8 +128,18 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           <AppText weight="bold" size={20}>Video Sharing</AppText>
         </View>
         {user ? (
-          <Pressable onPress={soon} style={styles.bell} accessibilityRole="button" accessibilityLabel="Thông báo">
+          <Pressable
+            onPress={() => navigation.navigate('Notifications')}
+            style={styles.bell}
+            accessibilityRole="button"
+            accessibilityLabel={unread.data ? `Thông báo, ${unread.data} chưa đọc` : 'Thông báo'}
+          >
             <Ionicons name="notifications-outline" size={22} color={colors.text} />
+            {!!unread.data && (
+              <View style={styles.bellBadge}>
+                <AppText weight="bold" size={10} color={colors.white}>{unread.data > 99 ? '99+' : unread.data}</AppText>
+              </View>
+            )}
           </Pressable>
         ) : (
           <Pressable onPress={() => navigation.navigate('Login')} style={styles.loginPill} accessibilityRole="button">
@@ -200,7 +214,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
             <SectionHeader title="Âm thanh nổi bật" linkLabel="Tất cả âm thanh" onLink={() => goSearch('', 'audio')} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.hRow, styles.audioRow]}>
               {hotAudios.map((a) => (
-                <AudioCard key={a.id} audio={a} onPress={() => goSearch(a.title, 'audio')} />
+                <AudioCard key={a.id} audio={a} onPress={() => navigation.navigate('Audio', { audioId: a.id })} />
               ))}
             </ScrollView>
           </>
@@ -385,6 +399,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9,
+    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.background,
   },
   loginPill: { height: 40, paddingHorizontal: spacing.lg, borderRadius: 20, backgroundColor: colors.primary, justifyContent: 'center' },
   content: { paddingBottom: 28 },
