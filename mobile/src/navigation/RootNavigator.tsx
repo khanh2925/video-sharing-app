@@ -37,6 +37,10 @@ import LiveWatchScreen from '../screens/live/LiveWatchScreen';
 import AudioScreen from '../screens/audio/AudioScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
+import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
+import AdminVideosScreen from '../screens/admin/AdminVideosScreen';
+import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
+import AdminSettingsScreen from '../screens/admin/AdminSettingsScreen';
 import WatchHistoryScreen from '../screens/settings/WatchHistoryScreen';
 import ChatbotScreen from '../screens/ai/ChatbotScreen';
 
@@ -74,6 +78,10 @@ export default function RootNavigator() {
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+        <Stack.Screen name="AdminVideos" component={AdminVideosScreen} />
+        <Stack.Screen name="AdminUsers" component={AdminUsersScreen} />
+        <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} />
         <Stack.Screen name="WatchHistory" component={WatchHistoryScreen} />
         <Stack.Screen name="Chatbot" component={ChatbotScreen} />
         <Stack.Screen name="StoryCreate" component={StoryCreateScreen} />

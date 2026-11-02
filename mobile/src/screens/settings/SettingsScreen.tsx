@@ -35,6 +35,12 @@ export default function SettingsScreen({ navigation }: RootScreenProps<'Settings
           <Row icon="lock-closed-outline" label="Đổi mật khẩu" onPress={soon} />
         </Section>
 
+        {user?.role === 'ADMIN' && (
+          <Section title="Quản trị">
+            <Row icon="shield-checkmark-outline" label="Trang quản trị" onPress={() => navigation.navigate('AdminDashboard')} />
+          </Section>
+        )}
+
         <Section title="Thông báo và quyền riêng tư">
           <Row icon="notifications-outline" label="Thông báo" onPress={() => navigation.navigate('Notifications')} />
           <Row icon="shield-checkmark-outline" label="Quyền riêng tư" onPress={soon} />

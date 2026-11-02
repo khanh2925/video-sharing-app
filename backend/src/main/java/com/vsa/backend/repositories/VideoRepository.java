@@ -97,4 +97,22 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Modifying(flushAutomatically = true)
     @Query("update Video v set v.viewCount = v.viewCount + 1 where v.id = :videoId")
     int incrementViewCount(@Param("videoId") Long videoId);
+
+    // ===== Trang quản trị (UC15) =====
+
+    // Danh sách video cho quản trị viên: lọc theo trạng thái, tìm trong tiêu đề hoặc tên tác giả, mới nhất trước.
+    // :query đã được thoát %, _, ! (SearchService.escapeLike); rỗng thì khớp mọi video.
+    @Query("""
+            select v from Video v join v.owner o
+            where v.status in :statuses
+              and (lower(coalesce(v.title, '')) like lower(concat('%', :query, '%')) escape '!'
+                   or lower(o.username) like lower(concat('%', :query, '%')) escape '!'
+                   or lower(coalesce(o.displayName, '')) like lower(concat('%', :query, '%')) escape '!')
+            order by v.createdAt desc
+            """)
+    Page<Video> searchForAdmin(@Param("query") String query,
+                               @Param("statuses") Collection<VideoStatus> statuses,
+                               Pageable pageable);
+
+    long countByStatus(VideoStatus status);
 }

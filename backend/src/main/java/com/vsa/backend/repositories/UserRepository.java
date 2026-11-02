@@ -48,4 +48,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
             order by count(f) desc, u.id asc
             """)
     List<User> findSuggestions(@Param("viewerId") Long viewerId, Pageable pageable);
+
+    // ===== Trang quản trị (UC16) =====
+
+    // Danh sách tài khoản cho quản trị viên: locked = null là tất cả, tìm theo tên đăng nhập / tên hiển thị / email.
+    @Query("""
+            select u from User u
+            where (:locked is null or u.locked = :locked)
+              and (lower(u.username) like lower(concat('%', :query, '%')) escape '!'
+                   or lower(coalesce(u.displayName, '')) like lower(concat('%', :query, '%')) escape '!'
+                   or lower(u.email) like lower(concat('%', :query, '%')) escape '!')
+            order by u.createdAt desc
+            """)
+    Page<User> searchForAdmin(@Param("query") String query, @Param("locked") Boolean locked, Pageable pageable);
+
+    long countByLocked(boolean locked);
 }

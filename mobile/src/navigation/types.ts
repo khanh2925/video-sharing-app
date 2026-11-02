@@ -64,6 +64,11 @@ export type RootStackParamList = {
   EditProfile: undefined;
   Notifications: undefined;
   Settings: undefined;
+  // Trang quản trị: chỉ ADMIN (vào từ menu ☰ ở Hồ sơ của tôi)
+  AdminDashboard: undefined;
+  AdminVideos: { status?: 'ALL' | 'PUBLISHED' | 'HIDDEN' } | undefined;
+  AdminUsers: { status?: 'ALL' | 'ACTIVE' | 'LOCKED' } | undefined;
+  AdminSettings: undefined;
   WatchHistory: undefined;
   /** Trợ lý AI: hỏi tìm video, quy định của app, thống kê video của tôi */
   Chatbot: undefined;

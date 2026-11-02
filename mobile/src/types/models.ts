@@ -199,3 +199,31 @@ export interface AppNotification {
   read: boolean;
   createdAt: string;
 }
+
+/** Trang quản trị (UC15, UC16, UC19) — chỉ tài khoản ADMIN */
+export interface AdminStats {
+  totalUsers: number;
+  lockedUsers: number;
+  totalVideos: number;
+  publishedVideos: number;
+  hiddenVideos: number;
+}
+
+export interface AdminUser {
+  id: number;
+  username: string;
+  displayName: string;
+  email: string;
+  role: Role;
+  locked: boolean;
+  createdAt: string;
+}
+
+export type SettingKey = 'STORY_MAX_DURATION_SEC' | 'STORY_LIFETIME_HOURS' | 'VIDEO_MAX_SIZE_MB';
+
+export interface AdminSetting {
+  key: SettingKey;
+  value: string;
+  description: string;
+  updatedAt: string | null;
+}

@@ -5,7 +5,7 @@
  * - Đã đăng nhập: avatar, số liệu, nút Sửa hồ sơ, 2 tab "Video của tôi" / "Đã thích".
  *   Ô đầu tiên của tab "Video của tôi" là ô mờ "Bản nháp: N" → mở màn Video nháp.
  *   Tab thứ 3 "Lịch sử": video mình đã xem, mới xem nhất trước.
- *   Menu ☰: "Video nháp", "Phát livestream", "Cài đặt", "Đăng xuất" (hỏi xác nhận, xong về Trang chủ).
+ *   Menu ☰: "Video nháp", "Phát livestream", ("Quản trị" nếu là ADMIN), "Cài đặt", "Đăng xuất" (hỏi xác nhận, xong về Trang chủ).
  *   Quay lại tab này thì tải lại số liệu, ô "Bản nháp" và lưới video.
  * - Khách: hiện màn "Đăng ký tài khoản" (R3).
  */
@@ -264,7 +264,7 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
       />
 
       {/* Menu ☰: Video nháp · Phát livestream · Cài đặt · Đăng xuất */}
-      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} heightPercent={42}>
+      <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} heightPercent={user.role === 'ADMIN' ? 50 : 42}>
         <Pressable onPress={() => openFromMenu(() => navigation.navigate('Drafts'))} style={styles.menuItem} accessibilityRole="button">
           <Ionicons name="document-outline" size={22} color={colors.text} />
           <AppText weight="semibold">Video nháp</AppText>
@@ -274,6 +274,12 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
           <Ionicons name="radio-outline" size={22} color={colors.text} />
           <AppText weight="semibold">Phát livestream</AppText>
         </Pressable>
+        {user.role === 'ADMIN' && (
+          <Pressable onPress={() => openFromMenu(() => navigation.navigate('AdminDashboard'))} style={styles.menuItem} accessibilityRole="button">
+            <Ionicons name="shield-checkmark-outline" size={22} color={colors.primary} />
+            <AppText weight="semibold" color={colors.primaryText}>Quản trị</AppText>
+          </Pressable>
+        )}
         <Pressable onPress={() => openFromMenu(() => navigation.navigate('Settings'))} style={styles.menuItem} accessibilityRole="button">
           <Ionicons name="settings-outline" size={22} color={colors.text} />
           <AppText weight="semibold">Cài đặt</AppText>
