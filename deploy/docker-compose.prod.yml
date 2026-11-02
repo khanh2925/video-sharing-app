@@ -1,4 +1,4 @@
-# Chạy toàn bộ hệ thống trên VPS: MySQL + backend Spring Boot + Caddy (HTTPS tự động).
+# Chạy toàn bộ hệ thống trên VPS: MySQL + pgvector (AI) + backend Spring Boot + Caddy (HTTPS tự động).
 # Dùng:  docker compose -f deploy/docker-compose.prod.yml up -d --build
 # Biến (mật khẩu, JWT, DOMAIN) đọc từ deploy/.env – setup-vps.sh tự tạo file này.
 
@@ -24,11 +24,31 @@ services:
       retries: 12
       start_period: 30s
 
+  # Kho vector cho Spring AI (gợi ý video, tìm theo nghĩa, chatbot). Chỉ chứa vector,
+  # dữ liệu nghiệp vụ vẫn ở MySQL. Không mở cổng ra ngoài, giống MySQL.
+  vector-db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vsa
+      POSTGRES_PASSWORD: ${VECTOR_DB_PASSWORD:-vsa}
+      POSTGRES_DB: vsa_vectors
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vsa -d vsa_vectors"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   backend:
     build: ../backend
     restart: unless-stopped
     depends_on:
       db:
+        condition: service_healthy
+      vector-db:
         condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/video_sharing?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh
@@ -40,6 +60,10 @@ services:
       APP_UPLOADDIR: /app/uploads
       APP_SEEDMEDIADIR: /app/seed-media
       JAVA_OPTS: -Xms256m -Xmx2g
+      # Spring AI: để trống = tắt. Bật bằng dòng SPRING_PROFILES_ACTIVE=ai trong deploy/.env
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
+      APP_AI_VECTORDB_URL: jdbc:postgresql://vector-db:5432/vsa_vectors
+      APP_AI_VECTORDB_PASSWORD: ${VECTOR_DB_PASSWORD:-vsa}
       TZ: Asia/Ho_Chi_Minh
     volumes:
       - uploads:/app/uploads
@@ -64,6 +88,7 @@ services:
 
 volumes:
   mysql_data:
+  pgvector_data:
   uploads:
   caddy_data:
   caddy_config:
