@@ -15,7 +15,7 @@ public interface LiveStreamRepository extends JpaRepository<LiveStream, Long> {
     // findBy<TenThuocTinh>, existsBy..., countBy..., ...OrderBy<TenThuocTinh>Desc
     boolean existsByHostIdAndStatus(Long hostId, LiveStatus status);
 
-    // Các buổi live của một người theo trạng thái (tự kết thúc buổi cũ, chủ phòng mất kết nối)
+    // Các buổi live của một người theo trạng thái (chủ phòng mất kết nối)
     List<LiveStream> findByHostIdAndStatus(Long hostId, LiveStatus status);
 
     List<LiveStream> findByStatusOrderByStartedAtDesc(LiveStatus status);

@@ -35,7 +35,16 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <NavigationContainer theme={navTheme}>
+          <NavigationContainer
+            theme={navTheme}
+            initialState={{
+              index: 1,
+              routes: [
+                { name: 'MainTabs' },
+                { name: 'Watch', params: { source: { kind: 'trending' } } },
+              ],
+            }}
+          >
             <RootNavigator />
           </NavigationContainer>
         </AuthProvider>
