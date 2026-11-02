@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Set;
 
@@ -33,7 +34,7 @@ public class WatchHistoryService {
     public void record(Long videoId) {
         Long me = SecurityUtils.getCurrentUserIdOrNull();
         if (me != null) {
-            watchHistoryRepository.upsert(me, videoId);
+            watchHistoryRepository.upsert(me, videoId, LocalDateTime.now());
         }
     }
 
