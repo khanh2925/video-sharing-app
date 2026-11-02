@@ -79,7 +79,8 @@ export type RootStackParamList = {
   StoryCreate: { uri: string; mediaType: MediaType; audio?: Audio; durationSec?: number };
   MyStory: undefined;
   /** filter, audio: do màn Filter / Music gửi về (popTo kèm merge: true, giống Lab 06 bài 1 nhưng dùng popTo) */
-  Camera: { filter?: string; audio?: Audio } | undefined;
+  /** mode: 'story' = mở thẳng chế độ Story (nút + ở thanh story, màn Tin của bạn) */
+  Camera: { filter?: string; audio?: Audio; mode?: 'video' | 'story' } | undefined;
   Filter: { videoUri?: string; current?: string } | undefined;
   Music: { current?: number } | undefined;
   PostVideo: { videoUri?: string; filter?: string; audio?: Audio } | undefined;
