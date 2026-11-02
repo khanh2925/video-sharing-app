@@ -33,6 +33,7 @@ import { useBackgroundMusic } from '../../hooks/useBackgroundMusic';
 import { useAppActive } from '../../hooks/useAppActive';
 import { formatCount } from '../../utils/format';
 import { ShareSheet } from './ShareSheet';
+import { VideoPlaybackControls } from './VideoPlaybackControls';
 import { mediaUrl } from '../../utils/media';
 import type { PageResponse, Video } from '../../types/models';
 import type { RootScreenProps, SearchTab, WatchSource } from '../../navigation/types';
@@ -66,7 +67,8 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
   const { videoId, source } = route.params;
   const { user } = useAuth();
   const { height } = useWindowDimensions(); // mỗi video cao đúng 1 màn hình
-  const sourceKey = JSON.stringify(source ?? null);
+  const sourceKey = JSON.stringify({ source: source ?? null, videoId });
+  const feedRef = useRef<FlatList<Video>>(null);
 
   // Video được bấm mở (nếu có) + danh sách để vuốt tiếp
   const opened = useFetch(() => (videoId != null ? videoApi.getById(videoId) : Promise.resolve(null)), [videoId]);
@@ -114,6 +116,19 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
   const sourceKeyRef = useRef(sourceKey);
   useEffect(() => { sourceKeyRef.current = sourceKey; }, [sourceKey]);
   const current = (active?.key === sourceKey ? active.index : null) ?? placement?.startIndex ?? 0;
+
+  const refreshVideos = async () => {
+    // Bỏ video ghim khi mở từ một thẻ: lần làm mới bắt đầu từ trang mới nhất của nguồn.
+    setPatches({});
+    setActive({ key: sourceKey, index: 0 });
+    feedRef.current?.scrollToOffset({ offset: 0, animated: false });
+    if (videoId != null) {
+      navigation.setParams({ videoId: undefined });
+      // sourceKey đổi sẽ tự tải lại trang đầu và đặt lại vị trí video.
+      return;
+    }
+    await list.refresh();
+  };
 
   // Video nào hiện quá 80% màn hình thì là video đang xem
   const viewabilityConfig = useMemo(() => ({ itemVisiblePercentThreshold: 80 }), []);
@@ -218,6 +233,9 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
               <AppText weight="semibold" color={colors.white}>Tìm người để theo dõi</AppText>
             </Pressable>
           )}
+          <Pressable style={styles.emptyBtn} onPress={refreshVideos} accessibilityRole="button">
+            <AppText weight="semibold" color={colors.white}>Tải lại video</AppText>
+          </Pressable>
         </View>
         {topBar}
       </Screen>
@@ -227,6 +245,7 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
   return (
     <Screen dark edges={[]}>
       <FlatList
+        ref={feedRef}
         key={sourceKey}
         data={videos}
         keyExtractor={(v) => String(v.id)}
@@ -253,8 +272,15 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
         windowSize={3}
         onEndReached={list.loadMore}
         onEndReachedThreshold={2}
-        // Đang ở video đầu, kéo xuống để tải lại danh sách mới nhất
-        refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={list.refresh} tintColor={colors.white} />}
+        refreshControl={(
+          <RefreshControl
+            refreshing={list.refreshing}
+            onRefresh={refreshVideos}
+            tintColor={colors.white}
+            colors={[colors.primary]}
+            progressViewOffset={insets.top + 48}
+          />
+        )}
       />
       {topBar}
       {/* Vẫn xem được video đang mở nhưng danh sách vuốt tiếp bị lỗi */}
@@ -270,55 +296,6 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
         </Pressable>
       )}
     </Screen>
-  );
-}
-
-/** 75 → "01:15" */
-function clock(sec: number) {
-  const s = Math.max(0, Math.floor(sec));
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-}
-
-/**
- * Thanh tiến độ tua được: chạm hoặc kéo trên thanh để tới đoạn muốn xem.
- * Bên phải luôn hiện "đã xem / tổng thời lượng"; đang kéo thì thanh dày lên.
- */
-function SeekBar({ progress, duration, onSeek }: { progress: number; duration: number; onSeek: (sec: number) => void }) {
-  const width = useRef(0);
-  const [dragRatio, setDragRatio] = useState<number | null>(null);
-  const ratioAt = (x: number) => (width.current > 0 ? Math.min(1, Math.max(0, x / width.current)) : 0);
-  const shown = dragRatio ?? progress;
-  const ready = duration > 0;
-
-  return (
-    <View style={styles.seekRow}>
-      <View
-        style={styles.seekArea}
-        onLayout={(e) => { width.current = e.nativeEvent.layout.width; }}
-        onStartShouldSetResponder={() => ready}
-        onMoveShouldSetResponder={() => ready}
-        onResponderTerminationRequest={() => false} // đang kéo thanh thì không cho danh sách vuốt cướp
-        onResponderGrant={(e) => setDragRatio(ratioAt(e.nativeEvent.locationX))}
-        onResponderMove={(e) => setDragRatio(ratioAt(e.nativeEvent.locationX))}
-        onResponderRelease={() => {
-          if (dragRatio != null) onSeek(dragRatio * duration);
-          setDragRatio(null);
-        }}
-        onResponderTerminate={() => setDragRatio(null)}
-        accessibilityRole="adjustable"
-        accessibilityLabel="Tiến độ video"
-        accessibilityValue={{ text: `${clock(shown * duration)} trên ${clock(duration)}` }}
-      >
-        <View style={[styles.track, dragRatio != null && styles.trackActive]}>
-          <View style={[styles.trackFill, { width: `${shown * 100}%` }]} />
-        </View>
-      </View>
-      {ready && (
-        <AppText size={12} weight="medium" color={colors.white} style={styles.seekTime}>
-          {`${clock(shown * duration)} / ${clock(duration)}`}
-        </AppText>
-      )}
-    </View>
   );
 }
 
@@ -352,7 +329,6 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
   });
   const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
   const timeUpdate = useEvent(player, 'timeUpdate');
-  const progress = player.duration > 0 && timeUpdate ? Math.min(1, timeUpdate.currentTime / player.duration) : 0;
 
   // Nhạc nền chạy theo video: video dừng (chạm, rời màn, mở Bình luận) thì nhạc dừng.
   // Có nhạc thì tắt tiếng gốc của video
@@ -570,7 +546,7 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
       </View>
 
       {/* Thông tin video phía dưới bên trái */}
-      <View style={[styles.info, { bottom: 72 + insets.bottom + spacing.lg }]}>
+      <View style={[styles.info, { bottom: 136 + insets.bottom + spacing.lg }]}>
         <Pressable onPress={openProfile} style={styles.selfStart}>
           <AppText weight="bold" size={17} color={colors.white}>{video.owner.displayName}</AppText>
         </Pressable>
@@ -594,14 +570,7 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
 
       {/* Thanh tiến độ + ô viết bình luận */}
       <View style={[styles.bottom, { paddingBottom: insets.bottom + spacing.md }]}>
-        <SeekBar
-          progress={progress}
-          duration={player.duration}
-          onSeek={(sec) => {
-            // eslint-disable-next-line react-hooks/immutability -- Tua native player tới giây người dùng chọn.
-            player.currentTime = sec;
-          }}
-        />
+        <VideoPlaybackControls player={player} />
         <Pressable style={styles.commentBox} onPress={openComments}>
           <AppText size={14} color={colors.white} style={styles.commentHint}>
             {video.allowComments ? 'Viết bình luận…' : 'Tác giả đã tắt bình luận'}
@@ -651,12 +620,6 @@ const styles = StyleSheet.create({
   selfStart: { alignSelf: 'flex-start' },
   audioRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start' },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: spacing.md, paddingHorizontal: spacing.lg, gap: spacing.md },
-  seekRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  seekArea: { flex: 1, height: 24, justifyContent: 'center' }, // vùng chạm cao hơn thanh cho dễ bấm
-  seekTime: { fontVariant: ['tabular-nums'] },
-  track: { height: 3, borderRadius: 2, backgroundColor: colors.whiteTrack, overflow: 'hidden' },
-  trackActive: { height: 6, borderRadius: 3 },
-  trackFill: { height: '100%', backgroundColor: colors.white },
   commentBox: { height: 44, borderRadius: radius.xl, backgroundColor: colors.whiteSoft, justifyContent: 'center', paddingHorizontal: spacing.lg },
   commentHint: { opacity: 0.85 },
   retryPill: {

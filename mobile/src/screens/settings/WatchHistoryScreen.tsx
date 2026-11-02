@@ -1,5 +1,5 @@
 /**
- * Lịch sử xem — mở từ Cài đặt (cũng có tab "Video đã xem" ở Hồ sơ của tôi).
+ * Lịch sử xem — mở từ Cài đặt (cũng có tab "Lịch sử xem" ở Hồ sơ của tôi).
  * Lưới video đã xem, mới xem nhất trước.
  * - Nút "Chọn" ở góc phải → bấm vào video để tick, thanh dưới có "Xoá (n)" và "Xoá tất cả".
  * - Xoá nào cũng hỏi xác nhận.
