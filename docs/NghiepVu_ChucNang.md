@@ -88,7 +88,7 @@ Công nghệ: Expo + React Native + TypeScript (mobile), Spring Boot 4 REST API 
 |---|---|---|
 | Khách | Người mở app **chưa đăng nhập** | Xem trang chủ, tìm kiếm, xem video, xem hồ sơ; đăng ký tài khoản. |
 | Người dùng | Người đã có tài khoản, vai trò `USER` | **Kế thừa** mọi việc của Khách, thêm tương tác, đăng video, đăng tin, theo dõi, phát và xem live. Người phát live cũng chỉ là Người dùng. |
-| Quản trị viên | Tài khoản vai trò `ADMIN` | Kiểm duyệt video, khoá / mở khoá tài khoản, chỉnh thông số hệ thống. Làm qua API quản trị, không có màn hình riêng trong 12 màn hình thiết kế. |
+| Quản trị viên | Tài khoản vai trò `ADMIN` | Kiểm duyệt video, khoá / mở khoá tài khoản, chỉnh thông số hệ thống. Làm trên **trang quản trị trong app** (chỉ hiện với tài khoản ADMIN; thiết kế của thầy không có màn này nên nhóm bổ sung). |
 
 Vai trò lưu ở `User.role` (enum `Role`). Chỉ có **một bảng** `users` cho cả hai vai trò.
 
@@ -110,11 +110,11 @@ Vai trò lưu ở `User.role` (enum `Role`). Chỉ có **một bảng** `users` 
 | UC12 | Theo dõi người dùng | Người dùng | «include» Đăng nhập | Follow, Profile Details |
 | UC13 | Phát livestream | Người dùng | «include» Đăng nhập | Video Streaming |
 | UC14 | Xem livestream | Người dùng | «include» Đăng nhập | Video Streaming |
-| UC15 | Kiểm duyệt video | Quản trị viên | «include» Đăng nhập | API quản trị |
-| UC16 | Quản lý người dùng | Quản trị viên | «include» Đăng nhập | API quản trị |
+| UC15 | Kiểm duyệt video | Quản trị viên | «include» Đăng nhập | (bổ sung) Quản trị → Kiểm duyệt video |
+| UC16 | Quản lý người dùng | Quản trị viên | «include» Đăng nhập | (bổ sung) Quản trị → Quản lý người dùng |
 | UC17 | Đăng story | Người dùng | «include» Đăng nhập | Home – Video Listing (Stories) |
 | UC18 | Xem story | Người dùng | «include» Đăng nhập | Home – Video Listing (Stories) |
-| UC19 | Cấu hình hệ thống | Quản trị viên | «include» Đăng nhập | API quản trị |
+| UC19 | Cấu hình hệ thống | Quản trị viên | «include» Đăng nhập | (bổ sung) Quản trị → Cấu hình hệ thống |
 | UC20 | Thông báo và chia sẻ | Người dùng | «include» Đăng nhập | Home (chuông), Video Watching (Chia sẻ) |
 
 Người dùng —▷ Khách (kế thừa). Thích và bình luận gộp chung một use case **Tương tác video**; bộ lọc và nhạc **không** là use case riêng mà nằm trong **Chỉnh sửa video**.
@@ -197,7 +197,12 @@ VIDEO STREAMING                                  👁 1.204   [X]
 - Ẩn video vi phạm → video chuyển `HIDDEN`, biến khỏi trang chủ, tìm kiếm, hồ sơ.
 - Khoá / mở khoá tài khoản → `locked = true / false`; tài khoản bị khoá không đăng nhập được, token cũ cũng bị từ chối.
 - Chỉnh thông số hệ thống (độ dài story, thời gian tồn tại story, dung lượng video) → có hiệu lực ngay, không phải sửa code hay chạy lại server.
-- Thao tác qua **API** `/api/admin/**` (test bằng Postman), không có màn hình trong 12 màn hình thiết kế.
+- **Trang quản trị trong app** (thêm 02/11/2026): tài khoản ADMIN thấy dòng "Quản trị" trong menu ☰ ở Hồ sơ của tôi (và trong Cài đặt). Gồm:
+  - **Bảng điều khiển**: số người dùng, số bị khoá, video đã đăng, video đã ẩn (`GET /api/admin/stats`); bấm ô số liệu mở đúng danh sách.
+  - **Kiểm duyệt video (UC15)**: tìm theo tiêu đề / tác giả, lọc Tất cả / Đang hiện / Đã ẩn (`GET /api/admin/videos`), nút "Ẩn" có hỏi xác nhận.
+  - **Quản lý người dùng (UC16)**: tìm theo tên, @tên đăng nhập, email, lọc Tất cả / Hoạt động / Bị khoá (`GET /api/admin/users`), nút "Khoá" / "Mở khoá" có hỏi xác nhận; tài khoản quản trị không có nút khoá (R15).
+  - **Cấu hình hệ thống (UC19)**: sửa 3 thông số, kiểm tra số nguyên lớn hơn 0, chỉ gửi thông số đã đổi; rời màn khi chưa lưu thì hỏi.
+- Mọi API vẫn nằm dưới `/api/admin/**`: chưa đăng nhập 401, người dùng thường 403. Postman vẫn dùng để kiểm thử API.
 
 ---
 
