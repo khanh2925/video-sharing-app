@@ -70,6 +70,18 @@ services:
     expose:
       - "8080"
 
+  # Trang web xem database (giống phpMyAdmin), mở ở https://<DOMAIN>/db/
+  # Chỉ chạy khi deploy/.env có COMPOSE_PROFILES=dbpanel. Caddy khoá thêm một lớp mật khẩu phía trước
+  # (DB_PANEL_USER, DB_PANEL_HASH). Đặt bằng: bash deploy/set-db-panel-password.sh
+  adminer:
+    image: adminer:4.8.1
+    profiles: ["dbpanel"]
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    expose:
+      - "8080"
+
   caddy:
     # Caddy + giao diện web của app (build từ mobile/ theo web.Dockerfile)
     build:
@@ -86,6 +98,10 @@ services:
       - "443:443/udp"
     environment:
       DOMAIN: ${DOMAIN:-}
+      # Mật khẩu lớp ngoài cho /db/. Mặc định là mã băm của một chuỗi ngẫu nhiên không ai biết
+      # → trang luôn bị khoá cho tới khi chạy deploy/set-db-panel-password.sh
+      DB_PANEL_USER: ${DB_PANEL_USER:-admin}
+      DB_PANEL_HASH: ${DB_PANEL_HASH:-$$2a$$14$$vRfMggN5wWJVojVYKLbp4.ObuEQgJiMUClzrpaK.AqA4Sh0KJUIwa}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

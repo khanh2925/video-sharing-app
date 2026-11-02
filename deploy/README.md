@@ -112,3 +112,26 @@ Container `vector-db` (pgvector) đã có sẵn trong `docker-compose.prod.yml`.
 
 Tắt lại: xoá dòng ở bước 1 rồi chạy lại `update.sh`. Key AI đã ghi sẵn trong `backend/src/main/resources/application-ai.yaml`.
 pgvector tốn thêm khoảng 100–200 MB RAM.
+
+## Trang web xem database (Adminer)
+
+Giống phpMyAdmin: mở `https://<DOMAIN>/db/` bằng trình duyệt, xem và truy vấn cả MySQL lẫn pgvector. Mặc định **tắt và bị khoá**.
+
+**Bật / đổi mật khẩu** (trên VPS):
+```bash
+bash video-sharing-app/deploy/set-db-panel-password.sh
+```
+Script hỏi tên đăng nhập và mật khẩu (≥ 12 ký tự), tự ghi vào `deploy/.env` rồi khởi động trang.
+
+**Vào trang**: có 2 lớp đăng nhập.
+1. Hộp đăng nhập của trình duyệt: tên + mật khẩu vừa đặt bằng script.
+2. Form của Adminer:
+   - MySQL: System `MySQL`, Server `db`, Username `root`, Password = `MYSQL_ROOT_PASSWORD` trong `deploy/.env`, Database `video_sharing`.
+   - Kho vector: System `PostgreSQL`, Server `vector-db`, Username `vsa`, Password = `VECTOR_DB_PASSWORD` (mặc định `vsa`), Database `vsa_vectors`.
+
+**Tắt**: xoá 3 dòng `DB_PANEL_USER`, `DB_PANEL_HASH`, `COMPOSE_PROFILES` trong `deploy/.env`, rồi chạy:
+```bash
+docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env rm -sf adminer && bash deploy/update.sh
+```
+
+Trang này sửa xoá được toàn bộ dữ liệu: không chia sẻ mật khẩu, chỉ bật khi cần, nên tắt sau khi chấm đồ án.
