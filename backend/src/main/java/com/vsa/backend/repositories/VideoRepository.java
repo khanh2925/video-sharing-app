@@ -42,6 +42,10 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     Page<Video> findByTopicIdAndStatusAndVisibilityOrderByCreatedAtDesc(
             Long topicId, VideoStatus status, Visibility visibility, Pageable pageable);
 
+    // Màn Âm thanh: các video đang dùng một bài nhạc, nhiều lượt xem lên trước
+    Page<Video> findByAudioIdAndStatusAndVisibilityOrderByViewCountDesc(
+            Long audioId, VideoStatus status, Visibility visibility, Pageable pageable);
+
     @Query("select distinct v from Video v left join v.hashtags h "
             + "where v.status = :status and v.visibility = :visibility and "
             + "(lower(coalesce(v.title, '')) like lower(concat('%', :query, '%')) escape '!' "

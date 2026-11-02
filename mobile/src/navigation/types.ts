@@ -23,7 +23,8 @@ export type WatchSource =
   | { kind: 'topic'; topicId: number }
   | { kind: 'search'; q: string }
   | { kind: 'user'; userId: number }
-  | { kind: 'liked'; userId: number };
+  | { kind: 'liked'; userId: number }
+  | { kind: 'audio'; audioId: number };
 
 /** Các tab kết quả trong màn Tìm kiếm */
 export type SearchTab = 'video' | 'user' | 'live' | 'audio';
@@ -55,9 +56,12 @@ export type RootStackParamList = {
   Profile: { userId: number };
   StoryView: { ownerId: number };
   LiveWatch: { liveId: number };
+  /** Màn Âm thanh: thông tin bài nhạc + các video đang dùng bài đó */
+  Audio: { audioId: number };
 
   // Cần đăng nhập (mở qua useRequireAuth)
   EditProfile: undefined;
+  Notifications: undefined;
   /**
    * audio: do màn Music gửi về (popTo kèm merge: true)
    * durationSec: độ dài video lấy từ ImagePicker (nếu có), để không phải chờ trình phát báo

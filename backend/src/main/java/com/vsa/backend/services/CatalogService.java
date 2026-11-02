@@ -2,6 +2,7 @@ package com.vsa.backend.services;
 
 import com.vsa.backend.dtos.response.AudioResponse;
 import com.vsa.backend.dtos.response.TopicResponse;
+import com.vsa.backend.exceptions.ApiException;
 import com.vsa.backend.mappers.CatalogMapper;
 import com.vsa.backend.repositories.AudioRepository;
 import com.vsa.backend.repositories.TopicRepository;
@@ -28,6 +29,13 @@ public class CatalogService {
         return topicRepository.findAllByOrderByNameAsc().stream()
                 .map(catalogMapper::toTopicResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public AudioResponse getAudio(Long id) {
+        return audioRepository.findById(id)
+                .map(catalogMapper::toAudioResponse)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy bài nhạc"));
     }
 
     @Transactional(readOnly = true)
