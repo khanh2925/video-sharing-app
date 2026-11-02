@@ -77,6 +77,8 @@ nav{background:var(--card);border-radius:10px;padding:10px 16px;position:sticky;
 <tr><td><code>GET /api/search/semantic?q=</code></td><td>Khách + đăng nhập</td><td>Tìm theo nghĩa</td></tr>
 <tr><td><code>POST /api/chat</code>, <code>DELETE /api/chat</code></td><td>Đăng nhập</td><td>Hỏi trợ lý, xoá trí nhớ hội thoại</td></tr>
 <tr><td><code>POST /api/admin/ai/reindex</code>, <code>GET /api/admin/ai/health</code></td><td>Admin</td><td>Nạp lại vector, kiểm tra cấu hình</td></tr>
+<tr><td><code>GET /api/admin/ai/events</code></td><td>Admin</td><td>Xem nhật ký hành vi (lọc <code>type</code>, <code>userId</code>), chỉ đọc. Dùng cho bản web / VPS, nơi MySQL không mở ra ngoài</td></tr>
+<tr><td><code>GET /api/admin/ai/vectors</code></td><td>Admin</td><td>Xem số vector và nội dung từng video trong pgvector, chỉ đọc</td></tr>
 </table>
 </section>
 
@@ -223,28 +225,32 @@ import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexT
  *
  * Vì sao tự dựng mà không dùng starter pgvector: app đã có DataSource MySQL cho JPA.
  * Starter sẽ dùng luôn DataSource đó và tạo bảng vector trong MySQL (không chạy được).
- * Ở đây kết nối Postgres được tạo riêng, KHÔNG đăng ký thành bean, nên JPA, HealthController
- * và mọi chỗ đang dùng MySQL không bị ảnh hưởng.
+ * Ở đây kết nối Postgres được tạo riêng và gói trong VectorDb (không phải DataSource hay JdbcTemplate),
+ * nên JPA, HealthController và mọi chỗ đang dùng MySQL không bị ảnh hưởng.
  */
 @Configuration
 @Profile(&quot;ai&quot;)
 @EnableConfigurationProperties(AiProperties.class)
 public class AiConfig {
 
+    /** Kết nối riêng tới pgvector (container vector-db). Dùng chung cho kho vector và trang quản trị. */
     @Bean
-    public VectorStore vectorStore(AiProperties props, EmbeddingModel embeddingModel) {
+    public VectorDb vectorDb(AiProperties props) {
         AiProperties.VectorDb db = props.vectorDb();
-
         HikariDataSource dataSource = new HikariDataSource();
         dataSource.setJdbcUrl(db.url());
         dataSource.setUsername(db.username());
         dataSource.setPassword(db.password());
         dataSource.setPoolName(&quot;vector-db&quot;);
         dataSource.setMaximumPoolSize(5);
+        return new VectorDb(new JdbcTemplate(dataSource), db.table());
+    }
 
-        return PgVectorStore.builder(new JdbcTemplate(dataSource), embeddingModel)
-                .vectorTableName(db.table())
-                .dimensions(db.dimensions())
+    @Bean
+    public VectorStore vectorStore(VectorDb vectorDb, AiProperties props, EmbeddingModel embeddingModel) {
+        return PgVectorStore.builder(vectorDb.jdbc(), embeddingModel)
+                .vectorTableName(vectorDb.table())
+                .dimensions(props.vectorDb().dimensions())
                 .distanceType(COSINE_DISTANCE)   // so độ giống theo góc giữa 2 vector
                 .indexType(HNSW)                 // chỉ mục tìm gần đúng, nhanh khi nhiều video
                 .initializeSchema(true)          // tự cài extension vector và tạo bảng lần đầu chạy
@@ -274,15 +280,19 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Kiểm tra nhanh phần AI đã cấu hình đúng chưa (chỉ quản trị viên, chỉ khi chạy profile &quot;ai&quot;).
- *   GET /api/admin/ai/health
- * Gọi Gemini 2 lần: đổi một câu thành vector, và hỏi một câu ngắn.
- * Trả {embeddingDimensions, chatReply}. Lỗi key hay mạng sẽ hiện ngay ở đây.
+ * Kiểm tra phần AI (chỉ quản trị viên, chỉ khi chạy profile &quot;ai&quot;).
+ *   GET /api/admin/ai/health            gọi AI 2 lần (đổi một câu thành vector, hỏi một câu ngắn)
+ *                                       → {embeddingDimensions, chatReply}; lỗi key hay mạng hiện ngay ở đây
+ *   GET /api/admin/ai/vectors?limit=20  xem kho vector, chỉ đọc, KHÔNG gọi AI
+ *                                       → {count, items: [{videoId, content, dimensions}]}
  */
 @RestController
 @Profile(&quot;ai&quot;)
@@ -291,10 +301,12 @@ public class AiHealthController {
 
     private final EmbeddingModel embeddingModel;
     private final ChatClient chatClient;
+    private final VectorDb vectorDb;
 
-    public AiHealthController(EmbeddingModel embeddingModel, ChatClient.Builder chatClientBuilder) {
+    public AiHealthController(EmbeddingModel embeddingModel, ChatClient.Builder chatClientBuilder, VectorDb vectorDb) {
         this.embeddingModel = embeddingModel;
         this.chatClient = chatClientBuilder.build();
+        this.vectorDb = vectorDb;
     }
 
     @GetMapping(&quot;/health&quot;)
@@ -305,6 +317,20 @@ public class AiHealthController {
                 .call()
                 .content();
         return Map.of(&quot;embeddingDimensions&quot;, vector.length, &quot;chatReply&quot;, reply == null ? &quot;&quot; : reply.trim());
+    }
+
+    @GetMapping(&quot;/vectors&quot;)
+    public Map&lt;String, Object&gt; vectors(@RequestParam(defaultValue = &quot;20&quot;) int limit) {
+        int n = Math.max(1, Math.min(limit, 100));
+        // Tên bảng lấy từ cấu hình (app.ai.vector-db.table), không phải từ người dùng
+        Long count = vectorDb.jdbc().queryForObject(&quot;SELECT count(*) FROM &quot; + vectorDb.table(), Long.class);
+        List&lt;Map&lt;String, Object&gt;&gt; items = vectorDb.jdbc().queryForList(
+                &quot;SELECT (metadata-&gt;&gt;&#x27;videoId&#x27;)::bigint AS \&quot;videoId\&quot;, content, vector_dims(embedding) AS dimensions&quot;
+                        + &quot; FROM &quot; + vectorDb.table() + &quot; ORDER BY (metadata-&gt;&gt;&#x27;videoId&#x27;)::bigint DESC LIMIT ?&quot;, n);
+        Map&lt;String, Object&gt; result = new LinkedHashMap&lt;&gt;();
+        result.put(&quot;count&quot;, count);
+        result.put(&quot;items&quot;, items);
+        return result;
     }
 }</code></pre></details>
 <details class="code"><summary><span class="fn">backend/pom.xml (phần thêm)</span><span class="hint">bấm để xem code</span></summary><pre><code class="xml">&lt;!-- ===== Spring AI (chỉ bật khi chạy profile &quot;ai&quot;, xem application-ai.yaml) ===== --&gt;
@@ -1519,8 +1545,8 @@ const styles = StyleSheet.create({
 <h2>8. Kịch bản demo cho cô (khoảng 5 phút)</h2>
 <ol class="steps">
 <li><b>Lý thuyết ngắn (1 phút)</b>: 3 phần, luồng dữ liệu ở mục 1, mở <code>application-ai.yaml</code> chỉ chỗ cấu hình.</li>
-<li><b>Thanh – tracking</b>: đăng nhập một tài khoản, xem hết 3 video cùng chủ đề (ví dụ thể thao), lướt nhanh qua 1 video khác. Mở bảng <code>user_events</code> trong MySQL cho cô thấy các dòng WATCH, SKIP, LIKE vừa ghi.</li>
-<li><b>Khánh – gợi ý</b>: mở tab "Dành cho bạn" thấy toàn video cùng chủ đề vừa xem. Đổi sang tài khoản khác thích chủ đề khác, danh sách khác hẳn. Tìm theo ý nghĩa "đi du lịch ngắm núi". Mở bảng <code>video_vectors</code> trong pgvector cho cô thấy vector 768 số.</li>
+<li><b>Thanh – tracking</b>: đăng nhập một tài khoản, xem hết 3 video cùng chủ đề (ví dụ thể thao), lướt nhanh qua 1 video khác. Gọi <code>GET /api/admin/ai/events</code> (hoặc mở bảng <code>user_events</code>) cho cô thấy các dòng WATCH, SKIP, LIKE vừa ghi.</li>
+<li><b>Khánh – gợi ý</b>: mở tab "Dành cho bạn" thấy toàn video cùng chủ đề vừa xem. Đổi sang tài khoản khác thích chủ đề khác, danh sách khác hẳn. Tìm theo ý nghĩa "đi du lịch ngắm núi". Gọi <code>GET /api/admin/ai/vectors</code> (hoặc mở bảng <code>video_vectors</code>) cho cô thấy mỗi video có vector 768 số.</li>
 <li><b>Long – chatbot</b>: hỏi 4 câu trong bảng mục 6. Đổi STORY_LIFETIME_HOURS ở trang quản trị rồi hỏi lại.</li>
 </ol>
 <div class="box warn">Dữ liệu mẫu có 8 chủ đề: Art, Health, News, Pets, Podcasts, Sports, Travel, Weather, <b>không có video món ăn</b>. Demo nên dùng du lịch, thú cưng, thể thao. Hạn chế gọi thử nhiều trước buổi demo để còn lượt miễn phí.</div>
