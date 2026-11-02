@@ -1,4 +1,5 @@
 /** Xử lý đường dẫn file (video, ảnh) giữa app và backend. */
+import { Platform } from 'react-native';
 import { API_URL } from '../constants/config';
 
 /**
@@ -36,4 +37,26 @@ export function fileFromUri(uri: string, mimeType?: string | null) {
   const name = uri.split('/').pop() ?? 'upload';
   // React Native chấp nhận object này trong FormData; kiểu TS mặc định chỉ biết Blob nên ép kiểu
   return { uri, name, type: mimeType ?? guessMimeType(uri) } as unknown as Blob;
+}
+
+const EXT_BY_TYPE: Record<string, string> = {
+  'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm',
+  'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+};
+
+/**
+ * Chuẩn bị file trước khi append vào FormData. Gọi ở các hàm api upload (videos, stories, avatar).
+ * - Điện thoại: giữ nguyên object {uri, name, type} của fileFromUri.
+ * - Web: trình duyệt chỉ nhận Blob/File thật (object {uri...} bị đổi thành chữ "[object Object]"
+ *   và upload hỏng) → tải file từ uri (blob:/data:) thành File, đặt tên có đuôi đúng
+ *   để backend nhận diện định dạng (mp4, mov, webm, jpg...).
+ */
+export async function toFormFile(file: Blob): Promise<Blob> {
+  if (Platform.OS !== 'web' || file instanceof Blob) return file;
+  const { uri, name, type } = file as unknown as { uri: string; name: string; type: string };
+  const blob = await (await fetch(uri)).blob();
+  const realType = blob.type || type;
+  const ext = EXT_BY_TYPE[realType];
+  const fileName = /\.[a-z0-9]{2,4}$/i.test(name) ? name : `upload.${ext ?? 'bin'}`;
+  return new File([blob], fileName, { type: realType });
 }

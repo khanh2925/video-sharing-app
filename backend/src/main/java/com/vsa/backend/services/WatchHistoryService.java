@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.Set;
 
 /**
@@ -48,5 +49,11 @@ public class WatchHistoryService {
     @Transactional
     public void clearMine() {
         watchHistoryRepository.deleteByUserId(SecurityUtils.getCurrentUserId());
+    }
+
+    /** Chỉ xoá các video đã chọn khỏi lịch sử của mình */
+    @Transactional
+    public void removeMine(Collection<Long> videoIds) {
+        watchHistoryRepository.deleteByUserIdAndVideoIds(SecurityUtils.getCurrentUserId(), videoIds);
     }
 }

@@ -5,7 +5,7 @@
  * Mọi prop của TextInput (keyboardType, autoCapitalize, multiline...) đều truyền được.
  */
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, TextInputProps, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput, TextInputProps, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius } from '../constants/theme';
 import { AppText } from './AppText';
@@ -16,6 +16,14 @@ interface Props extends TextInputProps {
   error?: string | null;
   /** Hiện "14/150" bên phải nhãn (cần có maxLength) */
   showCounter?: boolean;
+}
+
+// Bản web: trình duyệt Edge tự thêm nút con mắt riêng vào ô mật khẩu → thành 2 nút. Ẩn nút của trình duyệt.
+if (Platform.OS === 'web' && typeof document !== 'undefined' && !document.getElementById('hide-native-reveal')) {
+  const style = document.createElement('style');
+  style.id = 'hide-native-reveal';
+  style.textContent = 'input::-ms-reveal,input::-ms-clear{display:none}';
+  document.head.appendChild(style);
 }
 
 export function TextField({ label, required, error, showCounter = true, maxLength, value, secureTextEntry, multiline, style, onFocus, onBlur, ...rest }: Props) {
@@ -50,7 +58,8 @@ export function TextField({ label, required, error, showCounter = true, maxLengt
         />
         {secureTextEntry && (
           <Pressable onPress={() => setHidden((h) => !h)} hitSlop={10} accessibilityLabel={hidden ? 'Hiện mật khẩu' : 'Ẩn mật khẩu'}>
-            <Ionicons name={hidden ? 'eye-outline' : 'eye-off-outline'} size={20} color={colors.muted} />
+            {/* Icon thể hiện trạng thái: đang ẩn = mắt gạch chéo, đang hiện = mắt mở */}
+            <Ionicons name={hidden ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.muted} />
           </Pressable>
         )}
       </View>

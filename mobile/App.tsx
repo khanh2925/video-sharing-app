@@ -13,6 +13,10 @@ import { BeVietnamPro_700Bold } from '@expo-google-fonts/be-vietnam-pro/700Bold'
 import { AuthProvider } from './src/context/AuthContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { colors } from './src/constants/theme';
+import { installWebAlert } from './src/utils/webAlert';
+
+// Bản web: Alert.alert mặc định không hiện gì → thay bằng hộp thoại của trình duyệt
+installWebAlert();
 
 const navTheme = {
   ...DefaultTheme,

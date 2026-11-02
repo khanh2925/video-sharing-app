@@ -107,12 +107,15 @@ export default function PostVideoScreen({ navigation, route }: RootScreenProps<'
   const titleError = triedSubmit && !title.trim() ? 'Nhập tiêu đề để đăng' : null;
 
   // Thêm hashtag: bỏ dấu #, viết thường, không trùng. Trả về danh sách mới để submit dùng luôn
+  // Gõ nhiều thẻ một lần ("#dalat #DaLat, dulich") → tách theo dấu cách, # hoặc dấu phẩy,
+  // chuẩn hoá từng thẻ (viết thường, bỏ #) và bỏ trùng → #dalat chỉ còn một lần
   const addTag = () => {
-    const tag = normalizeTag(tagDraft);
-    const next = tag && !tags.includes(tag) ? [...tags, tag] : tags;
-    if (next !== tags) setTags(next);
+    const parts = tagDraft.split(/[\s#,]+/).map(normalizeTag).filter(Boolean);
+    const next = [...tags];
+    parts.forEach((t) => { if (!next.includes(t)) next.push(t); });
+    if (next.length !== tags.length) setTags(next);
     setTagDraft('');
-    return next;
+    return next.length !== tags.length ? next : tags;
   };
 
   const pickCover = async () => {

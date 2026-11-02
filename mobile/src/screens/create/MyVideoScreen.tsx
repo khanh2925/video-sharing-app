@@ -55,6 +55,24 @@ export default function MyVideoScreen({ navigation, route }: RootScreenProps<'My
     });
   }, [navigation, videoId, setData]);
 
+  // Thả tim video của chính mình (giống màn Xem video): đổi ngay trên màn rồi mới gọi API,
+  // lỗi thì trả lại như cũ. Bản nháp chưa đăng thì không thả tim được (nút bị khoá).
+  const liking = useRef(false);
+  const toggleLike = async () => {
+    if (!video || liking.current) return;
+    liking.current = true;
+    const before = video;
+    setData({ ...video, liked: !video.liked, likeCount: video.likeCount + (video.liked ? -1 : 1) });
+    try {
+      await (before.liked ? videoApi.unlike(videoId) : videoApi.like(videoId));
+    } catch (e) {
+      setData(before);
+      Alert.alert('Không thả tim được', getErrorMessage(e));
+    } finally {
+      liking.current = false;
+    }
+  };
+
   // Rời màn thì dừng phát, quay lại thì phát tiếp (nếu chưa bấm tạm dừng)
   useEffect(() => navigation.addListener('blur', () => player.pause()), [navigation, player]);
   const pausedRef = useRef(paused);
@@ -164,10 +182,16 @@ export default function MyVideoScreen({ navigation, route }: RootScreenProps<'My
 
         {/* Cột số liệu bên phải */}
         <View style={[styles.stats, { bottom: insets.bottom + 150 }]}>
-          <View style={styles.stat} accessibilityLabel={`${video.likeCount} lượt thích`}>
-            <Ionicons name="heart" size={30} color={colors.white} />
+          <Pressable
+            onPress={toggleLike}
+            disabled={video.status !== 'PUBLISHED'}
+            style={styles.stat}
+            accessibilityRole="button"
+            accessibilityLabel={`${video.liked ? 'Bỏ thích' : 'Thích'}, ${video.likeCount} lượt thích`}
+          >
+            <Ionicons name={video.liked ? 'heart' : 'heart-outline'} size={30} color={video.liked ? colors.primary : colors.white} />
             <AppText weight="semibold" size={12} color={colors.white}>{formatCount(video.likeCount)}</AppText>
-          </View>
+          </Pressable>
           <Pressable
             onPress={() => navigation.navigate('Comments', { videoId })}
             style={styles.stat}

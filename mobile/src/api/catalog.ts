@@ -3,7 +3,8 @@
  * hồ sơ người dùng (UC06), sửa thông tin cá nhân (UC07), theo dõi (UC12).
  */
 import { api, postMultipart } from './client';
-import type { Audio, AuthUser, FollowUser, PageResponse, SearchResponse, SearchType, Topic, UserProfile, Video } from '../types/models';
+import { toFormFile } from '../utils/media';
+import type { Audio, AuthUser, FollowUser, PageResponse, SearchResponse, SearchType, SettingKey, Topic, UserProfile, Video } from '../types/models';
 
 export const catalogApi = {
   topics: () => api.get<Topic[]>('/topics').then((r) => r.data),
@@ -12,6 +13,8 @@ export const catalogApi = {
   /** Video công khai đang dùng bài nhạc này, nhiều lượt xem trước (màn Âm thanh) */
   audioVideos: (id: number, page = 0, size = 18) =>
     api.get<PageResponse<Video>>(`/audios/${id}/videos`, { params: { page, size } }).then((r) => r.data),
+  /** Thông số hệ thống công khai (R17), ví dụ STORY_MAX_DURATION_SEC */
+  settings: () => api.get<Partial<Record<SettingKey, number>>>('/settings').then((r) => r.data),
 };
 
 export const searchApi = {
@@ -38,9 +41,9 @@ export const userApi = {
 
   // UC07: sửa thông tin của chính mình, trả về AuthUser mới → gọi updateUser() của useAuth()
   updateMe: (body: { displayName: string; bio: string }) => api.put<AuthUser>('/users/me', body).then((r) => r.data),
-  updateAvatar: (file: Blob) => {
+  updateAvatar: async (file: Blob) => {
     const form = new FormData();
-    form.append('file', file);
+    form.append('file', await toFormFile(file));
     return postMultipart<AuthUser>('/users/me/avatar', form);
   },
 };
