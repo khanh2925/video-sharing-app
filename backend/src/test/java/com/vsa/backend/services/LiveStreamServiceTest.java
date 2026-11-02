@@ -27,7 +27,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -53,7 +52,7 @@ class LiveStreamServiceTest {
 
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(HOA, null, List.of()));
-        when(userRepository.getReferenceById(HOA)).thenReturn(user(HOA));
+        when(userRepository.findByIdForLiveCreation(HOA)).thenReturn(Optional.of(user(HOA)));
         when(liveStreamRepository.save(any(LiveStream.class))).thenAnswer(i -> {   // giả lập DB cấp id
             LiveStream live = i.getArgument(0);
             live.setId(99L);
@@ -86,18 +85,26 @@ class LiveStreamServiceTest {
     }
 
     @Test
-    void create_conBuoiLiveCu_tuKetThucBuoiCuRoiTaoMoi() {
+    void create_conBuoiLiveCu_bao409VaGiuNguyenBuoiCu() {
         coVideoNguon(Visibility.PUBLIC, VideoStatus.PUBLISHED);
-        LiveStream old = LiveStream.builder().id(7L).title("Cũ").sourceVideoUrl("/files/videos/a.mp4")
-                .host(user(HOA)).build();
-        when(liveStreamRepository.findByHostIdAndStatus(HOA, LiveStatus.LIVE)).thenReturn(List.of(old));
+        when(liveStreamRepository.existsByHostIdAndStatus(HOA, LiveStatus.LIVE)).thenReturn(true);
 
-        liveStreamService.create(request());
+        ApiException e = assertThrows(ApiException.class, () -> liveStreamService.create(request()));
 
-        assertEquals(LiveStatus.ENDED, old.getStatus());
-        assertNotNull(old.getEndedAt());
-        verify(messagingTemplate).convertAndSend(eq("/topic/live/7"),
-                argThat((LiveSocketEventResponse event) -> "ENDED".equals(event.event())));
+        assertEquals(HttpStatus.CONFLICT, e.getStatus());
+        assertEquals("Bạn đang có một buổi live chưa kết thúc", e.getMessage());
+        verify(liveStreamRepository, never()).findByHostIdAndStatus(any(), any());
+        verifyNoInteractions(messagingTemplate);
+        verify(liveStreamRepository, never()).save(any());
+    }
+
+    @Test
+    void create_chuaCoLive_taoBuoiMoi() {
+        coVideoNguon(Visibility.PUBLIC, VideoStatus.PUBLISHED);
+
+        var response = liveStreamService.create(request());
+
+        assertEquals(99L, response.id());
         verify(liveStreamRepository).save(any(LiveStream.class));
     }
 

@@ -48,6 +48,9 @@ public class LiveStreamService {
     @Transactional
     public LiveStreamResponse create(CreateLiveRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
+        // Khoá trước các truy vấn đọc để hai thiết bị không cùng tạo phiên live.
+        User host = userRepository.findByIdForLiveCreation(userId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy người dùng"));
         Video source = videoRepository.findById(request.sourceVideoId())
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy video nguồn"));
         if (!source.getOwner().getId().equals(userId)) {
@@ -57,12 +60,10 @@ public class LiveStreamService {
         if (source.getStatus() != VideoStatus.PUBLISHED || source.getVisibility() != Visibility.PUBLIC) {
             throw ApiException.badRequest("Video nguồn phải là video công khai đã đăng");
         }
-        // Còn buổi live cũ chưa kết thúc (vd app bị tắt ngang, không kịp bấm Kết thúc):
-        // tự kết thúc buổi cũ rồi mới tạo buổi mới, thay vì báo lỗi mãi không phát được.
-        // Làm SAU khi kiểm tra video nguồn để tạo lỗi thì buổi cũ vẫn còn.
-        endAllLiveOfHost(userId);
-
-        User host = userRepository.getReferenceById(userId);
+        // UC13: phiên thứ hai không được ngắt phiên đang phát (kể cả từ thiết bị khác).
+        if (liveStreamRepository.existsByHostIdAndStatus(userId, LiveStatus.LIVE)) {
+            throw ApiException.conflict("Bạn đang có một buổi live chưa kết thúc");
+        }
         LiveStream live = liveStreamRepository.save(LiveStream.builder()
                 .title(request.title().trim())
                 .sourceVideoUrl(source.getVideoUrl())
@@ -91,7 +92,7 @@ public class LiveStreamService {
 
     /**
      * Kết thúc mọi buổi live đang phát của một người (không kiểm tra người gọi).
-     * Dùng khi chủ phòng mất kết nối WebSocket (LiveDisconnectListener) và khi tạo buổi live mới.
+     * Dùng khi chủ phòng mất kết nối WebSocket (LiveDisconnectListener).
      */
     @Transactional
     public void endAllLiveOfHost(Long hostId) {
