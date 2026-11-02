@@ -4,19 +4,32 @@
  * Dùng trong màn hình:
  *   const { user, login, register, logout, updateUser } = useAuth();
  *
- * - Token lưu trong expo-secure-store → tắt app mở lại vẫn còn đăng nhập.
+ * - Token lưu trong expo-secure-store (web: localStorage) → tắt app mở lại vẫn còn đăng nhập.
  * - Mở app: có token cũ thì gọi /auth/me để lấy lại user; chỉ xoá token khi backend trả 401 (token hỏng).
  *   Lỗi mạng (máy chủ chưa bật, mất wifi) thì giữ token, lần mở app sau thử lại.
  * - user khác null là đã đăng nhập → RootNavigator tự chuyển sang MainTabs.
  */
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { authApi, LoginBody, RegisterBody } from '../api/auth';
 import { setAuthToken, setOnUnauthorized } from '../api/client';
 import type { AuthResponse, AuthUser } from '../types/models';
 
 const TOKEN_KEY = 'vsa_token';
+
+/**
+ * Nơi lưu token: điện thoại dùng SecureStore (mã hoá), web không có SecureStore nên dùng localStorage.
+ */
+const tokenStorage = {
+  get: async () =>
+    Platform.OS === 'web' ? globalThis.localStorage?.getItem(TOKEN_KEY) ?? null : SecureStore.getItemAsync(TOKEN_KEY),
+  set: async (token: string) =>
+    Platform.OS === 'web' ? globalThis.localStorage?.setItem(TOKEN_KEY, token) : SecureStore.setItemAsync(TOKEN_KEY, token),
+  remove: async () =>
+    Platform.OS === 'web' ? globalThis.localStorage?.removeItem(TOKEN_KEY) : SecureStore.deleteItemAsync(TOKEN_KEY),
+};
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -38,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     setAuthToken(null);
     setUser(null);
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await tokenStorage.remove();
   }, []);
 
   // Mở app: thử đăng nhập lại bằng token đã lưu
@@ -50,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     (async () => {
       try {
-        const token = await SecureStore.getItemAsync(TOKEN_KEY);
+        const token = await tokenStorage.get();
         if (!token) return;
         setAuthToken(token);
         try {
@@ -76,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [logout]);
 
   const saveSession = async (res: AuthResponse) => {
-    await SecureStore.setItemAsync(TOKEN_KEY, res.token);
+    await tokenStorage.set(res.token);
     setAuthToken(res.token);
     setUser(res.user);
   };
