@@ -38,4 +38,8 @@ public class ApiException extends RuntimeException {
     public static ApiException conflict(String message) {        // 409
         return new ApiException(HttpStatus.CONFLICT, message);
     }
+
+    public static ApiException unavailable(String message) {     // 503
+        return new ApiException(HttpStatus.SERVICE_UNAVAILABLE, message);
+    }
 }

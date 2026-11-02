@@ -65,6 +65,8 @@ export type RootStackParamList = {
   Notifications: undefined;
   Settings: undefined;
   WatchHistory: undefined;
+  /** Trợ lý AI: hỏi tìm video, quy định của app, thống kê video của tôi */
+  Chatbot: undefined;
   /**
    * audio: do màn Music gửi về (popTo kèm merge: true)
    * durationSec: độ dài video lấy từ ImagePicker (nếu có), để không phải chờ trình phát báo

@@ -1,5 +1,7 @@
 package com.vsa.backend.controllers;
 
+import com.vsa.backend.ai.tracking.EventType;
+import com.vsa.backend.ai.tracking.TrackingService;
 import com.vsa.backend.dtos.request.CreateVideoRequest;
 import com.vsa.backend.dtos.request.UpdateVideoRequest;
 import com.vsa.backend.dtos.response.PageResponse;
@@ -31,6 +33,7 @@ public class VideoController {
 
     private final VideoService videoService;
     private final WatchHistoryService watchHistoryService;
+    private final TrackingService trackingService;   // ghi hành vi cho gợi ý video (AI)
 
     @GetMapping("/trending")
     public PageResponse<VideoResponse> getTrending(
@@ -65,6 +68,7 @@ public class VideoController {
     public VideoResponse recordView(@PathVariable Long id) {
         VideoResponse video = videoService.recordView(id);   // kiểm tra quyền xem + tăng lượt xem
         watchHistoryService.record(id);                      // đã đăng nhập thì ghi vào lịch sử xem
+        trackingService.videoEvent(EventType.VIEW, id);      // nhật ký hành vi cho AI (cả khách)
         return video;
     }
 

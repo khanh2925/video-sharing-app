@@ -3,6 +3,7 @@
  * Phụ trách: Thanh
  *
  * Các khối từ trên xuống: thanh story · Top trending · Chủ đề · Đang live · Âm thanh nổi bật.
+ * Cạnh "Top trending" có tab "Dành cho bạn": video AI gợi ý theo gu (cần đăng nhập). Icon ✨ ở đầu màn mở Trợ lý AI.
  * Khách (chưa đăng nhập, R3): đầu màn có nút "Đăng nhập" thay cho chuông; thanh story chỉ có
  * bong bóng "Đăng tin" (bấm vào hiện bảng đăng nhập), vì API story bắt buộc đăng nhập.
  */
@@ -12,7 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { AppText, Avatar, Button, Screen } from '../../components';
+import { AppText, Avatar, Button, EmptyView, Screen, SegmentedTabs } from '../../components';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '../../context/LoginPromptContext';
@@ -22,12 +23,20 @@ import { useNotifications } from '../../context/NotificationContext';
 import { catalogApi } from '../../api/catalog';
 import { storyApi } from '../../api/stories';
 import { liveApi } from '../../api/lives';
+import { aiApi } from '../../api/ai';
 import { formatCount } from '../../utils/format';
 import { mediaUrl } from '../../utils/media';
 import type { SearchTab, TabScreenProps } from '../../navigation/types';
 import type { Audio, LiveStream, StoryGroup, Topic, Video } from '../../types/models';
 
 type IconName = keyof typeof Ionicons.glyphMap;
+
+/** Khối video đầu trang: video thịnh hành hoặc video AI gợi ý theo gu (cần đăng nhập) */
+type FeedTab = 'trending' | 'forYou';
+const FEED_TABS: { key: FeedTab; label: string }[] = [
+  { key: 'trending', label: 'Top trending' },
+  { key: 'forYou', label: 'Dành cho bạn' },
+];
 
 /** Backend lưu tên chủ đề tiếng Anh → đổi sang tiếng Việt để hiển thị */
 const TOPIC_LABELS: Record<string, string> = {
@@ -59,6 +68,14 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   // Xem live cần đăng nhập (UC14): khách thì không gọi API, khối "Đang live" ẩn đi
   const lives = useFetch(() => (user ? liveApi.active() : Promise.resolve([])), [user?.id]);
   const audios = useFetch(() => catalogApi.audios(), []);
+  // "Dành cho bạn" (AI): chỉ gọi khi đã đăng nhập và đang chọn tab này. Đăng xuất thì tự về Top trending
+  const [feedTab, setFeedTab] = useState<FeedTab>('trending');
+  const showForYou = feedTab === 'forYou' && !!user;
+  const forYou = useFetch<Video[]>(() => (showForYou ? aiApi.forYou() : Promise.resolve([])), [showForYou, user?.id]);
+  const changeFeed = (key: FeedTab) => {
+    if (key === 'forYou') requireAuth(() => setFeedTab('forYou')); // khách → bảng đăng nhập
+    else setFeedTab('trending');
+  };
   // Story cần đăng nhập: khách thì trả mảng rỗng, không gọi API
   const stories = useFetch<StoryGroup[]>(() => (user ? storyApi.feed() : Promise.resolve([])), [user?.id]);
 
@@ -84,7 +101,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([trending.reload(), topics.reload(), lives.reload(), audios.reload(), stories.reload()]);
+    await Promise.all([trending.reload(), topics.reload(), lives.reload(), audios.reload(), stories.reload(), ...(showForYou ? [forYou.reload()] : [])]);
     refreshUnread();
     setRefreshing(false);
   };
@@ -114,6 +131,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const goSearch = (q = '', tab: SearchTab = 'video') => navigation.navigate('Search', { q, tab, nonce: Date.now() });
 
   const trendingVideos = trending.data?.content ?? [];
+  const forYouVideos = forYou.data ?? [];
   const liveList = lives.data ?? [];
   const hotAudios = (audios.data ?? []).filter((a) => a.trending);
 
@@ -128,6 +146,16 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           </View>
           <AppText weight="bold" size={20}>Video Sharing</AppText>
         </View>
+        <View style={styles.headerRight}>
+        {/* Trợ lý AI (cần đăng nhập) */}
+        <Pressable
+          onPress={() => requireAuth(() => navigation.navigate('Chatbot'))}
+          style={styles.bell}
+          accessibilityRole="button"
+          accessibilityLabel="Trợ lý AI"
+        >
+          <Ionicons name="sparkles-outline" size={22} color={colors.primary} />
+        </Pressable>
         {user ? (
           <Pressable
             onPress={() => navigation.navigate('Notifications')}
@@ -147,6 +175,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
             <AppText weight="semibold" size={14} color={colors.white}>Đăng nhập</AppText>
           </Pressable>
         )}
+        </View>
       </View>
 
       <ScrollView
@@ -164,9 +193,32 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           onOpen={(ownerId) => navigation.navigate('StoryView', { ownerId })}
         />
 
-        {/* Top trending */}
-        <SectionHeader title="Top trending" linkLabel="Tất cả video" onLink={() => goSearch()} />
-        {trending.loading ? (
+        {/* Top trending | Dành cho bạn (AI) */}
+        <View style={styles.feedTabsRow}>
+          <View style={styles.flex}>
+            <SegmentedTabs variant="pill" tabs={FEED_TABS} value={showForYou ? 'forYou' : 'trending'} onChange={changeFeed} />
+          </View>
+          {!showForYou && (
+            <Pressable onPress={() => goSearch()} hitSlop={8} accessibilityRole="link">
+              <AppText weight="semibold" size={13} color={colors.primaryText}>Tất cả video</AppText>
+            </Pressable>
+          )}
+        </View>
+        {showForYou ? (
+          forYou.loading ? (
+            <AppText size={13} color={colors.muted} style={styles.note}>Đang tải…</AppText>
+          ) : forYou.error ? (
+            <AppText size={13} color={colors.muted} style={styles.note}>{forYou.error}</AppText>
+          ) : forYouVideos.length === 0 ? (
+            <EmptyView icon="sparkles-outline" title="Xem và thích thêm vài video để AI hiểu gu của bạn" />
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hRow}>
+              {forYouVideos.map((v) => (
+                <TrendingCard key={v.id} video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id })} />
+              ))}
+            </ScrollView>
+          )
+        ) : trending.loading ? (
           <AppText size={13} color={colors.muted} style={styles.note}>Đang tải…</AppText>
         ) : trending.error ? (
           <AppText size={13} color={colors.muted} style={styles.note}>{trending.error}</AppText>
@@ -404,6 +456,11 @@ const styles = StyleSheet.create({
   bellBadge: {
     position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9,
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.background,
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  feedTabsRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingHorizontal: spacing.xl, paddingTop: spacing.xl, paddingBottom: spacing.md, minHeight: 44,
   },
   loginPill: { height: 40, paddingHorizontal: spacing.lg, borderRadius: 20, backgroundColor: colors.primary, justifyContent: 'center' },
   content: { paddingBottom: 28 },
