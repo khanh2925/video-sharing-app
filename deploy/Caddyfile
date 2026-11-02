@@ -6,6 +6,16 @@
 	# API, file video/ảnh và WebSocket livestream → backend Spring Boot.
 	# Không giới hạn dung lượng upload ở đây; backend tự chặn theo VIDEO_MAX_SIZE_MB.
 	# WebSocket (/ws/**) và HTTP Range (tua video) được chuyển tiếp tự động.
+	# Trang web xem database (Adminer), khoá mật khẩu lớp ngoài; sau đó còn phải đăng nhập database.
+	# Container adminer chỉ chạy khi bật (COMPOSE_PROFILES=dbpanel); chưa bật thì /db/ báo lỗi 502, phần còn lại không ảnh hưởng.
+	redir /db /db/
+	handle_path /db/* {
+		basic_auth {
+			{$DB_PANEL_USER} {$DB_PANEL_HASH}
+		}
+		reverse_proxy adminer:8080
+	}
+
 	@backend path /api/* /files/* /ws /ws/*
 	handle @backend {
 		reverse_proxy backend:8080
