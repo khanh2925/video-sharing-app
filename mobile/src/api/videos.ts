@@ -3,6 +3,7 @@
  * Màn hình gọi các hàm ở đây, không gõ thẳng đường dẫn '/videos/...' trong màn hình.
  */
 import { api, postMultipart } from './client';
+import { toFormFile } from '../utils/media';
 import type { Comment, PageResponse, Video, Visibility } from '../types/models';
 
 /** Các field gửi riêng lẻ trong form (không gói thành 1 part JSON, Expo sẽ lỗi 415). */
@@ -43,12 +44,13 @@ export const videoApi = {
   /** Tăng lượt xem, trả lại video mới */
   recordView: (id: number) => api.post<Video>(`/videos/${id}/view`).then((r) => r.data),
 
-  create: (form: CreateVideoForm) => {
+  create: async (form: CreateVideoForm) => {
     const data = new FormData();
-    Object.entries(form).forEach(([key, value]) => {
-      if (value === undefined || value === null || value === '') return;
-      data.append(key, typeof value === 'object' ? value : String(value));
-    });
+    for (const [key, value] of Object.entries(form)) {
+      if (value === undefined || value === null || value === '') continue;
+      // file, thumbnail: trên web phải đổi sang File thật (xem toFormFile)
+      data.append(key, typeof value === 'object' ? await toFormFile(value as Blob) : String(value));
+    }
     return postMultipart<Video>('/videos', data);
   },
   myDrafts: (page = 0, size = 10) =>
@@ -57,6 +59,9 @@ export const videoApi = {
   myHistory: (page = 0, size = 18) =>
     api.get<PageResponse<Video>>('/videos/me/history', { params: { page, size } }).then((r) => r.data),
   clearHistory: () => api.delete('/videos/me/history'),
+  /** Chỉ xoá các video đã chọn khỏi lịch sử xem (gửi videoIds=1,2,3) */
+  removeFromHistory: (videoIds: number[]) =>
+    api.delete('/videos/me/history', { params: { videoIds: videoIds.join(',') } }),
   update: (id: number, body: UpdateVideoBody) => api.put<Video>(`/videos/${id}`, body).then((r) => r.data),
   remove: (id: number) => api.delete(`/videos/${id}`),
 

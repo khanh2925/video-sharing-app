@@ -7,15 +7,19 @@
  * - "Tải lên": chọn video có sẵn trong máy (expo-image-picker).
  * - Bộ lọc và nhạc chọn ở màn Filter / Music, gửi về qua route.params (navigate + merge).
  * - Quay xong hoặc chọn xong → sang PostVideo { videoUri, filter, audio }.
+ * - Chế độ Story (UC17): quay tối đa STORY_MAX_DURATION_SEC giây (lấy từ GET /settings) hoặc chọn
+ *   ảnh/video trong máy → sang StoryCreate.
+ * - Trên web expo-camera không quay được video → báo người dùng dùng "Tải lên".
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigationState, usePreventRemove } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { catalogApi } from '../../api/catalog';
 import { AppText, Button, Loading, Screen } from '../../components';
 import { colors, radius, spacing } from '../../constants/theme';
 import type { RootScreenProps } from '../../navigation/types';
@@ -29,6 +33,8 @@ const FLASH_ON_COLOR = colors.flash;
 
 /** Thời lượng quay tối đa (giây), quay tới đây camera tự dừng */
 const VIDEO_MAX_DURATION_SEC = 60;
+/** Độ dài story mặc định khi chưa đọc được STORY_MAX_DURATION_SEC từ backend */
+const STORY_DEFAULT_MAX_SEC = 15;
 /**
  * Dung lượng tối đa khi chọn video trong máy (MB). Backend có VIDEO_MAX_SIZE_MB chỉnh được
  * trong system_settings (R17), số ở đây chỉ để chặn sớm cho đỡ tải lên vô ích.
@@ -65,6 +71,18 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [lastUri, setLastUri] = useState<string | null>(null);
+  // Chế độ quay: video thường (sang PostVideo) hoặc story (sang StoryCreate)
+  const [mode, setMode] = useState<'video' | 'story'>('video');
+  const [storyMaxSec, setStoryMaxSec] = useState(STORY_DEFAULT_MAX_SEC);
+  const isStory = mode === 'story';
+
+  // Đọc độ dài story tối đa do quản trị viên cấu hình (R17), lỗi thì giữ mặc định
+  useEffect(() => {
+    catalogApi
+      .settings()
+      .then((s) => s.STORY_MAX_DURATION_SEC && setStoryMaxSec(s.STORY_MAX_DURATION_SEC))
+      .catch(() => {});
+  }, []);
 
   // true = người dùng bấm "Bỏ video" → quay xong không chuyển sang PostVideo
   const discardRef = useRef(false);
@@ -123,6 +141,17 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
     navigation.navigate('PostVideo', { videoUri, filter, audio });
   };
 
+  // Video vừa quay đi tiếp theo chế độ đang chọn
+  const goNext = (uri: string) => {
+    if (isStory) navigation.navigate('StoryCreate', { uri, mediaType: 'VIDEO' });
+    else goToPost(uri);
+  };
+
+  const changeMode = (next: 'video' | 'story') => {
+    setMode(next);
+    setLastUri(null); // video quay ở chế độ kia không dùng cho chế độ này
+  };
+
   const startRecording = async () => {
     if (!cameraRef.current || !ready) {
       // Hẹn giờ đếm xong mà camera chưa mở xong
@@ -133,10 +162,11 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
     setRecording(true);
     try {
       // Promise trả về khi gọi stopRecording() hoặc quay đủ maxDuration giây
-      const result = await cameraRef.current.recordAsync({ maxDuration: VIDEO_MAX_DURATION_SEC });
+      const maxDuration = isStory ? storyMaxSec : VIDEO_MAX_DURATION_SEC;
+      const result = await cameraRef.current.recordAsync({ maxDuration });
       if (result?.uri && !discardRef.current) {
         setLastUri(result.uri);
-        goToPost(result.uri);
+        goNext(result.uri);
       }
     } catch (e) {
       Alert.alert('Không quay được video', e instanceof Error ? e.message : 'Thử lại sau');
@@ -149,6 +179,9 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
   const onRecordPress = () => {
     if (recording) {
       cameraRef.current?.stopRecording();
+    } else if (Platform.OS === 'web') {
+      // expo-camera trên web không hỗ trợ quay video
+      Alert.alert('Trình duyệt chưa quay được video', 'Bấm "Tải lên" để chọn video có sẵn, hoặc dùng app trên điện thoại.');
     } else if (countdown !== null) {
       setCountdown(null); // bấm lần nữa khi đang đếm ngược = huỷ
     } else if (TIMERS[timerIndex] > 0) {
@@ -163,9 +196,9 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
     if (recording) {
       cameraRef.current?.stopRecording();
     } else if (lastUri) {
-      goToPost(lastUri);
+      goNext(lastUri);
     } else {
-      Alert.alert('Chưa có video', 'Quay hoặc tải lên một video trước');
+      Alert.alert(isStory ? 'Chưa có story' : 'Chưa có video', 'Quay hoặc tải lên trước');
     }
   };
 
@@ -250,23 +283,26 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
           onCameraReady={() => setReady(true)}
           onMountError={(e) => Alert.alert('Không mở được camera', e.message)}
         />
-        <FilterOverlay name={filter} />
+        {!isStory && <FilterOverlay name={filter} />}
         <LinearGradient colors={['transparent', SHADE_COLOR]} style={styles.bottomShade} pointerEvents="none" />
 
         {/* Thanh trên: Đóng + chọn nhạc */}
         <View style={[styles.topBar, { top: insets.top + spacing.sm }]}>
           {closeButton}
-          <Pressable
-            onPress={() => navigation.navigate('Music', { current: audio?.id })}
-            disabled={busy}
-            style={styles.musicPill}
-            accessibilityRole="button"
-          >
-            <Ionicons name="musical-notes" size={15} color={colors.white} />
-            <AppText weight="semibold" size={14} color={colors.white} numberOfLines={1} style={styles.musicText}>
-              {audio ? audio.title : 'Thêm nhạc'}
-            </AppText>
-          </Pressable>
+          {/* Story chọn nhạc ở màn Đăng story nên ẩn nút này */}
+          {!isStory && (
+            <Pressable
+              onPress={() => navigation.navigate('Music', { current: audio?.id })}
+              disabled={busy}
+              style={styles.musicPill}
+              accessibilityRole="button"
+            >
+              <Ionicons name="musical-notes" size={15} color={colors.white} />
+              <AppText weight="semibold" size={14} color={colors.white} numberOfLines={1} style={styles.musicText}>
+                {audio ? audio.title : 'Thêm nhạc'}
+              </AppText>
+            </Pressable>
+          )}
           <View style={styles.iconBtn} />
         </View>
 
@@ -279,13 +315,15 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
             disabled={recording}
             onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
           />
-          <ToolButton
-            icon="options-outline"
-            label={filter ?? 'Bộ lọc'}
-            accessibilityLabel="Bộ lọc"
-            disabled={busy}
-            onPress={() => navigation.navigate('Filter', { current: filter })}
-          />
+          {!isStory && (
+            <ToolButton
+              icon="options-outline"
+              label={filter ?? 'Bộ lọc'}
+              accessibilityLabel="Bộ lọc"
+              disabled={busy}
+              onPress={() => navigation.navigate('Filter', { current: filter })}
+            />
+          )}
           <ToolButton
             icon="timer-outline"
             label={timerLabel}
@@ -314,14 +352,14 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
           {recording ? (
             <View style={styles.recBadge} accessibilityLiveRegion="polite">
               <View style={styles.recDot} />
-              <AppText weight="semibold" size={13} color={colors.white}>{`Đang quay ${clock(elapsed)}`}</AppText>
+              <AppText weight="semibold" size={13} color={colors.white}>{isStory ? `Đang quay ${clock(elapsed)} / ${clock(storyMaxSec)}` : `Đang quay ${clock(elapsed)}`}</AppText>
             </View>
           ) : (
             <View style={styles.recBadgeSpace} />
           )}
 
           <View style={styles.controls}>
-            <Pressable onPress={pickVideo} disabled={busy} style={styles.sideAction} accessibilityRole="button">
+            <Pressable onPress={isStory ? pickStory : pickVideo} disabled={busy} style={styles.sideAction} accessibilityRole="button">
               <View style={styles.uploadThumb}>
                 <Ionicons name="images-outline" size={20} color={colors.white} />
               </View>
@@ -347,11 +385,23 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
           </View>
 
           <View style={styles.modes} accessibilityLabel="Chế độ">
-            <View style={[styles.mode, styles.modeActive]}>
-              <AppText weight="semibold" size={14} color={colors.white}>Video</AppText>
-            </View>
-            <Pressable onPress={pickStory} disabled={busy} style={styles.mode} accessibilityRole="button">
-              <AppText weight="semibold" size={14} color={colors.white} style={styles.modeIdle}>Story</AppText>
+            <Pressable
+              onPress={() => changeMode('video')}
+              disabled={busy}
+              style={[styles.mode, !isStory && styles.modeActive]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: !isStory }}
+            >
+              <AppText weight="semibold" size={14} color={colors.white} style={isStory && styles.modeIdle}>Video</AppText>
+            </Pressable>
+            <Pressable
+              onPress={() => changeMode('story')}
+              disabled={busy}
+              style={[styles.mode, isStory && styles.modeActive]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isStory }}
+            >
+              <AppText weight="semibold" size={14} color={colors.white} style={!isStory && styles.modeIdle}>Story</AppText>
             </Pressable>
             <Pressable onPress={() => navigation.navigate('GoLive')} disabled={busy} style={styles.mode} accessibilityRole="button">
               <AppText weight="semibold" size={14} color={colors.white} style={styles.modeIdle}>LIVE</AppText>

@@ -18,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 /**
  * API video phía người đăng (đều cần token):
  *  POST   /api/videos             multipart: file, thumbnail + các trường của CreateVideoRequest → 201
@@ -94,10 +96,13 @@ public class VideoController {
         return watchHistoryService.getMine(PageUtils.of(page, size));
     }
 
+    // Xoá lịch sử xem: DELETE /api/videos/me/history (xoá hết)
+    // hoặc DELETE /api/videos/me/history?videoIds=1,2,3 (chỉ xoá các video đã chọn)
     @DeleteMapping("/me/history")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void clearMyHistory() {
-        watchHistoryService.clearMine();
+    public void clearMyHistory(@RequestParam(required = false) List<Long> videoIds) {
+        if (videoIds == null || videoIds.isEmpty()) watchHistoryService.clearMine();
+        else watchHistoryService.removeMine(videoIds);
     }
 
     @PutMapping("/{id}")
