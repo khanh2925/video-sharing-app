@@ -8,6 +8,10 @@ import type { Audio, AuthUser, FollowUser, PageResponse, SearchResponse, SearchT
 export const catalogApi = {
   topics: () => api.get<Topic[]>('/topics').then((r) => r.data),
   audios: () => api.get<Audio[]>('/audios').then((r) => r.data),
+  audio: (id: number) => api.get<Audio>(`/audios/${id}`).then((r) => r.data),
+  /** Video công khai đang dùng bài nhạc này, nhiều lượt xem trước (màn Âm thanh) */
+  audioVideos: (id: number, page = 0, size = 18) =>
+    api.get<PageResponse<Video>>(`/audios/${id}/videos`, { params: { page, size } }).then((r) => r.data),
 };
 
 export const searchApi = {

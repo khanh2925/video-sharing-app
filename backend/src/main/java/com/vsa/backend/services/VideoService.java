@@ -86,6 +86,17 @@ public class VideoService {
                 topicId, VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable), currentUserId);
     }
 
+    /** Màn Âm thanh: video công khai đã đăng đang dùng bài nhạc audioId, nhiều lượt xem trước. */
+    @Transactional(readOnly = true)
+    public PageResponse<VideoResponse> getByAudio(Long audioId, Pageable pageable) {
+        if (!audioRepository.existsById(audioId)) {
+            throw ApiException.notFound("Không tìm thấy bài nhạc");
+        }
+        Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();
+        return toPage(videoRepository.findByAudioIdAndStatusAndVisibilityOrderByViewCountDesc(
+                audioId, VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable), currentUserId);
+    }
+
     @Transactional(readOnly = true)
     public VideoResponse getById(Long videoId) {
         Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();

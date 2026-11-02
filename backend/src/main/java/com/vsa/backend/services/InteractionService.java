@@ -9,6 +9,7 @@ import com.vsa.backend.entities.CommentLike;
 import com.vsa.backend.entities.User;
 import com.vsa.backend.entities.Video;
 import com.vsa.backend.entities.VideoLike;
+import com.vsa.backend.enums.NotificationType;
 import com.vsa.backend.enums.VideoStatus;
 import com.vsa.backend.exceptions.ApiException;
 import com.vsa.backend.mappers.UserMapper;
@@ -41,6 +42,7 @@ public class InteractionService {
     private final UserMapper userMapper;
     private final AppProperties appProperties;
     private final VideoAccessPolicy videoAccessPolicy;
+    private final NotificationService notificationService;
 
     @Transactional
     public void likeVideo(Long videoId) {
@@ -52,6 +54,7 @@ public class InteractionService {
         User user = userRepository.getReferenceById(userId);
         videoLikeRepository.save(VideoLike.builder().video(video).user(user).build());
         videoRepository.addLikeCount(videoId, 1);
+        notificationService.notify(video.getOwner(), userId, NotificationType.LIKE, video, null);
     }
 
     @Transactional
@@ -87,6 +90,7 @@ public class InteractionService {
                 .video(video)
                 .build());
         videoRepository.addCommentCount(videoId, 1);
+        notificationService.notify(video.getOwner(), userId, NotificationType.COMMENT, video, comment.getContent());
         return toResponse(comment, userId);
     }
 

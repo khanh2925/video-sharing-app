@@ -3,6 +3,7 @@
 > Tổng hợp từ: sơ đồ use case đã chốt (19 use case, 3 actor), tài liệu SDLC trên Google Docs (bản trình bày), class diagram và khung Back-End hiện tại (25/10/2026).
 > Tên use case trong file này giữ **đúng tên trên sơ đồ use case**. Tên lớp, thuộc tính, enum giữ **đúng tên trong code** (tiếng Anh). Chú thích, câu báo lỗi vẫn tiếng Việt.
 > Mục 7 ghi các **quyết định đã chốt** (25/10/2026) về đặt tên và những chỗ nghiệp vụ trước đó còn bỏ ngỏ. Code theo đúng mục này.
+> **Cập nhật 01/11/2026:** đối chiếu lại với code thật trên `main` (UC01–03, UC08–10, UC17–18) và sửa các chỗ tài liệu ghi cũ: chế độ khách, đăng ký 3 bước, thoát màn Đăng video, lưới Video của tôi, tên bộ lọc, định dạng file story, hàng Stories, mã lỗi khi không có quyền xem video.
 
 ## Mục lục
 
@@ -59,14 +60,14 @@ Công nghệ: Expo + React Native + TypeScript (mobile), Spring Boot 4 REST API 
 
 | # | Quy tắc |
 |---|---|
-| R1 | **Tên đăng nhập** 3–30 ký tự, duy nhất. **Email** hợp lệ, duy nhất. **Mật khẩu** ≥ 6 ký tự, lưu dạng băm **BCrypt**, không bao giờ trả ra API. |
+| R1 | **Tên đăng nhập** 3–30 ký tự, chỉ gồm chữ không dấu, số, dấu chấm, gạch dưới, duy nhất. **Email** hợp lệ, tối đa 100 ký tự, duy nhất. **Tên hiển thị** tối đa 50 ký tự. **Mật khẩu** 6–72 ký tự (BCrypt chỉ dùng 72 byte đầu), lưu dạng băm **BCrypt**, không bao giờ trả ra API. Tên đăng nhập và email được đổi về chữ thường trước khi lưu và khi đăng nhập. |
 | R2 | Đăng nhập bằng tên đăng nhập **hoặc** email, trả **JWT hạn 7 ngày**. Tài khoản `locked = true` bị từ chối **dù token còn hạn**. |
-| R3 | **Khách** (chưa đăng nhập) chỉ đọc nội dung công khai. Mọi thao tác ghi (thích, bình luận, theo dõi, đăng…) cần đăng nhập; khách bấm vào thì chuyển sang màn hình Đăng nhập. |
+| R3 | **Khách** (chưa đăng nhập) chỉ đọc nội dung công khai. Mọi thao tác ghi (thích, bình luận, theo dõi, đăng…) cần đăng nhập; khách bấm vào thì hiện **bảng mời đăng nhập** (Đăng nhập / Tạo tài khoản mới / Để sau). Đăng nhập hoặc đăng ký xong thì quay lại đúng màn đang xem. |
 | R4 | **Quyền xem video** theo `visibility` và `status` (xem bảng 6.2). Video `DRAFT`, `PRIVATE` chỉ tác giả thấy; `FOLLOWERS` chỉ người đang theo dõi tác giả thấy; `HIDDEN` không hiện ở đâu cả. |
-| R5 | **Chỉ chủ sở hữu** được sửa, xoá video, bình luận, tin của mình. Người khác gọi API → **HTTP 403**. |
+| R5 | **Chỉ chủ sở hữu** được sửa, xoá video, bình luận, tin của mình. Người khác gọi API sửa / xoá → **HTTP 403**. Còn **xem** một video mình không có quyền (nháp hoặc riêng tư của người khác, chỉ cho người theo dõi mà mình chưa theo dõi, bị ẩn) thì trả **HTTP 404** "Video không tồn tại hoặc bạn không có quyền xem", để không lộ là video có tồn tại. |
 | R6 | Mỗi người **thích một video / một bình luận tối đa 1 lần**, mỗi cặp theo dõi chỉ 1 dòng, mỗi người xem một tin chỉ ghi 1 lượt (ràng buộc unique trong DB). **Không tự theo dõi chính mình.** |
 | R7 | Các bộ đếm `likeCount`, `commentCount`, `viewCount` (bảng `videos`) và `likeCount` (bảng `comments`) được cập nhật **trong cùng giao dịch** với bảng chi tiết, để trang chủ không phải đếm lại. |
-| R8 | **Upload**: video mp4 / mov / webm ≤ **`VIDEO_MAX_SIZE_MB`** (mặc định 100 MB, quản trị viên chỉnh); ảnh jpg / png / webp ≤ **5 MB** (`application.yaml`). File lưu trong `uploads/` với **tên UUID**. Tin là video thì dài tối đa **`STORY_MAX_DURATION_SEC`** (mặc định 15 giây, quản trị viên chỉnh). |
+| R8 | **Upload**: video mp4 / mov / webm ≤ **`VIDEO_MAX_SIZE_MB`** (mặc định 100 MB, quản trị viên chỉnh); ảnh jpg / jpeg / png / webp ≤ **5 MB** (`application.yaml`). Định dạng kiểm tra theo đuôi tên file. File lưu trong `uploads/` với **tên UUID**. Tin là video thì dài tối đa **`STORY_MAX_DURATION_SEC`** (mặc định 15 giây, quản trị viên chỉnh); app gửi kèm độ dài (`durationSec`), **backend kiểm tra** và từ chối nếu quá. |
 | R9 | **Bộ lọc và nhạc chỉ lưu thông tin** (`filter`, `audio`) đi kèm video, không xử lý lại file. App hiển thị bộ lọc bằng lớp màu phủ khi phát. |
 | R10 | Video: **tiêu đề bắt buộc, ≤ 150 ký tự**; mô tả ≤ 2000 ký tự. Bình luận **1–500 ký tự** (hằng số trong `AppConstants`, gắn với độ dài cột DB). Video tắt bình luận (`allowComments = false`) thì chặn gửi bình luận mới. |
 | R11 | **Tin (story) hết hạn sau `STORY_LIFETIME_HOURS` giờ** (mặc định 24, quản trị viên chỉnh; `expiresAt` tính lúc đăng, đổi thông số không ảnh hưởng tin đã đăng). Hàng Stories chỉ hiện tin còn hạn của **bản thân và người mình đang theo dõi**. |
@@ -75,7 +76,7 @@ Công nghệ: Expo + React Native + TypeScript (mobile), Spring Boot 4 REST API 
 | R14 | Mọi lỗi API trả JSON thống nhất `{"status": 400, "message": "…", "timestamp": "…"}`. |
 | R15 | Quản trị viên **không khoá được tài khoản quản trị**. Video bị ẩn không xoá khỏi DB (để tra lại khi cần) và **không bỏ ẩn được** (MVP). |
 | R17 | **Thông số không viết cứng**, chia 3 loại (C12): thông số quản trị viên chỉnh trên hệ thống (bảng `system_settings`, UC19); cấu hình kỹ thuật trong `application.yaml`; giới hạn gắn với cột DB trong `AppConstants`. |
-| R16 | Các nút có trong thiết kế nhưng **ngoài phạm vi MVP** (Buy now, Message, chuông thông báo, Also post on) vẫn hiện, bấm vào thì báo "Tính năng sẽ có ở phiên bản sau". |
+| R16 | Các nút có trong thiết kế nhưng **ngoài phạm vi MVP** (Buy now, Message, Also post on, chia sẻ sang Facebook / Instagram / sao chép liên kết) vẫn hiện, bấm vào thì báo "Tính năng sẽ có ở phiên bản sau". |
 
 ---
 
@@ -114,6 +115,7 @@ Vai trò lưu ở `User.role` (enum `Role`). Chỉ có **một bảng** `users` 
 | UC17 | Đăng story | Người dùng | «include» Đăng nhập | Home – Video Listing (Stories) |
 | UC18 | Xem story | Người dùng | «include» Đăng nhập | Home – Video Listing (Stories) |
 | UC19 | Cấu hình hệ thống | Quản trị viên | «include» Đăng nhập | API quản trị |
+| UC20 | Thông báo và chia sẻ | Người dùng | «include» Đăng nhập | Home (chuông), Video Watching (Chia sẻ) |
 
 Người dùng —▷ Khách (kế thừa). Thích và bình luận gộp chung một use case **Tương tác video**; bộ lọc và nhạc **không** là use case riêng mà nằm trong **Chỉnh sửa video**.
 
@@ -126,7 +128,7 @@ Người dùng —▷ Khách (kế thừa). Thích và bình luận gộp chung 
 - Xem trang chủ: Top trending, Browse topic, Streaming, Audio (hàng Stories chỉ hiện khi đã đăng nhập).
 - Tìm kiếm video, tài khoản, live, nhạc.
 - Xem video toàn màn hình, xem bình luận, xem hồ sơ người khác.
-- Bấm thích, bình luận, theo dõi, "+" → chuyển sang Đăng nhập.
+- Bấm thích, bình luận, theo dõi, "+", tab Bạn bè, đăng tin, phát / xem live → hiện bảng mời đăng nhập; tab Hồ sơ của khách có nút Đăng ký và link Đăng nhập.
 - Đăng ký tài khoản.
 
 ```
@@ -157,10 +159,10 @@ Audio
 
 **Đăng video**
 
-1. Bấm "+" → quay video mới, hoặc "Upload" chọn video trong thư viện.
+1. Bấm "+" → quay video mới (tối đa 60 giây), hoặc "Tải lên" chọn video trong thư viện (≤ 60 giây, ≤ 100 MB).
 2. (Tuỳ chọn) chọn bộ lọc, chọn nhạc nền – UC09.
-3. Màn "Post on social": nhập tiêu đề, mô tả, hashtag, chủ đề; chọn **Who can watch** (Công khai / Người theo dõi / Riêng tư); bật / tắt Comments.
-4. Bấm "Post" → video `PUBLISHED`; hoặc "Save draft" → video `DRAFT`, đăng sau ở mục Video nháp.
+3. Màn Đăng video: nhập tiêu đề, mô tả, hashtag, chủ đề, đổi ảnh bìa; chọn **Ai được xem** (Mọi người / Người theo dõi / Chỉ mình tôi); bật / tắt Cho phép bình luận.
+4. Bấm "Đăng" → video `PUBLISHED`, về tab Hồ sơ; hoặc "Lưu nháp" → video `DRAFT`, mở màn Video nháp để đăng sau.
 
 ```
 POST ON SOCIAL
@@ -168,12 +170,12 @@ POST ON SOCIAL
             Mô tả:   [________________]
  Hashtag:   #dulich #dalat  [+]
  Chủ đề:    [ Travel ▼ ]
- Who can watch:  (•) Công khai  ( ) Người theo dõi  ( ) Riêng tư
- Comments:  [ON]
-            [ Save draft ]                 [ Post ]
+ Ai được xem:  (•) Mọi người  ( ) Người theo dõi  ( ) Chỉ mình tôi
+ Cho phép bình luận:  [ON]
+            [ Lưu nháp ]                   [ Đăng ]
 ```
 
-**Tin (story)**: bấm ô "You +" đăng ảnh hoặc video ngắn (mặc định ≤ 15 giây); xem tin của người mình theo dõi, tin tự ẩn sau 24 giờ (mặc định, quản trị viên chỉnh được).
+**Tin (story)**: bấm ô "Đăng tin" hoặc chế độ Story ở màn Camera, đăng ảnh hoặc video ngắn (mặc định ≤ 15 giây); xem tin của mình và của người mình theo dõi, tin tự ẩn sau 24 giờ (mặc định, quản trị viên chỉnh được).
 
 **Livestream**: mở phòng live từ menu hồ sơ (chọn video nguồn của mình, gắn sản phẩm nếu muốn); vào xem live của người khác, chat, thả ❤️ / 👍 / 😀.
 
@@ -207,23 +209,29 @@ Mỗi use case ghi: **Actor**, **Mục đích**, **Điều kiện trước**, **
 
 #### UC01. Đăng ký tài khoản
 - **Actor**: Khách.
-- **Luồng chính**: nhập tên đăng nhập, tên hiển thị, email, mật khẩu, nhập lại mật khẩu → hệ thống kiểm tra → băm mật khẩu, lưu `User` (vai trò `USER`) → tạo JWT → đăng nhập luôn, về trang chủ.
-- **Lỗi**: sai định dạng, mật khẩu nhập lại không khớp; "Tên đăng nhập đã tồn tại" / "Email đã được sử dụng".
+- **Luồng chính** (3 bước, có thanh tiến độ, nút "Tiếp tục" xám khi bước chưa hợp lệ):
+  1. Email.
+  2. Mật khẩu + nhập lại; danh sách điều kiện "Từ 6 đến 72 ký tự", "Hai lần nhập giống nhau" tự tick xanh.
+  3. Tên đăng nhập + tên hiển thị, có thẻ xem trước hồ sơ → "Đăng ký".
+  → Hệ thống kiểm tra → băm mật khẩu, lưu `User` (vai trò `USER`, `locked = false`) → tạo JWT → **đăng nhập luôn**, quay lại màn đang xem trước khi mở Đăng ký.
+- **Luồng phụ**: nút lùi ở bước 2, 3 về bước trước (giữ dữ liệu đã nhập); ở bước 1 thì đóng màn. Link "Đăng nhập" chuyển sang màn Đăng nhập.
+- **Lỗi**: sai định dạng; "Mật khẩu nhập lại không khớp" (400); "Tên đăng nhập đã tồn tại" / "Email đã được sử dụng" (409). Lỗi liên quan email thì app tự quay về bước 1, lỗi khác hiện ở bước 3.
 - **Quy tắc**: R1.
 - **API**: `POST /api/auth/register`.
 - **Dữ liệu**: User.
 
 #### UC02. Đăng nhập
 - **Actor**: Khách, Quản trị viên.
-- **Luồng chính**: nhập tên đăng nhập hoặc email + mật khẩu → so khớp BCrypt → trả JWT, thông tin người dùng, vai trò → app lưu token, quay lại màn hình trước đó.
-- **Lỗi**: "Tên đăng nhập hoặc mật khẩu không đúng"; "Tài khoản đã bị khóa".
+- **Luồng chính**: nhập tên đăng nhập hoặc email + mật khẩu (có `@` thì tìm theo email) → so khớp BCrypt → kiểm tra tài khoản bị khoá → trả JWT, thông tin người dùng, vai trò → app lưu token vào SecureStore, đóng màn (mở dạng modal) và quay lại màn hình trước đó.
+- **Luồng phụ**: mở lại app → app đọc token đã lưu, gọi `GET /api/auth/me`; token hết hạn hoặc tài khoản bị khoá (401) thì tự đăng xuất.
+- **Lỗi**: bỏ trống → báo ngay dưới ô, không gọi server; "Tên đăng nhập hoặc mật khẩu không đúng" (401, dùng chung một câu để không dò được tài khoản nào tồn tại); "Tài khoản đã bị khóa" (403, chỉ báo khi mật khẩu đúng).
 - **Quy tắc**: R1, R2.
 - **API**: `POST /api/auth/login`, `GET /api/auth/me`.
 - **Dữ liệu**: User.
 
 #### UC03. Đăng xuất
 - **Actor**: Người dùng, Quản trị viên.
-- **Luồng chính**: My profile → menu → "Đăng xuất" → xác nhận → xoá token trên máy, về trang chủ ở trạng thái khách.
+- **Luồng chính**: Hồ sơ của tôi → menu ☰ → "Đăng xuất" → hộp hỏi "Đăng xuất?" → xoá token trên máy, về Trang chủ ở trạng thái khách.
 - **Luồng phụ**: chọn "Hủy" → giữ phiên.
 - **Ghi chú**: JWT không lưu ở server nên đăng xuất chỉ xoá token phía app, **không cần API**.
 
@@ -241,6 +249,7 @@ Mỗi use case ghi: **Actor**, **Mục đích**, **Điều kiện trước**, **
 - **Actor**: Khách, Người dùng.
 - **Luồng chính**: tab Search → nhập từ khoá (vd "Pet") → tìm video công khai có tiêu đề, mô tả hoặc hashtag chứa từ khoá, sắp theo lượt xem → hiện lưới video + mục "Maybe you're interested" (hashtag liên quan) → chọn bộ lọc **Trending / Accounts / Streaming / Audio**.
 - **Luồng phụ**: chọn chủ đề ở Browse topic → video thuộc chủ đề, "Show more" tải thêm; chưa nhập từ khoá → hiện trending; không có kết quả → "Không tìm thấy kết quả".
+- **Màn Âm thanh** (thêm 02/11/2026): bấm một bài nhạc (tab Âm thanh ở Tìm kiếm, mục Âm thanh nổi bật ở Trang chủ, tên bài / đĩa nhạc ở Xem video) → màn Âm thanh: tên bài, ca sĩ, nghe thử, số video đang dùng, nút "Dùng âm thanh này" (mở Camera gắn sẵn bài) và lưới video công khai đang dùng bài đó, nhiều lượt xem trước. API `GET /api/audios/{id}`, `GET /api/audios/{id}/videos`.
 - **Quy tắc**: chỉ tìm video `PUBLISHED` + `PUBLIC` (R4). Bộ lọc là tab trên giao diện, **không** tách use case con.
 - **API**: `GET /api/search?q=&type=`, `GET /api/search/suggestions?q=`, `GET /api/videos?topicId=`, `GET /api/topics`.
 - **Dữ liệu**: Video, Hashtag, Topic, User, LiveStream, Audio.
@@ -264,18 +273,26 @@ Mỗi use case ghi: **Actor**, **Mục đích**, **Điều kiện trước**, **
 
 #### UC08. Đăng video
 - **Actor**: Người dùng.
-- **Điều kiện trước**: đã đăng nhập, đã cấp quyền camera và thư viện ảnh.
-- **Luồng chính**: "+" → quay video (hoặc Upload) → xem trước → (tuỳ chọn) UC09 → "Tiếp" → nhập tiêu đề, mô tả, hashtag, chủ đề, chế độ hiển thị, bật / tắt bình luận → "Post" → lưu file, tạo `Video` (`PUBLISHED`), tạo / gắn `Hashtag` → "Đăng thành công", về My profile.
-- **Luồng phụ**: "Save draft" → `DRAFT`; thoát trước khi Post → không lưu gì.
-- **Lỗi**: sai định dạng / quá `VIDEO_MAX_SIZE_MB` (mặc định 100 MB); thiếu tiêu đề.
-- **Quy tắc**: R8, R10. Hashtag lưu không dấu `#`, viết thường; trùng tên thì dùng lại dòng cũ.
+- **Điều kiện trước**: đã đăng nhập, đã cấp quyền **camera và micro** (chọn video có sẵn thì không cần).
+- **Luồng chính**: "+" → màn Camera (chế độ Video) → quay video (tự dừng ở 60 giây, có hẹn giờ 3 / 10 giây) hoặc "Tải lên" chọn video trong thư viện → (tuỳ chọn) UC09 → "Tiếp" → màn Đăng video: xem trước, nhập tiêu đề, mô tả, hashtag, chủ đề, ảnh bìa, ai được xem, bật / tắt bình luận → "Đăng" → lưu file, tạo `Video` (`PUBLISHED`), tạo / gắn `Hashtag` → về tab Hồ sơ, video mới hiện trong lưới.
+- **Luồng phụ**:
+  - "Lưu nháp" → `DRAFT`, mở màn Video nháp.
+  - Rời màn Camera khi đang quay → hỏi "Bỏ video đang quay?".
+  - Rời màn Đăng video khi chưa đăng → hỏi "Thoát mà chưa đăng?" với 3 lựa chọn: Lưu nháp / Bỏ video / Ở lại.
+  - Không chọn ảnh bìa → video không có ảnh bìa, lưới hiện biểu tượng máy quay.
+- **Lỗi**:
+  - App: video chọn từ thư viện quá 60 giây hoặc quá 100 MB; chưa có video mà bấm "Tiếp"; thiếu tiêu đề ("Nhập tiêu đề để đăng", không gửi).
+  - Backend: sai định dạng ("Chỉ nhận file mp4, mov, webm"); quá `VIDEO_MAX_SIZE_MB` ("File quá lớn, tối đa 100 MB"); ảnh bìa sai định dạng hoặc > 5 MB; chủ đề / bài nhạc không tồn tại (404); hashtag dài quá 50 ký tự. Lưu DB lỗi thì xoá file vừa lưu.
+- **Quy tắc**: R8, R10. Hashtag lưu không dấu `#`, viết thường, tối đa 50 ký tự, bỏ trùng; trùng tên với hashtag đã có thì dùng lại dòng cũ. Mặc định: ai được xem = `PUBLIC`, cho phép bình luận = bật.
 - **API**: `POST /api/videos` (multipart: `file`, `thumbnail` và các trường `title`, `description`, `hashtags`, `topicId`, `audioId`, `filter`, `visibility`, `allowComments`, `draft`); `GET /api/topics` để chọn chủ đề.
 - **Dữ liệu**: Video, Hashtag, Topic, Audio.
 
 #### UC09. Chỉnh sửa video («extend» Đăng video)
 - **Actor**: Người dùng.
-- **Luồng chính**: "Filter" → bảng "Add filter" (For you / Trending / Saved) → chọn bộ lọc (Film, Black white, Natural, Art, Vintage, Spring, Baby, Contrast) → áp lớp màu lên bản xem trước → "Add audio" → danh sách nhạc → "Use" một bài → tên bài hiện trên nút.
-- **Luồng phụ**: chọn ⊘ bỏ bộ lọc; gõ tên bài để lọc danh sách nhạc.
+- **Luồng chính**:
+  - Bộ lọc: bấm "Bộ lọc" → 3 tab Dành cho bạn / Thịnh hành / Đã lưu → chọn 1 trong 8 bộ lọc (Film, Đen trắng, Tự nhiên, Nghệ thuật, Cổ điển, Mùa xuân, Baby, Tương phản) → lớp màu phủ lên bản xem trước → "Xong".
+  - Nhạc: bấm "Thêm nhạc" → danh sách nhạc (3 tab, bài thịnh hành lên trước) → chạm bài để nghe thử → "Dùng" → tên bài hiện trên nút.
+- **Luồng phụ**: chọn ⊘ bỏ bộ lọc ("Không lọc"); đóng màn Bộ lọc mà không bấm "Xong" thì không đổi gì; gõ tên bài hoặc ca sĩ để lọc danh sách nhạc; "Bỏ nhạc" để không dùng nhạc. Tab "Đã lưu" của nhạc chưa có (R16).
 - **Quy tắc**: R9. Kết quả chỉ là 2 thuộc tính `filter`, `audio` gửi cùng lúc Post.
 - **API**: `GET /api/audios` (dữ liệu chọn); lưu cùng `POST /api/videos`.
 - **Dữ liệu**: Video.filter, Audio.
@@ -286,13 +303,13 @@ Mỗi use case ghi: **Actor**, **Mục đích**, **Điều kiện trước**, **
 
 | Chức năng | Mô tả | Quy tắc |
 |---|---|---|
-| Xem video của tôi | Tab My Videos (mọi trạng thái trừ `HIDDEN`) | |
-| Xem bản nháp | Menu → "Video nháp" | Chỉ video `DRAFT` của mình |
-| Sửa video | Đổi tiêu đề, mô tả, chế độ hiển thị, bật / tắt bình luận | R5, R10 |
-| Đăng bản nháp | "Đăng ngay" → `DRAFT` → `PUBLISHED` | |
-| Xoá video | Xoá video kèm lượt thích, bình luận, liên kết hashtag và file | R5. Video `HIDDEN` chủ video không tự xoá được (để quản trị viên tra) |
+| Xem video của tôi | Lưới "Video của tôi" ở Hồ sơ: video `PUBLISHED` của mình với mọi chế độ hiển thị (video riêng tư có biểu tượng khoá). Ô đầu tiên là **"Bản nháp: N"** (chỉ hiện khi có nháp) | |
+| Xem bản nháp | Ô "Bản nháp: N" hoặc menu ☰ → "Video nháp" | Chỉ video `DRAFT` của mình, mới nhất trước, phân trang |
+| Sửa video | Đổi tiêu đề, mô tả, ai được xem, bật / tắt bình luận. **Không** đổi file video, bộ lọc, nhạc, hashtag, chủ đề, ảnh bìa. Sửa bản nháp thì vẫn là nháp | R5, R10. Rời màn khi có thay đổi chưa lưu → hỏi "Bỏ thay đổi?" |
+| Đăng bản nháp | "Đăng ngay" → hỏi xác nhận (kèm ai được xem) → `DRAFT` → `PUBLISHED` | |
+| Xoá video | Hỏi xác nhận → xoá video kèm lượt thích bình luận, bình luận, lượt thích video, liên kết hashtag và file | R5. Video `HIDDEN` chủ video không sửa, không xoá được (để quản trị viên tra) |
 
-- **Lỗi**: video không thuộc mình → 403.
+- **Lỗi**: video không thuộc mình → 403 "Bạn không có quyền với video này"; video bị ẩn → 403 "Video đã bị quản trị viên ẩn"; xoá tiêu đề khi sửa → 400 "Tiêu đề không được để trống".
 - **API**: `PUT /api/videos/{id}` (gửi trường muốn đổi; `{"publish": true}` để đăng bản nháp), `DELETE /api/videos/{id}`, `GET /api/videos/me/drafts`.
 - **Dữ liệu**: Video, VideoLike, Comment, CommentLike.
 
@@ -328,18 +345,18 @@ Mỗi use case ghi: **Actor**, **Mục đích**, **Điều kiện trước**, **
 
 #### UC17. Đăng story
 - **Actor**: Người dùng.
-- **Luồng chính**: ô "You +" → chụp ảnh / quay video ≤ `STORY_MAX_DURATION_SEC` hoặc chọn từ thư viện → xem trước → "Đăng story" → lưu `Story` với `expiresAt = createdAt + STORY_LIFETIME_HOURS` → avatar của tôi có viền xanh.
+- **Luồng chính**: ô "Đăng tin" ở hàng Stories hoặc chế độ Story ở màn Camera → chọn ảnh / video ≤ `STORY_MAX_DURATION_SEC` → xem trước → "Đăng story" → lưu `Story` với `expiresAt = createdAt + STORY_LIFETIME_HOURS` → avatar của tôi có viền xanh.
 - **Luồng phụ**: "Hủy" → không lưu; mở tin của mình → "Xóa".
-- **Lỗi**: file không phải jpg / png / mp4 / mov; video dài hơn `STORY_MAX_DURATION_SEC` (app kiểm tra, lấy giới hạn qua `GET /api/settings`).
-- **Quy tắc**: R8, R11.
+- **Lỗi** (backend kiểm tra, app hiện câu lỗi trong hộp "Không đăng được"): file không phải jpg / jpeg / png / webp / mp4 / mov / webm; video thiếu độ dài ("Thiếu độ dài video (durationSec)"); video dài hơn `STORY_MAX_DURATION_SEC` ("Video story tối đa 15 giây", số lấy từ thông số); quá dung lượng (R8). Xoá tin của người khác → 403 "Bạn chỉ được xoá story của mình".
+- **Quy tắc**: R8, R11. Loại tin (`IMAGE` / `VIDEO`) xác định theo đuôi file; tin ảnh lưu độ dài 0. Tin hết hạn vẫn còn trong DB, chỉ bị lọc khi lấy danh sách.
 - **API**: `POST /api/stories` (multipart: `file`, `durationSec` bắt buộc khi là video), `DELETE /api/stories/{id}`.
 - **Dữ liệu**: Story (`mediaType` = `IMAGE` / `VIDEO`), SystemSetting.
 
 #### UC18. Xem story
 - **Actor**: Người dùng.
-- **Luồng chính**: hàng Stories hiện avatar người đang theo dõi có tin còn hạn (viền xanh) → chọn avatar → phát lần lượt các tin toàn màn hình, có thanh tiến trình → ghi `StoryView` → chạm phải / trái sang tin kế / trước → hết tin người này thì sang người tiếp theo.
-- **Luồng phụ**: không ai có tin mới → chỉ hiện ô "You +"; vuốt xuống → đóng.
-- **Quy tắc**: R6, R11. Viền chuyển **xám** khi mình đã xem hết tin của người đó.
+- **Luồng chính**: hàng Stories hiện tin còn hạn của **chính mình (luôn đứng đầu)** và của người đang theo dõi; nhóm còn tin chưa xem (viền xanh) xếp trước, rồi theo tin mới nhất → chọn avatar → phát lần lượt các tin toàn màn hình, có thanh tiến trình → ghi `StoryView` → chạm phải / trái sang tin kế / trước → hết tin người này thì sang người tiếp theo.
+- **Luồng phụ**: không ai có tin mới → chỉ hiện ô đăng tin; vuốt xuống → đóng.
+- **Quy tắc**: R6, R11. Viền chuyển **xám** khi mình đã xem hết tin của người đó. Tin của chính mình luôn tính là đã xem, không ghi lượt xem. Xem tin đã hết hạn → 404 "Story đã hết hạn".
 - **API**: `GET /api/stories/feed`, `POST /api/stories/{id}/view`.
 - **Dữ liệu**: Story, StoryView, Follow.
 
@@ -361,6 +378,17 @@ Mỗi use case ghi: **Actor**, **Mục đích**, **Điều kiện trước**, **
 - **Quy tắc**: R12.
 - **API + WebSocket**: `GET /api/lives`, `GET /api/lives/{id}`, `GET /api/lives/{id}/messages`; client gửi `/app/live/{id}/join`, `/leave`, `/chat`, `/react`; server phát `/topic/live/{id}` các loại `COMMENT`, `REACTION`, `VIEWERS`.
 - **Dữ liệu**: LiveStream, LiveMessage (`type` = `COMMENT` / `REACTION`).
+
+### 5.6b Nhóm thông báo (thêm 02/11/2026)
+
+#### UC20. Thông báo và chia sẻ
+- **Actor**: Người dùng.
+- **Luồng chính**: có người **thích** hoặc **bình luận** video của mình, **theo dõi** mình, hoặc **chia sẻ** video cho mình → hệ thống tạo một thông báo → nút chuông ở Trang chủ có chấm đỏ đếm số chưa đọc → bấm chuông → màn Thông báo (mới nhất trước, dòng chưa đọc nền hồng nhạt) → mở màn là đánh dấu đã đọc hết → bấm một dòng: có video thì mở Xem video, theo dõi thì mở hồ sơ người đó.
+- **Chia sẻ**: ở Xem video bấm "Chia sẻ" → bảng chọn bạn bè (những người mình đang theo dõi, có ô tìm) → chọn tối đa 20 người, viết lời nhắn (không bắt buộc, ≤ 150 ký tự) → "Gửi" → mỗi người nhận một thông báo loại chia sẻ.
+- **Luồng phụ**: tự thích / bình luận video của mình → không tạo thông báo; người nhận không xem được video (vd video "Người theo dõi" mà họ chưa theo dõi) → bỏ qua người đó, báo "Đã gửi cho x/y người"; không ai nhận được → 400 "Không gửi được cho ai: người nhận không xem được video này". Sao chép liên kết, Facebook, Instagram → báo tính năng sau (R16).
+- **Quy tắc**: thông báo chỉ người nhận xem được; xoá video hoặc tài khoản thì thông báo liên quan tự xoá (ON DELETE CASCADE). App tải lại khi mở màn và đếm lại khi về Trang chủ, không đẩy tức thì.
+- **API**: `GET /api/notifications`, `GET /api/notifications/unread-count`, `PUT /api/notifications/read-all`, `PUT /api/notifications/{id}/read`, `POST /api/videos/{id}/share` (`{userIds, message}`).
+- **Dữ liệu**: Notification (`type` = `LIKE` / `COMMENT` / `FOLLOW` / `SHARE`, `recipient`, `actor`, `video`, `text`, `read`).
 
 ### 5.7 Nhóm quản trị
 
@@ -414,7 +442,9 @@ Tạo video ──"Save draft"──▶ DRAFT ──"Đăng ngay"──┐
 | `DRAFT` | ✓ | ✗ | ✗ | ✗ |
 | `HIDDEN` | ✗ | ✗ | ✗ | ✗ |
 
-Trending, Browse topic, Tìm kiếm **chỉ lấy** `PUBLISHED` + `PUBLIC`.
+Trending, Browse topic, Tìm kiếm **chỉ lấy** `PUBLISHED` + `PUBLIC`. Feed "Đang theo dõi" lấy `PUBLISHED` + (`PUBLIC` hoặc `FOLLOWERS`) của người mình theo dõi. Lưới "Video của tôi" lấy mọi video `PUBLISHED` của mình; bản nháp xem ở màn Video nháp.
+
+Trường hợp ✗ ở bảng trên, API trả **404** "Video không tồn tại hoặc bạn không có quyền xem" (kể cả tác giả với video `HIDDEN`).
 
 ### 6.3 Tin (story)
 
@@ -464,6 +494,7 @@ Danh sách Service dự kiến: `AuthService`, `UserService`, `VideoService`, `C
 | # | Việc | Khi nào |
 |---|---|---|
 | C3 | `pom.xml` đã thêm Security, WebSocket, jjwt; `application.yaml` đặt trần multipart 500 MB (giới hạn thật lấy từ `VIDEO_MAX_SIZE_MB`) | **Đã xong** |
+| C13 | Màn Camera đang **viết cứng** giới hạn 100 MB khi chọn video từ thư viện. Nên đọc `VIDEO_MAX_SIZE_MB` qua `GET /api/settings` cho đúng R17. Giới hạn 60 giây quay / chọn video là quy định riêng của app | Chưa làm |
 | C8 | Xoá video: entity không tự xoá dây chuyền, phải xoá trong service theo thứ tự **lượt thích bình luận → bình luận → lượt thích video → video → file**, bọc trong `@Transactional` | Khi làm UC10 |
 | C11 | Tài liệu chính là **Google Docs** "Tài liệu SDLC – Video Sharing App (Đề tài 1) – bản trình bày". Bản Claude Docs cũ không sửa nữa | |
 

@@ -24,18 +24,17 @@ import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useRequireAuth } from '../../context/LoginPromptContext';
 import { videoApi } from '../../api/videos';
-import { searchApi, userApi } from '../../api/catalog';
+import { catalogApi, searchApi, userApi } from '../../api/catalog';
 import { getErrorMessage } from '../../api/client';
 import { useFetch } from '../../hooks/useFetch';
 import { usePagedList } from '../../hooks/usePagedList';
 import { useBackgroundMusic } from '../../hooks/useBackgroundMusic';
 import { useAppActive } from '../../hooks/useAppActive';
 import { formatCount } from '../../utils/format';
+import { ShareSheet } from './ShareSheet';
 import { mediaUrl } from '../../utils/media';
 import type { PageResponse, Video } from '../../types/models';
 import type { RootScreenProps, SearchTab, WatchSource } from '../../navigation/types';
-
-const soon = () => Alert.alert('Thông báo', 'Tính năng sẽ có ở phiên bản sau');
 
 const EMPTY_PAGE: PageResponse<Video> = { content: [], page: 0, size: 0, totalElements: 0, totalPages: 0, last: true };
 
@@ -48,6 +47,7 @@ function fetchSource(source: WatchSource, page: number, size: number): Promise<P
     case 'search': return searchApi.search<Video>(source.q, 'videos', page, size);
     case 'user': return userApi.videos(source.userId, page, size);
     case 'liked': return userApi.liked(source.userId, page, size);
+    case 'audio': return catalogApi.audioVideos(source.audioId, page, size);
   }
 }
 
@@ -281,6 +281,7 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
   // Đã theo dõi chủ video từ trước khi mở màn → ẩn nút "+" (null = chưa biết)
   const [followedBefore, setFollowedBefore] = useState<boolean | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
   const likeBusy = useRef(false);
   const followBusy = useRef(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -402,6 +403,8 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
   // nonce: bấm lại cùng từ khoá vẫn tìm lại (dù ô tìm kiếm đã bị sửa)
   const searchTag = (q: string, tab: SearchTab = 'video') =>
     navigation.popTo('MainTabs', { screen: 'Search', params: { q, tab, nonce: Date.now() } });
+  // Bấm tên bài nhạc / đĩa nhạc → màn Âm thanh (các video dùng cùng bài)
+  const openAudio = () => video.audio && navigation.navigate('Audio', { audioId: video.audio.id });
 
   return (
     <View style={[styles.page, { height }]}>
@@ -450,7 +453,7 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
           <AppText weight="semibold" size={12} color={colors.white}>{formatCount(video.commentCount)}</AppText>
         </Pressable>
 
-        <Pressable style={styles.action} onPress={soon} accessibilityLabel="Chia sẻ">
+        <Pressable style={styles.action} onPress={() => requireAuth(() => setShareOpen(true))} accessibilityLabel="Chia sẻ">
           <Ionicons name="share-social-outline" size={28} color={colors.white} />
           <AppText weight="semibold" size={12} color={colors.white}>Chia sẻ</AppText>
         </Pressable>
@@ -458,7 +461,7 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
         {video.audio && (
           <Pressable
             style={styles.disc}
-            onPress={() => searchTag(video.audio!.title, 'audio')}
+            onPress={openAudio}
             accessibilityLabel={`Âm thanh: ${video.audio.title}`}
           >
             <Ionicons name="musical-note" size={16} color={colors.white} />
@@ -480,7 +483,7 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
           ))}
         </AppText>
         {video.audio && (
-          <Pressable style={styles.audioRow} onPress={() => searchTag(video.audio!.title, 'audio')}>
+          <Pressable style={styles.audioRow} onPress={openAudio}>
             <Ionicons name="musical-notes-outline" size={14} color={colors.white} />
             <AppText size={13} color={colors.white} numberOfLines={1}>
               {video.audio.title} · {video.audio.artist}
@@ -506,6 +509,8 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
           <AppText size={14} align="center">{toast}</AppText>
         </View>
       )}
+
+      {shareOpen && <ShareSheet visible videoId={video.id} onClose={() => setShareOpen(false)} />}
     </View>
   );
 }

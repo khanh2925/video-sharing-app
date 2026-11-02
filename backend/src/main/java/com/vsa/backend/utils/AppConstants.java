@@ -33,4 +33,9 @@ public final class AppConstants {
     public static final int COMMENT_MAX = 500;
     public static final int LIVE_MESSAGE_MAX = 300;
     public static final int LIVE_MAX_ACTIVE_PER_USER = 1;
+
+    // Thông báo, chia sẻ (UC20)
+    public static final int NOTIFICATION_TEXT_MAX = 200;   // cột notifications.text
+    public static final int SHARE_MESSAGE_MAX = 150;
+    public static final int SHARE_MAX_RECIPIENTS = 20;
 }

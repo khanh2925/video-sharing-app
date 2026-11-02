@@ -60,7 +60,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // Các GET cần đăng nhập (phải khai báo TRƯỚC dòng GET permitAll bên dưới)
                         .requestMatchers(HttpMethod.GET,
-                                "/api/auth/me", "/api/videos/me/**", "/api/users/suggestions", "/api/stories/**")
+                                "/api/auth/me", "/api/videos/me/**", "/api/users/suggestions", "/api/stories/**",
+                                "/api/notifications/**")
                         .authenticated()
                         // Còn lại: GET công khai, mọi thứ khác cần đăng nhập
                         .requestMatchers(HttpMethod.GET, "/api/**").permitAll()

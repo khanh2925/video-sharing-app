@@ -4,6 +4,7 @@ import com.vsa.backend.dtos.response.FollowUserResponse;
 import com.vsa.backend.dtos.response.PageResponse;
 import com.vsa.backend.entities.Follow;
 import com.vsa.backend.entities.User;
+import com.vsa.backend.enums.NotificationType;
 import com.vsa.backend.exceptions.ApiException;
 import com.vsa.backend.repositories.FollowRepository;
 import com.vsa.backend.repositories.UserRepository;
@@ -34,6 +35,7 @@ public class FollowService {
 
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * Bấm 2 lần (mạng chậm) không lỗi: đã theo dõi rồi thì thôi.
@@ -57,6 +59,7 @@ public class FollowService {
                     .follower(userRepository.getReferenceById(me))      // chỉ cần id, không phải đọc cả User
                     .following(target)
                     .build());
+            notificationService.notify(target, me, NotificationType.FOLLOW, null, null);
         } catch (DataIntegrityViolationException e) {
             // Request khác vừa theo dõi xong trước mình: kết quả vẫn là "đang theo dõi" → không báo lỗi
         }
