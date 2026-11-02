@@ -20,6 +20,8 @@ import type { Audio, MediaType } from '../types/models';
 export type WatchSource =
   | { kind: 'trending' }
   | { kind: 'following' }
+  /** AI gợi ý theo gu (cần đăng nhập), backend trả 1 danh sách không phân trang */
+  | { kind: 'forYou' }
   | { kind: 'topic'; topicId: number }
   | { kind: 'search'; q: string }
   | { kind: 'user'; userId: number }
