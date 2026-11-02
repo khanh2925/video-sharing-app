@@ -100,3 +100,15 @@ Sau lần chạy đầu, đăng xuất SSH rồi vào lại là gõ `docker` kh�
 - **Upload video lỗi "File quá lớn"** → giới hạn do quản trị viên chỉnh (`VIDEO_MAX_SIZE_MB`), trần cứng 500MB.
 - **Hết ổ đĩa** → `df -h`; dọn image cũ: `sudo docker system prune -f`. Boot volume Always Free tổng 200 GB, có thể tăng kích thước trên Console.
 - **Oracle tắt instance vì "idle"** → tài khoản Free có thể bị thu hồi máy nhàn rỗi lâu ngày; nâng lên Pay As You Go (vẫn miễn phí trong hạn mức) để tránh.
+
+## Bật Spring AI (gợi ý video, chatbot)
+
+Container `vector-db` (pgvector) đã có sẵn trong `docker-compose.prod.yml`. AI mặc định **tắt**.
+
+1. Mở `deploy/.env`, thêm dòng `SPRING_PROFILES_ACTIVE=ai`.
+2. Chạy `bash video-sharing-app/deploy/update.sh`.
+3. Kiểm tra log: `docker compose -f deploy/docker-compose.prod.yml logs backend | grep profile` phải thấy `"ai"`.
+4. Đăng nhập tài khoản admin, gọi `POST /api/admin/ai/reindex` **một lần** để nạp vector cho video có sẵn.
+
+Tắt lại: xoá dòng ở bước 1 rồi chạy lại `update.sh`. Key AI đã ghi sẵn trong `backend/src/main/resources/application-ai.yaml`.
+pgvector tốn thêm khoảng 100–200 MB RAM.
