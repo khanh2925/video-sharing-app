@@ -22,6 +22,14 @@ export interface ChatReply {
   reply: string;
   /** video trợ lý gợi ý kèm câu trả lời (có thể rỗng) */
   videos: Video[];
+  /** số tin CŨ NHẤT trong history bị server bỏ vì vượt giới hạn token → xoá chừng ấy tin trên máy */
+  trimmed: number;
+}
+
+/** Một tin cũ gửi kèm câu hỏi (cũ trước, mới sau) để trợ lý hiểu câu hỏi nối tiếp */
+export interface ChatTurn {
+  role: 'user' | 'bot';
+  text: string;
 }
 
 export const aiApi = {
@@ -32,8 +40,7 @@ export const aiApi = {
   forYou: () => api.get<Video[]>('/videos/me/for-you').then((r) => r.data),
   /** Tìm video theo ý nghĩa câu mô tả, không cần trùng từ khoá. Khách dùng được. */
   semanticSearch: (q: string) => api.get<Video[]>('/search/semantic', { params: { q } }).then((r) => r.data),
-  /** Gửi 1 câu cho trợ lý (tối đa 500 ký tự). Cần đăng nhập. */
-  chat: (message: string) => api.post<ChatReply>('/chat', { message }).then((r) => r.data),
-  /** Xoá trí nhớ hội thoại, bắt đầu cuộc trò chuyện mới */
-  resetChat: () => api.delete('/chat').then(() => undefined),
+  /** Gửi 1 câu cho trợ lý (tối đa 500 ký tự) kèm lịch sử lưu trên máy. Cần đăng nhập. */
+  chat: (message: string, history: ChatTurn[]) =>
+    api.post<ChatReply>('/chat', { message, history }).then((r) => r.data),
 };

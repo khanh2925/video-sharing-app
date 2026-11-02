@@ -54,6 +54,9 @@ spring:
 # Thông số kỹ thuật của phần AI (đọc qua lớp AiProperties)
 app:
   ai:
+    # Lịch sử chat (lưu trên máy người dùng) gửi kèm mỗi câu hỏi tối đa bao nhiêu token;
+    # vượt thì bỏ tin cũ nhất để có chỗ cho tin mới
+    chat-history-max-tokens: 2000
     vector-db:
       url: jdbc:postgresql://localhost:5433/vsa_vectors
       username: vsa

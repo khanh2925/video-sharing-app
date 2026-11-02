@@ -75,7 +75,7 @@ nav{background:var(--card);border-radius:10px;padding:10px 16px;position:sticky;
 <tr><td><code>POST /api/events</code></td><td>Khách + đăng nhập</td><td>App gửi WATCH / SKIP khi rời một video</td></tr>
 <tr><td><code>GET /api/videos/me/for-you</code></td><td>Đăng nhập</td><td>Danh sách "Dành cho bạn"</td></tr>
 <tr><td><code>GET /api/search/semantic?q=</code></td><td>Khách + đăng nhập</td><td>Tìm theo nghĩa</td></tr>
-<tr><td><code>POST /api/chat</code>, <code>DELETE /api/chat</code></td><td>Đăng nhập</td><td>Hỏi trợ lý, xoá trí nhớ hội thoại</td></tr>
+<tr><td><code>POST /api/chat</code></td><td>Đăng nhập</td><td>Hỏi trợ lý, gửi kèm lịch sử chat lưu trên máy (<code>history</code>)</td></tr>
 <tr><td><code>POST /api/admin/ai/reindex</code>, <code>GET /api/admin/ai/health</code></td><td>Admin</td><td>Nạp lại vector, kiểm tra cấu hình</td></tr>
 <tr><td><code>GET /api/admin/ai/events</code></td><td>Admin</td><td>Xem nhật ký hành vi (lọc <code>type</code>, <code>userId</code>), chỉ đọc. Dùng cho bản web / VPS, nơi MySQL không mở ra ngoài</td></tr>
 <tr><td><code>GET /api/admin/ai/vectors</code></td><td>Admin</td><td>Xem số vector và nội dung từng video trong pgvector, chỉ đọc</td></tr>
@@ -947,7 +947,7 @@ public class RecommendationController {
 <h2>6. Long: Chatbot hỏi đáp</h2>
 <p>Một câu hỏi đi qua 3 kỹ thuật của Spring AI:</p>
 <ol class="steps">
-<li><b>Nhớ hội thoại</b> (<code>MessageChatMemoryAdvisor</code>): gửi kèm 10 tin gần nhất của người đó, nên hỏi nối tiếp được ("cái đầu tiên bạn vừa nói").</li>
+<li><b>Nhớ hội thoại</b>: lịch sử lưu <b>trên máy</b> người dùng (AsyncStorage, web là localStorage), app gửi kèm mỗi câu hỏi nên hỏi nối tiếp được ("cái đầu tiên bạn vừa nói"). Server giới hạn theo <b>token</b> (<code>app.ai.chat-history-max-tokens</code>, đếm bằng <code>JTokkitTokenCountEstimator</code>), vượt thì bỏ tin cũ nhất và báo lại <code>trimmed</code> để app xoá theo.</li>
 <li><b>RAG</b> (<code>QuestionAnswerAdvisor</code>): tìm 5 video gần nghĩa nhất trong pgvector (kho của Khánh), chèn vào câu hỏi. Model chỉ được giới thiệu video trong danh sách đó.</li>
 <li><b>Tool calling</b> (<code>ChatTools</code>): model tự gọi <code>getAppRules()</code> (đọc <code>system_settings</code>) hoặc <code>getMyVideos()</code> (video của người đang hỏi) khi cần.</li>
 </ol>
@@ -959,7 +959,7 @@ public class RecommendationController {
 <tr><td>Còn video nào giống cái đầu tiên bạn vừa giới thiệu?</td><td>Hiểu đó là "Du lịch Đà Lạt"</td><td>Nhớ hội thoại</td></tr>
 <tr><td>Thời tiết Hà Nội hôm nay?</td><td>Lịch sự từ chối, chỉ hỗ trợ về app</td><td>System prompt</td></tr>
 </table>
-<ul class='notes'><li>Đổi <code>STORY_LIFETIME_HOURS</code> trong trang quản trị rồi hỏi lại: bot trả lời số mới. Đây là cảnh chứng minh bot đọc dữ liệu thật, không học thuộc.</li><li><code>ChatTools</code> tạo mới cho mỗi câu hỏi và giữ sẵn id người hỏi, nên không thể hỏi lộ video của người khác.</li><li>Mẫu RAG mặc định của Spring AI là tiếng Anh và bắt "không có trong ngữ cảnh thì nói không biết", làm model không dám gọi tool. Nhóm thay bằng mẫu tiếng Việt cho phép dùng tool.</li><li>Trí nhớ để trong RAM: khởi động lại backend thì mất, đủ cho demo. Nút "Cuộc trò chuyện mới" trên app gọi <code>DELETE /api/chat</code>.</li><li>Bên AI hết lượt, sai key, mất mạng → trả 503 "Trợ lý đang bận hoặc hết lượt" thay vì lỗi hệ thống.</li></ul>
+<ul class='notes'><li>Đổi <code>STORY_LIFETIME_HOURS</code> trong trang quản trị rồi hỏi lại: bot trả lời số mới. Đây là cảnh chứng minh bot đọc dữ liệu thật, không học thuộc.</li><li><code>ChatTools</code> tạo mới cho mỗi câu hỏi và giữ sẵn id người hỏi, nên không thể hỏi lộ video của người khác.</li><li>Mẫu RAG mặc định của Spring AI là tiếng Anh và bắt "không có trong ngữ cảnh thì nói không biết", làm model không dám gọi tool. Nhóm thay bằng mẫu tiếng Việt cho phép dùng tool.</li><li>Server không lưu lịch sử nên deploy / khởi động lại backend không mất. Nút thùng rác trên app xoá lịch sử trên máy.</li><li>Bên AI hết lượt, sai key, mất mạng → trả 503 "Trợ lý đang bận hoặc hết lượt" thay vì lỗi hệ thống.</li></ul>
 <details class="code"><summary><span class="fn">backend/src/main/java/com/vsa/backend/ai/chat/ChatbotService.java</span><span class="hint">bấm để xem code</span></summary><pre><code class="java">package com.vsa.backend.ai.chat;
 
 import com.vsa.backend.dtos.response.VideoResponse;
@@ -1208,7 +1208,7 @@ public class ChatbotController {
     }
 }</code></pre></details>
 <h3>Câu cô dễ hỏi Long</h3>
-<dl class='qa'><dt>Chatbot lấy dữ liệu từ đâu?</dt><dd>Hai nguồn: kho vector (RAG, để tìm video) và tool đọc thẳng database (quy định trong system_settings, video của người hỏi).</dd><dt>Làm sao bot không bịa?</dt><dd>System prompt bắt chỉ giới thiệu video có trong ngữ cảnh RAG; số liệu quy định thì bắt gọi tool chứ không tự đoán.</dd><dt>Bot nhớ hội thoại thế nào?</dt><dd>MessageChatMemoryAdvisor giữ 10 tin gần nhất theo conversationId = user-&lt;id&gt;, mỗi người một cuộc hội thoại riêng.</dd><dt>Cấu hình model chat ở đâu?</dt><dd>application-ai.yaml, khối spring.ai.openai và spring.ai.google.genai; chọn bằng biến AI_CHAT_PROVIDER.</dd></dl></section>
+<dl class='qa'><dt>Chatbot lấy dữ liệu từ đâu?</dt><dd>Hai nguồn: kho vector (RAG, để tìm video) và tool đọc thẳng database (quy định trong system_settings, video của người hỏi).</dd><dt>Làm sao bot không bịa?</dt><dd>System prompt bắt chỉ giới thiệu video có trong ngữ cảnh RAG; số liệu quy định thì bắt gọi tool chứ không tự đoán.</dd><dt>Bot nhớ hội thoại thế nào?</dt><dd>App lưu lịch sử trên máy theo từng tài khoản và gửi kèm mỗi câu hỏi; server cắt theo giới hạn token (bỏ tin cũ nhất) rồi đưa vào prompt bằng <code>.messages(...)</code>.</dd><dt>Cấu hình model chat ở đâu?</dt><dd>application-ai.yaml, khối spring.ai.openai và spring.ai.google.genai; chọn bằng biến AI_CHAT_PROVIDER.</dd></dl></section>
 <section id="mobile">
 <h2>7. Trên app</h2>
 <ul>
@@ -1570,4 +1570,4 @@ docker exec vsa-pgvector psql -U vsa -d vsa_vectors -c "SELECT content, metadata
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>hljs.highlightAll();</script>
-</body></html>
+</body></html>
