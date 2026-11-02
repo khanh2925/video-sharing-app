@@ -65,7 +65,7 @@ nav{background:var(--card);border-radius:10px;padding:10px 16px;position:sticky;
 <p>AI <b>tắt mặc định</b>. Không bật thì backend chạy y như cũ (test, VPS, máy chưa có key đều không sao).</p>
 <ol class="steps">
 <li>Kéo code mới về, ở thư mục gốc chạy <code>docker compose up -d</code> (bật MySQL và thêm container <code>vsa-pgvector</code>).</li>
-<li><b>Điền key</b>: trong <code>backend/src/main/resources/</code>, chép <code>ai-local.example.yaml</code> thành <code>ai-local.yaml</code>, điền key và địa chỉ máy chủ (<b>xin riêng Khánh</b>). File <code>ai-local.yaml</code> đã nằm trong <code>.gitignore</code> nên không bao giờ lên GitHub. Có file này thì backend <b>tự bật AI</b>; xoá hoặc đổi tên file là tắt.</li>
+<li><b>Bật AI</b>: trong <code>backend/src/main/resources/</code>, chép <code>ai-local.example.yaml</code> thành <code>ai-local.yaml</code>. Không cần điền gì: key của nhóm đã ghi sẵn trong <code>application-ai.yaml</code>. Có file <code>ai-local.yaml</code> thì backend <b>tự bật AI</b>; xoá hoặc đổi tên là tắt. (Trên VPS không có file này nên AI vẫn tắt, backend chung không bị ảnh hưởng.)</li>
 <li>Chạy backend như bình thường (IntelliJ bấm Run), log có dòng <code>The following 1 profile is active: "ai"</code>. Lần đầu: đăng nhập <code>admin</code> trong Postman, gọi <code>POST /api/admin/ai/reindex</code> để nạp vector cho các video có sẵn (chỉ cần một lần).</li>
 <li>Kiểm tra nhanh: <code>GET /api/admin/ai/health</code> (admin) trả <code>{"embeddingDimensions":768,"chatReply":"..."}</code>.</li>
 </ol>
@@ -89,7 +89,8 @@ nav{background:var(--card);border-radius:10px;padding:10px 16px;position:sticky;
 #   Dòng lệnh: SPRING_PROFILES_ACTIVE=ai ./mvnw spring-boot:run
 # Trước khi chạy: docker compose up -d (bật cả MySQL và vector-db).
 #
-# Biến môi trường (KHÔNG ghi key thẳng vào file này, file này lên GitHub):
+# Key của nhóm ghi sẵn bên dưới làm giá trị mặc định (repo riêng tư, chỉ nhóm xem).
+# Muốn dùng key khác thì đặt biến môi trường cùng tên, biến môi trường sẽ được ưu tiên:
 #   GEMINI_API_KEY     bắt buộc: embedding (gợi ý, tìm theo nghĩa, RAG) luôn dùng Gemini
 #   AI_CHAT_PROVIDER   model chat cho chatbot: openai (mặc định) hoặc google-genai
 #   OPENAI_API_KEY     key của máy chủ chat tương thích OpenAI (khi AI_CHAT_PROVIDER=openai)
@@ -105,21 +106,21 @@ spring:
         text: google-genai               # đổi chữ thành vector: luôn là Gemini
     google:
       genai:
-        api-key: ${GEMINI_API_KEY}
+        api-key: ${GEMINI_API_KEY:&lt;key Gemini của nhóm&gt;}
         chat:
           model: gemini-3.5-flash        # dùng khi AI_CHAT_PROVIDER=google-genai
           temperature: 0.3               # thấp → trả lời ổn định, ít &quot;sáng tác&quot;
         embedding:
-          api-key: ${GEMINI_API_KEY}
+          api-key: ${GEMINI_API_KEY:&lt;key Gemini của nhóm&gt;}
           text:
             model: gemini-embedding-001
             dimensions: 768              # độ dài mỗi vector; phải khớp app.ai.vector-db.dimensions
     openai:
-      api-key: ${OPENAI_API_KEY:chua-dat-key}
-      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      api-key: ${OPENAI_API_KEY:&lt;key chat của nhóm&gt;}
+      base-url: ${OPENAI_BASE_URL:&lt;địa chỉ máy chủ chat&gt;}
       chat:
         options:
-          model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
+          model: ${OPENAI_CHAT_MODEL:cx/gpt-5.6-luna}
           temperature: 0.3
     # Giới hạn thử lại khi bên AI lỗi: mặc định Spring AI thử tới 10 lần, app treo cả phút
     retry:
@@ -144,7 +145,7 @@ app:
       password: vsa
       table: video_vectors               # bảng chứa vector của video
       dimensions: 768</code></pre></div>
-<ul class='notes'><li>Spring Boot tự đọc thêm <code>application-ai.yaml</code> khi chạy profile <code>ai</code>.</li><li><b>Embedding luôn dùng Gemini</b> (<code>gemini-embedding-001</code>, 768 chiều). <b>Chat</b> chọn bằng <code>AI_CHAT_PROVIDER</code>: máy chủ tương thích OpenAI hoặc Gemini. Code Java không đổi, đây chính là lợi ích của Spring AI.</li><li><code>${{TEN_BIEN}}</code> đọc từ biến môi trường, để key không nằm trong file lên GitHub.</li><li><code>retry.max-attempts: 2</code>: mặc định Spring AI thử lại tới 10 lần khi lỗi, app treo cả phút. Hết lượt (lỗi 4xx) thì báo ngay.</li><li><code>temperature: 0.3</code>: thấp để trả lời ổn định, ít "sáng tác".</li></ul>
+<ul class='notes'><li>Spring Boot tự đọc thêm <code>application-ai.yaml</code> khi chạy profile <code>ai</code>.</li><li><b>Embedding luôn dùng Gemini</b> (<code>gemini-embedding-001</code>, 768 chiều). <b>Chat</b> chọn bằng <code>AI_CHAT_PROVIDER</code>: máy chủ tương thích OpenAI hoặc Gemini. Code Java không đổi, đây chính là lợi ích của Spring AI.</li><li>Key của nhóm ghi sẵn làm giá trị mặc định (<code>${{TEN_BIEN:gia-tri}}</code>). Đặt biến môi trường cùng tên thì biến môi trường được ưu tiên, dùng khi muốn thay key khác. Tài liệu này che key đi vì có thể gửi ra ngoài.</li><li><code>retry.max-attempts: 2</code>: mặc định Spring AI thử lại tới 10 lần khi lỗi, app treo cả phút. Hết lượt (lỗi 4xx) thì báo ngay.</li><li><code>temperature: 0.3</code>: thấp để trả lời ổn định, ít "sáng tác".</li></ul>
 <details class="code"><summary><span class="fn">backend/src/main/resources/application.yaml (khối cuối)</span><span class="hint">bấm để xem code</span></summary><pre><code class="yaml">---
 # =====================================================================
 # Spring AI mặc định TẮT để backend chạy được khi chưa có API key (test, VPS).

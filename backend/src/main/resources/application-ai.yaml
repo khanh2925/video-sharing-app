@@ -4,7 +4,8 @@
 #   Dòng lệnh: SPRING_PROFILES_ACTIVE=ai ./mvnw spring-boot:run
 # Trước khi chạy: docker compose up -d (bật cả MySQL và vector-db).
 #
-# Biến môi trường (KHÔNG ghi key thẳng vào file này, file này lên GitHub):
+# Key của nhóm ghi sẵn bên dưới làm giá trị mặc định (repo riêng tư, chỉ nhóm xem).
+# Muốn dùng key khác thì đặt biến môi trường cùng tên, biến môi trường sẽ được ưu tiên:
 #   GEMINI_API_KEY     bắt buộc: embedding (gợi ý, tìm theo nghĩa, RAG) luôn dùng Gemini
 #   AI_CHAT_PROVIDER   model chat cho chatbot: openai (mặc định) hoặc google-genai
 #   OPENAI_API_KEY     key của máy chủ chat tương thích OpenAI (khi AI_CHAT_PROVIDER=openai)
@@ -20,21 +21,21 @@ spring:
         text: google-genai               # đổi chữ thành vector: luôn là Gemini
     google:
       genai:
-        api-key: ${GEMINI_API_KEY}
+        api-key: ${GEMINI_API_KEY:AQ.Ab8RN6J6fc5Wv8SIbiobv60PTWC_3CWXPUqrYoU73DhQJ4Mjfg}
         chat:
           model: gemini-3.5-flash        # dùng khi AI_CHAT_PROVIDER=google-genai
           temperature: 0.3               # thấp → trả lời ổn định, ít "sáng tác"
         embedding:
-          api-key: ${GEMINI_API_KEY}
+          api-key: ${GEMINI_API_KEY:AQ.Ab8RN6J6fc5Wv8SIbiobv60PTWC_3CWXPUqrYoU73DhQJ4Mjfg}
           text:
             model: gemini-embedding-001
             dimensions: 768              # độ dài mỗi vector; phải khớp app.ai.vector-db.dimensions
     openai:
-      api-key: ${OPENAI_API_KEY:chua-dat-key}
-      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      api-key: ${OPENAI_API_KEY:sk-8c57e8b469e67aeb-0uqx3n-3bdce705}
+      base-url: ${OPENAI_BASE_URL:http://221.132.19.207:20128/v1}
       chat:
         options:
-          model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
+          model: ${OPENAI_CHAT_MODEL:cx/gpt-5.6-luna}
           temperature: 0.3
     # Giới hạn thử lại khi bên AI lỗi: mặc định Spring AI thử tới 10 lần, app treo cả phút
     retry:
