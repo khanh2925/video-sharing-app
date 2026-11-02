@@ -72,9 +72,15 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
   const [elapsed, setElapsed] = useState(0);
   const [lastUri, setLastUri] = useState<string | null>(null);
   // Chế độ quay: video thường (sang PostVideo) hoặc story (sang StoryCreate)
-  const [mode, setMode] = useState<'video' | 'story'>('video');
+  const [mode, setMode] = useState<'video' | 'story'>(route.params?.mode ?? 'video');
   const [storyMaxSec, setStoryMaxSec] = useState(STORY_DEFAULT_MAX_SEC);
   const isStory = mode === 'story';
+
+  // Camera đang mở sẵn trong stack mà được gọi lại với mode khác (navigate gộp params)
+  const paramMode = route.params?.mode;
+  useEffect(() => {
+    if (paramMode) setMode(paramMode);
+  }, [paramMode]);
 
   // Đọc độ dài story tối đa do quản trị viên cấu hình (R17), lỗi thì giữ mặc định
   useEffect(() => {
@@ -261,7 +267,13 @@ export default function CameraScreen({ navigation, route }: RootScreenProps<'Cam
           <AppText weight="bold" size={18} color={colors.white} align="center">Cho phép dùng camera và micro</AppText>
           <AppText size={14} color={colors.border} align="center">Cần quyền camera và micro để quay video.</AppText>
           <Button title="Cấp quyền" onPress={requestPermissions} style={styles.permissionBtn} />
-          <Button title="Tải video lên" variant="secondary" icon="images-outline" onPress={pickVideo} style={styles.permissionBtn} />
+          <Button
+            title={isStory ? 'Chọn ảnh / video' : 'Tải video lên'}
+            variant="secondary"
+            icon="images-outline"
+            onPress={isStory ? pickStory : pickVideo}
+            style={styles.permissionBtn}
+          />
         </View>
       </Screen>
     );

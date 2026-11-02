@@ -3,7 +3,8 @@
  * Phụ trách: Thanh
  *
  * - Lướt video toàn màn hình như TikTok: vuốt lên sang video kế, vuốt xuống về video trước (UC05).
- * - 2 tab ở đầu màn: "Dành cho bạn" (video thịnh hành) và "Đang theo dõi" (video của người mình theo dõi).
+ * - 3 tab ở đầu màn: "Trending" (nhiều lượt xem nhất, mặc định khi mở app), "Theo dõi" (video của người
+ *   mình theo dõi) và "Dành cho bạn" (AI gợi ý theo gu). Hai tab sau cần đăng nhập.
  *   Danh sách lấy theo chỗ mở (route.params.source): trending, chủ đề, kết quả tìm kiếm, video của 1 người...
  *   Gần hết danh sách thì tự tải thêm trang (usePagedList).
  * - Chỉ video đang hiện trên màn mới phát (cùng nhạc nền); lượt xem tăng 1 lần cho mỗi video khi nó được phát.
@@ -12,7 +13,7 @@
  * - Khách bấm thả tim / theo dõi → bảng "Đăng nhập để tiếp tục" (requireAuth).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,9 +34,18 @@ import { useBackgroundMusic } from '../../hooks/useBackgroundMusic';
 import { useAppActive } from '../../hooks/useAppActive';
 import { formatCount } from '../../utils/format';
 import { ShareSheet } from './ShareSheet';
+import { VideoPlaybackControls } from './VideoPlaybackControls';
 import { mediaUrl } from '../../utils/media';
 import type { PageResponse, Video } from '../../types/models';
 import type { RootScreenProps, SearchTab, WatchSource } from '../../navigation/types';
+
+/** 3 tab ở đầu màn Xem video */
+type FeedKind = 'trending' | 'following' | 'forYou';
+const FEEDS: { kind: FeedKind; label: string }[] = [
+  { kind: 'trending', label: 'Trending' },
+  { kind: 'following', label: 'Theo dõi' },
+  { kind: 'forYou', label: 'Dành cho bạn' },
+];
 
 const EMPTY_PAGE: PageResponse<Video> = { content: [], page: 0, size: 0, totalElements: 0, totalPages: 0, last: true };
 
@@ -44,6 +54,11 @@ function fetchSource(source: WatchSource, page: number, size: number): Promise<P
   switch (source.kind) {
     case 'trending': return videoApi.trending(page, size);
     case 'following': return videoApi.following(page, size);
+    // AI trả 1 danh sách duy nhất → gói thành 1 trang cuối cùng
+    case 'forYou':
+      return page > 0
+        ? Promise.resolve(EMPTY_PAGE)
+        : aiApi.forYou().then((content) => ({ ...EMPTY_PAGE, content, size: content.length, totalElements: content.length, totalPages: 1 }));
     case 'topic': return videoApi.byTopic(source.topicId, page, size);
     case 'search': return searchApi.search<Video>(source.q, 'videos', page, size);
     case 'user': return userApi.videos(source.userId, page, size);
@@ -66,7 +81,8 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
   const { videoId, source } = route.params;
   const { user } = useAuth();
   const { height } = useWindowDimensions(); // mỗi video cao đúng 1 màn hình
-  const sourceKey = JSON.stringify(source ?? null);
+  const sourceKey = JSON.stringify({ source: source ?? null, videoId });
+  const feedRef = useRef<FlatList<Video>>(null);
 
   // Video được bấm mở (nếu có) + danh sách để vuốt tiếp
   const opened = useFetch(() => (videoId != null ? videoApi.getById(videoId) : Promise.resolve(null)), [videoId]);
@@ -115,6 +131,19 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
   useEffect(() => { sourceKeyRef.current = sourceKey; }, [sourceKey]);
   const current = (active?.key === sourceKey ? active.index : null) ?? placement?.startIndex ?? 0;
 
+  const refreshVideos = async () => {
+    // Bỏ video ghim khi mở từ một thẻ: lần làm mới bắt đầu từ trang mới nhất của nguồn.
+    setPatches({});
+    setActive({ key: sourceKey, index: 0 });
+    feedRef.current?.scrollToOffset({ offset: 0, animated: false });
+    if (videoId != null) {
+      navigation.setParams({ videoId: undefined });
+      // sourceKey đổi sẽ tự tải lại trang đầu và đặt lại vị trí video.
+      return;
+    }
+    await list.refresh();
+  };
+
   // Video nào hiện quá 80% màn hình thì là video đang xem
   const viewabilityConfig = useMemo(() => ({ itemVisiblePercentThreshold: 80 }), []);
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: { index?: number | null }[] }) => {
@@ -122,33 +151,41 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
     if (first?.index != null) setActive({ key: sourceKeyRef.current, index: first.index });
   }, []);
 
-  // Hai tab ở đầu màn: đổi nguồn danh sách ngay trên màn này (setParams), thanh trên đứng yên,
+  // Các tab ở đầu màn: đổi nguồn danh sách ngay trên màn này (setParams), thanh trên đứng yên,
   // chỉ danh sách video tải lại. (Trước đây dùng replace nên cả màn dựng lại, thanh trên bị nháy.)
   const requireAuth = useRequireAuth();
   const insets = useSafeAreaInsets();
   const isFollowingFeed = source?.kind === 'following';
-  const openFollowing = () => {
-    if (isFollowingFeed) return;
-    requireAuth(() => navigation.setParams({ videoId: undefined, source: { kind: 'following' } })); // khách → bảng đăng nhập
-  };
-  const openForYou = () => {
-    if (!isFollowingFeed) return;
-    navigation.setParams({ videoId: undefined, source: { kind: 'trending' } });
+  const isForYouFeed = source?.kind === 'forYou';
+  // Mở từ chủ đề, tìm kiếm, hồ sơ... thì không tab nào sáng
+  const activeFeed = FEEDS.find((f) => f.kind === source?.kind)?.kind;
+  const openFeed = (kind: FeedKind) => {
+    if (kind === activeFeed) return;
+    const go = () => navigation.setParams({ videoId: undefined, source: { kind } });
+    if (kind === 'trending') go();
+    else requireAuth(go); // khách → bảng đăng nhập
   };
 
-  // Thanh trên dùng chung cho cả danh sách: quay lại · Đang theo dõi | Dành cho bạn · tìm kiếm
+  // Thanh trên dùng chung cho cả danh sách: quay lại · Trending | Theo dõi | Dành cho bạn · tìm kiếm
   const topBar = (
     <View style={[styles.topBar, { top: insets.top + spacing.xs }]}>
       <Pressable style={styles.iconBtn} onPress={navigation.goBack} accessibilityLabel="Quay lại">
         <Ionicons name="chevron-back" size={26} color={colors.white} />
       </Pressable>
       <View style={styles.feeds}>
-        <Pressable style={styles.feedTab} onPress={openFollowing} accessibilityRole="tab" accessibilityState={{ selected: isFollowingFeed }}>
-          <AppText weight="semibold" color={colors.white} style={isFollowingFeed ? styles.feedActive : styles.feedIdle}>Đang theo dõi</AppText>
-        </Pressable>
-        <Pressable style={styles.feedTab} onPress={openForYou} accessibilityRole="tab" accessibilityState={{ selected: !isFollowingFeed }}>
-          <AppText weight="semibold" color={colors.white} style={isFollowingFeed ? styles.feedIdle : styles.feedActive}>Dành cho bạn</AppText>
-        </Pressable>
+        {FEEDS.map((f) => (
+          <Pressable
+            key={f.kind}
+            style={styles.feedTab}
+            onPress={() => openFeed(f.kind)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeFeed === f.kind }}
+          >
+            <AppText weight="semibold" size={15} color={colors.white} numberOfLines={1} style={activeFeed === f.kind ? styles.feedActive : styles.feedIdle}>
+              {f.label}
+            </AppText>
+          </Pressable>
+        ))}
       </View>
       <Pressable
         style={styles.iconBtn}
@@ -204,20 +241,32 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
     );
   }
 
-  // Feed "Đang theo dõi" trống: chưa theo dõi ai hoặc họ chưa đăng video
+  // Danh sách trống: chưa theo dõi ai / AI chưa đủ dữ liệu để gợi ý / chưa có video
   if (videos.length === 0) {
     return (
       <Screen dark edges={[]}>
         <View style={styles.emptyFeed}>
           <Ionicons name="people-outline" size={48} color={colors.white} />
           <AppText weight="bold" size={18} color={colors.white} align="center">
-            {isFollowingFeed ? 'Chưa có video từ người bạn theo dõi' : 'Chưa có video nào'}
+            {isFollowingFeed
+              ? 'Chưa có video từ người bạn theo dõi'
+              : isForYouFeed
+                ? 'Chưa đủ dữ liệu để gợi ý'
+                : 'Chưa có video nào'}
           </AppText>
+          {isForYouFeed && (
+            <Pressable style={styles.emptyBtn} onPress={() => openFeed('trending')} accessibilityRole="button">
+              <AppText weight="semibold" color={colors.white}>Xem Trending</AppText>
+            </Pressable>
+          )}
           {isFollowingFeed && (
             <Pressable style={styles.emptyBtn} onPress={() => navigation.popTo('MainTabs', { screen: 'Friends' })}>
               <AppText weight="semibold" color={colors.white}>Tìm người để theo dõi</AppText>
             </Pressable>
           )}
+          <Pressable style={styles.emptyBtn} onPress={refreshVideos} accessibilityRole="button">
+            <AppText weight="semibold" color={colors.white}>Tải lại video</AppText>
+          </Pressable>
         </View>
         {topBar}
       </Screen>
@@ -227,6 +276,7 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
   return (
     <Screen dark edges={[]}>
       <FlatList
+        ref={feedRef}
         key={sourceKey}
         data={videos}
         keyExtractor={(v) => String(v.id)}
@@ -253,6 +303,15 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
         windowSize={3}
         onEndReached={list.loadMore}
         onEndReachedThreshold={2}
+        refreshControl={(
+          <RefreshControl
+            refreshing={list.refreshing}
+            onRefresh={refreshVideos}
+            tintColor={colors.white}
+            colors={[colors.primary]}
+            progressViewOffset={insets.top + 48}
+          />
+        )}
       />
       {topBar}
       {/* Vẫn xem được video đang mở nhưng danh sách vuốt tiếp bị lỗi */}
@@ -301,7 +360,6 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
   });
   const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
   const timeUpdate = useEvent(player, 'timeUpdate');
-  const progress = player.duration > 0 && timeUpdate ? Math.min(1, timeUpdate.currentTime / player.duration) : 0;
 
   // Nhạc nền chạy theo video: video dừng (chạm, rời màn, mở Bình luận) thì nhạc dừng.
   // Có nhạc thì tắt tiếng gốc của video
@@ -519,7 +577,7 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
       </View>
 
       {/* Thông tin video phía dưới bên trái */}
-      <View style={[styles.info, { bottom: 72 + insets.bottom + spacing.lg }]}>
+      <View style={[styles.info, { bottom: 136 + insets.bottom + spacing.lg }]}>
         <Pressable onPress={openProfile} style={styles.selfStart}>
           <AppText weight="bold" size={17} color={colors.white}>{video.owner.displayName}</AppText>
         </Pressable>
@@ -543,9 +601,7 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
 
       {/* Thanh tiến độ + ô viết bình luận */}
       <View style={[styles.bottom, { paddingBottom: insets.bottom + spacing.md }]}>
-        <View style={styles.track} accessibilityLabel="Tiến độ video">
-          <View style={[styles.trackFill, { width: `${progress * 100}%` }]} />
-        </View>
+        <VideoPlaybackControls player={player} />
         <Pressable style={styles.commentBox} onPress={openComments}>
           <AppText size={14} color={colors.white} style={styles.commentHint}>
             {video.allowComments ? 'Viết bình luận…' : 'Tác giả đã tắt bình luận'}
@@ -573,8 +629,8 @@ const styles = StyleSheet.create({
   playIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center' },
   topBar: { position: 'absolute', left: 10, right: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  feeds: { flexDirection: 'row', gap: 6 },
-  feedTab: { height: 40, paddingHorizontal: spacing.sm, justifyContent: 'center' },
+  feeds: { flexDirection: 'row', gap: 2, flexShrink: 1 },
+  feedTab: { height: 40, paddingHorizontal: 6, justifyContent: 'center' },
   feedIdle: { opacity: 0.7, paddingBottom: spacing.xs, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   feedActive: { paddingBottom: spacing.xs, borderBottomWidth: 2, borderBottomColor: colors.white },
   emptyFeed: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, padding: spacing.xxl },
@@ -595,8 +651,6 @@ const styles = StyleSheet.create({
   selfStart: { alignSelf: 'flex-start' },
   audioRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start' },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: spacing.md, paddingHorizontal: spacing.lg, gap: spacing.md },
-  track: { height: 3, borderRadius: 2, backgroundColor: colors.whiteTrack, overflow: 'hidden' },
-  trackFill: { height: '100%', backgroundColor: colors.white },
   commentBox: { height: 44, borderRadius: radius.xl, backgroundColor: colors.whiteSoft, justifyContent: 'center', paddingHorizontal: spacing.lg },
   commentHint: { opacity: 0.85 },
   retryPill: {

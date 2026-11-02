@@ -1,6 +1,6 @@
 /**
  * Điều hướng gốc, chế độ khách kiểu TikTok (R3):
- * - Mở app luôn vào MainTabs, khách xem được Trang chủ, Tìm kiếm, video, hồ sơ.
+ * - Mở app vào video trending, khách vẫn xem được Trang chủ, Tìm kiếm, video, hồ sơ.
  * - Login / Register là màn modal trượt từ dưới lên, mở từ bảng "Đăng nhập để tiếp tục".
  * - Màn cần đăng nhập vẫn khai báo ở đây; chỗ mở chúng phải bọc trong useRequireAuth().
  * - Đang đăng nhập mà bị đăng xuất (bấm Đăng xuất, hoặc token hết hạn → 401) thì đưa về MainTabs,

@@ -16,8 +16,9 @@ import { userApi } from '../../api/catalog';
 import { liveApi } from '../../api/lives';
 import { getErrorMessage } from '../../api/client';
 import { usePagedList } from '../../hooks/usePagedList';
-import type { Video } from '../../types/models';
+import type { LiveStream, Video } from '../../types/models';
 import { mediaUrl } from '../../utils/media';
+import { confirmAsync } from '../../utils/confirm';
 import type { RootScreenProps } from '../../navigation/types';
 
 const TITLE_MAX = 150;
@@ -40,6 +41,8 @@ export default function GoLiveScreen({ navigation }: RootScreenProps<'GoLive'>) 
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [existingLive, setExistingLive] = useState<LiveStream | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
 
   // Còn buổi live cũ của mình đang phát? → cho chọn tiếp tục hoặc kết thúc nó
   useEffect(() => {
@@ -50,16 +53,7 @@ export default function GoLiveScreen({ navigation }: RootScreenProps<'GoLive'>) 
       .then((list) => {
         const mine = list.find((l) => l.host.id === user.id);
         if (!alive || !mine) return;
-        Alert.alert('Bạn đang có buổi live', `"${mine.title}" vẫn đang phát.`, [
-          { text: 'Tiếp tục live', onPress: () => navigation.replace('LiveHost', { liveId: mine.id }) },
-          {
-            text: 'Kết thúc live cũ',
-            style: 'destructive',
-            onPress: () => {
-              liveApi.end(mine.id).catch((e) => Alert.alert('Không kết thúc được live', getErrorMessage(e)));
-            },
-          },
-        ]);
+        setExistingLive(mine);
       })
       .catch(() => {}); // lỗi thì bỏ qua, vẫn tạo live mới được
     return () => {
@@ -67,8 +61,24 @@ export default function GoLiveScreen({ navigation }: RootScreenProps<'GoLive'>) 
     };
   }, [user, navigation]);
 
+  const endExistingLive = async () => {
+    if (!existingLive || submitting) return;
+    if (!await confirmAsync('Kết thúc live cũ?', 'Người xem sẽ bị ngắt.', 'Kết thúc')) return;
+    setSubmitting(true);
+    setLiveError(null);
+    try {
+      await liveApi.end(existingLive.id);
+      setExistingLive(null);
+    } catch (e) {
+      setLiveError(getErrorMessage(e));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const onStart = async () => {
-    if (!user || submitting) return;
+    if (!user || submitting || existingLive) return;
+    setLiveError(null);
     if (!title.trim()) {
       setTitleError('Nhập tiêu đề buổi live');
       return;
@@ -101,7 +111,7 @@ export default function GoLiveScreen({ navigation }: RootScreenProps<'GoLive'>) 
       // replace: bấm quay lại ở LiveHost không về màn chuẩn bị nữa
       navigation.replace('LiveHost', { liveId: live.id });
     } catch (e) {
-      Alert.alert('Không phát được live', getErrorMessage(e));
+      setLiveError(getErrorMessage(e));
     } finally {
       setSubmitting(false);
     }
@@ -153,6 +163,14 @@ export default function GoLiveScreen({ navigation }: RootScreenProps<'GoLive'>) 
       <Header title="Phát live" />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+          {existingLive && (
+            <View style={styles.productBox}>
+              <AppText weight="semibold">Bạn đang có một buổi live chưa kết thúc</AppText>
+              <AppText size={13}>{existingLive.title}</AppText>
+              <Button title="Tiếp tục live" disabled={submitting} onPress={() => navigation.replace('LiveHost', { liveId: existingLive.id })} />
+              <Button title="Kết thúc live cũ" variant="outline" disabled={submitting} onPress={endExistingLive} />
+            </View>
+          )}
           {/* Chọn video nguồn */}
           <View>
             <AppText weight="semibold" size={13}>
@@ -202,7 +220,8 @@ export default function GoLiveScreen({ navigation }: RootScreenProps<'GoLive'>) 
         </ScrollView>
 
         <View style={styles.footer}>
-          <Button title="Bắt đầu live" icon="radio-button-on" onPress={onStart} disabled={!user || selectedId === null || loading} loading={submitting} style={styles.startBtn} />
+          {!!liveError && <AppText color={colors.danger} accessibilityRole="alert" style={styles.hint}>{liveError}</AppText>}
+          <Button title="Bắt đầu live" icon="radio-button-on" onPress={onStart} disabled={!user || selectedId === null || loading || !!existingLive} loading={submitting} style={styles.startBtn} />
         </View>
       </KeyboardAvoidingView>
     </Screen>

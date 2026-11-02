@@ -22,6 +22,7 @@ import { videoApi } from '../../api/videos';
 import { getErrorMessage } from '../../api/client';
 import { usePagedList } from '../../hooks/usePagedList';
 import { formatCount, timeAgo } from '../../utils/format';
+import { confirmAsync } from '../../utils/confirm';
 import type { Comment } from '../../types/models';
 import type { RootScreenProps } from '../../navigation/types';
 
@@ -101,24 +102,17 @@ export default function CommentsScreen({ navigation, route }: RootScreenProps<'C
     });
 
   // ----- Xoá bình luận của mình (hỏi xác nhận) -----
-  const onDelete = (c: Comment) =>
-    Alert.alert('Xoá bình luận?', 'Không khôi phục được.', [
-      { text: 'Huỷ', style: 'cancel' },
-      {
-        text: 'Xoá',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await videoApi.removeComment(c.id);
-            list.setItems((prev) => prev.filter((x) => x.id !== c.id));
-            await list.refresh();
-            flash('Đã xoá bình luận');
-          } catch (e) {
-            Alert.alert('Không xoá được', getErrorMessage(e));
-          }
-        },
-      },
-    ]);
+  const onDelete = async (c: Comment) => {
+    if (!await confirmAsync('Xoá bình luận?', 'Không khôi phục được.', 'Xoá')) return;
+    try {
+      await videoApi.removeComment(c.id);
+      list.setItems((prev) => prev.filter((x) => x.id !== c.id));
+      await list.refresh();
+      flash('Đã xoá bình luận');
+    } catch (e) {
+      Alert.alert('Không xoá được', getErrorMessage(e));
+    }
+  };
 
   const renderItem = ({ item }: { item: Comment }) => {
     const mine = user?.id === item.user.id;
@@ -200,7 +194,7 @@ export default function CommentsScreen({ navigation, route }: RootScreenProps<'C
         {!allowComments ? (
           <View style={[styles.inputRow, styles.disabledRow, { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.sm }]}>
             <Ionicons name="lock-closed-outline" size={16} color={colors.muted} />
-            <AppText size={14} color={colors.muted}>Tác giả đã tắt bình luận</AppText>
+            <AppText size={14} color={colors.muted}>Video đã tắt bình luận</AppText>
           </View>
         ) : (
           <View style={[styles.inputRow, { paddingBottom: Math.max(insets.bottom, spacing.md) + spacing.sm }]}>

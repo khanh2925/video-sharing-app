@@ -20,6 +20,8 @@ import type { Audio, MediaType } from '../types/models';
 export type WatchSource =
   | { kind: 'trending' }
   | { kind: 'following' }
+  /** AI gợi ý theo gu (cần đăng nhập), backend trả 1 danh sách không phân trang */
+  | { kind: 'forYou' }
   | { kind: 'topic'; topicId: number }
   | { kind: 'search'; q: string }
   | { kind: 'user'; userId: number }
@@ -79,7 +81,8 @@ export type RootStackParamList = {
   StoryCreate: { uri: string; mediaType: MediaType; audio?: Audio; durationSec?: number };
   MyStory: undefined;
   /** filter, audio: do màn Filter / Music gửi về (popTo kèm merge: true, giống Lab 06 bài 1 nhưng dùng popTo) */
-  Camera: { filter?: string; audio?: Audio } | undefined;
+  /** mode: 'story' = mở thẳng chế độ Story (nút + ở thanh story, màn Tin của bạn) */
+  Camera: { filter?: string; audio?: Audio; mode?: 'video' | 'story' } | undefined;
   Filter: { videoUri?: string; current?: string } | undefined;
   Music: { current?: number } | undefined;
   PostVideo: { videoUri?: string; filter?: string; audio?: Audio } | undefined;

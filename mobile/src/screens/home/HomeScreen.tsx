@@ -8,11 +8,10 @@
  * bong bóng "Đăng tin" (bấm vào hiện bảng đăng nhập), vì API story bắt buộc đăng nhập.
  */
 import { useCallback, useRef, useState } from 'react';
-import { Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker';
 import { AppText, Avatar, Button, EmptyView, Screen, SegmentedTabs } from '../../components';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
@@ -107,25 +106,8 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   };
 
   // Đăng tin: chọn ảnh/video trong máy rồi mở màn StoryCreate
-  const createStory = () =>
-    requireAuth(async () => {
-      try {
-        const result = await ImagePicker.launchImageLibraryAsync({
-          preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
-          mediaTypes: ['images', 'videos'], quality: 0.8,
-        });
-        if (result.canceled) return;
-        const asset = result.assets[0];
-        navigation.navigate('StoryCreate', {
-          uri: asset.uri,
-          mediaType: asset.type === 'video' ? 'VIDEO' : 'IMAGE',
-          // ImagePicker trả duration theo mili giây (có thể không có)
-          durationSec: asset.duration ? Math.max(1, Math.round(asset.duration / 1000)) : undefined,
-        });
-      } catch {
-        Alert.alert('Không mở được thư viện', 'Kiểm tra quyền truy cập ảnh và thử lại.');
-      }
-    });
+  // Mở Camera ở chế độ Story: quay trực tiếp hoặc bấm "Tải lên" để chọn ảnh / video trong máy
+  const createStory = () => requireAuth(() => navigation.navigate('Camera', { mode: 'story' }));
 
   // nonce: mở lại cùng từ khoá vẫn tìm lại (dù ô tìm kiếm đã bị sửa)
   const goSearch = (q = '', tab: SearchTab = 'video') => navigation.navigate('Search', { q, tab, nonce: Date.now() });
@@ -214,7 +196,7 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hRow}>
               {forYouVideos.map((v) => (
-                <TrendingCard key={v.id} video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id })} />
+                <TrendingCard key={v.id} video={v} onPress={() => navigation.navigate('Watch', { videoId: v.id, source: { kind: 'forYou' } })} />
               ))}
             </ScrollView>
           )
