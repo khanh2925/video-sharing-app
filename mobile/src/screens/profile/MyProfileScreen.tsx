@@ -4,7 +4,7 @@
  *
  * - Đã đăng nhập: avatar, số liệu, nút Sửa hồ sơ, 2 tab "Video của tôi" / "Đã thích".
  *   Ô đầu tiên của tab "Video của tôi" là ô mờ "Bản nháp: N" → mở màn Video nháp.
- *   Tab thứ 3 "Lịch sử": video mình đã xem, mới xem nhất trước.
+ *   Tab thứ 3 "Video đã xem": video mình đã xem, mới xem nhất trước.
  *   Menu ☰: "Video nháp", "Phát livestream", ("Quản trị" nếu là ADMIN), "Cài đặt", "Đăng xuất" (hỏi xác nhận, xong về Trang chủ).
  *   Quay lại tab này thì tải lại số liệu, ô "Bản nháp" và lưới video.
  * - Khách: hiện màn "Đăng ký tài khoản" (R3).
@@ -194,7 +194,7 @@ function ProfileContent({ navigation, user }: TabScreenProps<'MyProfile'> & { us
           tabs={[
             { key: 'mine', label: 'Video của tôi' },
             { key: 'liked', label: 'Đã thích' },
-            { key: 'history', label: 'Lịch sử' },
+            { key: 'history', label: 'Video đã xem' },
           ]}
         />
       </View>

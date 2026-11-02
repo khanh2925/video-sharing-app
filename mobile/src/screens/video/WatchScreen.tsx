@@ -12,7 +12,7 @@
  * - Khách bấm thả tim / theo dõi → bảng "Đăng nhập để tiếp tục" (requireAuth).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -253,6 +253,8 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
         windowSize={3}
         onEndReached={list.loadMore}
         onEndReachedThreshold={2}
+        // Đang ở video đầu, kéo xuống để tải lại danh sách mới nhất
+        refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={list.refresh} tintColor={colors.white} />}
       />
       {topBar}
       {/* Vẫn xem được video đang mở nhưng danh sách vuốt tiếp bị lỗi */}
@@ -268,6 +270,55 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
         </Pressable>
       )}
     </Screen>
+  );
+}
+
+/** 75 → "01:15" */
+function clock(sec: number) {
+  const s = Math.max(0, Math.floor(sec));
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Thanh tiến độ tua được: chạm hoặc kéo trên thanh để tới đoạn muốn xem.
+ * Bên phải luôn hiện "đã xem / tổng thời lượng"; đang kéo thì thanh dày lên.
+ */
+function SeekBar({ progress, duration, onSeek }: { progress: number; duration: number; onSeek: (sec: number) => void }) {
+  const width = useRef(0);
+  const [dragRatio, setDragRatio] = useState<number | null>(null);
+  const ratioAt = (x: number) => (width.current > 0 ? Math.min(1, Math.max(0, x / width.current)) : 0);
+  const shown = dragRatio ?? progress;
+  const ready = duration > 0;
+
+  return (
+    <View style={styles.seekRow}>
+      <View
+        style={styles.seekArea}
+        onLayout={(e) => { width.current = e.nativeEvent.layout.width; }}
+        onStartShouldSetResponder={() => ready}
+        onMoveShouldSetResponder={() => ready}
+        onResponderTerminationRequest={() => false} // đang kéo thanh thì không cho danh sách vuốt cướp
+        onResponderGrant={(e) => setDragRatio(ratioAt(e.nativeEvent.locationX))}
+        onResponderMove={(e) => setDragRatio(ratioAt(e.nativeEvent.locationX))}
+        onResponderRelease={() => {
+          if (dragRatio != null) onSeek(dragRatio * duration);
+          setDragRatio(null);
+        }}
+        onResponderTerminate={() => setDragRatio(null)}
+        accessibilityRole="adjustable"
+        accessibilityLabel="Tiến độ video"
+        accessibilityValue={{ text: `${clock(shown * duration)} trên ${clock(duration)}` }}
+      >
+        <View style={[styles.track, dragRatio != null && styles.trackActive]}>
+          <View style={[styles.trackFill, { width: `${shown * 100}%` }]} />
+        </View>
+      </View>
+      {ready && (
+        <AppText size={12} weight="medium" color={colors.white} style={styles.seekTime}>
+          {`${clock(shown * duration)} / ${clock(duration)}`}
+        </AppText>
+      )}
+    </View>
   );
 }
 
@@ -543,9 +594,14 @@ function WatchContent({ video, active, height, onChange, navigation }: ContentPr
 
       {/* Thanh tiến độ + ô viết bình luận */}
       <View style={[styles.bottom, { paddingBottom: insets.bottom + spacing.md }]}>
-        <View style={styles.track} accessibilityLabel="Tiến độ video">
-          <View style={[styles.trackFill, { width: `${progress * 100}%` }]} />
-        </View>
+        <SeekBar
+          progress={progress}
+          duration={player.duration}
+          onSeek={(sec) => {
+            // eslint-disable-next-line react-hooks/immutability -- Tua native player tới giây người dùng chọn.
+            player.currentTime = sec;
+          }}
+        />
         <Pressable style={styles.commentBox} onPress={openComments}>
           <AppText size={14} color={colors.white} style={styles.commentHint}>
             {video.allowComments ? 'Viết bình luận…' : 'Tác giả đã tắt bình luận'}
@@ -595,7 +651,11 @@ const styles = StyleSheet.create({
   selfStart: { alignSelf: 'flex-start' },
   audioRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start' },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: spacing.md, paddingHorizontal: spacing.lg, gap: spacing.md },
+  seekRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  seekArea: { flex: 1, height: 24, justifyContent: 'center' }, // vùng chạm cao hơn thanh cho dễ bấm
+  seekTime: { fontVariant: ['tabular-nums'] },
   track: { height: 3, borderRadius: 2, backgroundColor: colors.whiteTrack, overflow: 'hidden' },
+  trackActive: { height: 6, borderRadius: 3 },
   trackFill: { height: '100%', backgroundColor: colors.white },
   commentBox: { height: 44, borderRadius: radius.xl, backgroundColor: colors.whiteSoft, justifyContent: 'center', paddingHorizontal: spacing.lg },
   commentHint: { opacity: 0.85 },
