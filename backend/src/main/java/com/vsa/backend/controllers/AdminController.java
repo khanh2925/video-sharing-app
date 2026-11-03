@@ -20,6 +20,7 @@ import java.util.List;
  * API quản trị – chỉ tài khoản ADMIN (SecurityConfig chặn sẵn /api/admin/**: chưa đăng nhập 401, USER 403).
  * Không có màn hình trong 12 màn hình thiết kế, test bằng Postman.
  *  PUT /api/admin/videos/{id}/hide     UC15 → 200 + video (status HIDDEN)
+ *  PUT /api/admin/videos/{id}/unhide   UC15 → 200 + video (status PUBLISHED), 409 nếu video đang không bị ẩn
  *  PUT /api/admin/users/{id}/lock      UC16 → 200 + tài khoản (locked = true)
  *  PUT /api/admin/users/{id}/unlock    UC16 → 200 + tài khoản (locked = false)
  *  GET /api/admin/settings             UC19 → 200 + danh sách thông số
@@ -38,6 +39,12 @@ public class AdminController {
     @PutMapping("/videos/{id}/hide")
     public VideoResponse hideVideo(@PathVariable Long id) {
         return adminService.hideVideo(id);
+    }
+
+    // PUT /api/admin/videos/6/unhide → bỏ ẩn video 6 (ẩn nhầm, hoặc đã xem xét lại)   ADMIN
+    @PutMapping("/videos/{id}/unhide")
+    public VideoResponse unhideVideo(@PathVariable Long id) {
+        return adminService.unhideVideo(id);
     }
 
     // ===== UC16 – Quản lý người dùng =====

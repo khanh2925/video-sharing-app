@@ -50,6 +50,35 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
     @Query("select f.follower.id from Follow f where f.following.id = :viewerId and f.follower.id in :userIds")
     Set<Long> findFollowerIdsAmong(@Param("viewerId") Long viewerId, @Param("userIds") Collection<Long> userIds);
 
+    // ===== UC12 – Gợi ý cho bạn =====
+    // Nhóm 1 "bạn của bạn": người được những người mình đang theo dõi theo dõi.
+    // Mỗi dòng [userId, số bạn chung]; nhiều bạn chung xếp trước. Đã loại: chính mình, người mình đã theo dõi,
+    // người mình đã bấm X, quản trị viên, tài khoản bị khoá.
+    @Query("""
+            select f.following.id, count(f) from Follow f
+            where f.follower.id in (select f1.following.id from Follow f1 where f1.follower.id = :viewerId)
+              and f.following.id <> :viewerId
+              and f.following.role = com.vsa.backend.enums.Role.USER
+              and f.following.locked = false
+              and f.following.id not in (select f2.following.id from Follow f2 where f2.follower.id = :viewerId)
+              and f.following.id not in (select d.dismissedUser.id from SuggestionDismissal d where d.user.id = :viewerId)
+            group by f.following.id
+            order by count(f) desc, f.following.id asc
+            """)
+    List<Object[]> findFriendsOfFollowing(@Param("viewerId") Long viewerId, Pageable pageable);
+
+    // Nhóm 2 "theo dõi lại": người đang theo dõi mình mà mình chưa theo dõi lại (cùng các điều kiện loại như trên)
+    @Query("""
+            select f.follower.id from Follow f
+            where f.following.id = :viewerId
+              and f.follower.role = com.vsa.backend.enums.Role.USER
+              and f.follower.locked = false
+              and f.follower.id not in (select f2.following.id from Follow f2 where f2.follower.id = :viewerId)
+              and f.follower.id not in (select d.dismissedUser.id from SuggestionDismissal d where d.user.id = :viewerId)
+            order by f.createdAt desc
+            """)
+    List<Long> findFollowersNotFollowedBack(@Param("viewerId") Long viewerId, Pageable pageable);
+
     // Số người theo dõi của từng người trong userIds → mỗi dòng [userId, count]
     @Query("select f.following.id, count(f) from Follow f where f.following.id in :userIds group by f.following.id")
     List<Object[]> countFollowersAmong(@Param("userIds") Collection<Long> userIds);

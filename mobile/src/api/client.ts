@@ -9,7 +9,7 @@ import { API_URL } from '../constants/config';
 import type { ApiErrorBody } from '../types/models';
 
 let authToken: string | null = null;
-let onUnauthorized: (() => void) | null = null;
+let onUnauthorized: ((message?: string) => void) | null = null;
 
 /** AuthContext gọi hàm này mỗi khi đăng nhập / đăng xuất. Màn hình không cần gọi. */
 export function setAuthToken(token: string | null) {
@@ -22,7 +22,7 @@ export function getAuthToken() {
 }
 
 /** AuthContext đăng ký: token hết hạn (backend trả 401) thì tự đăng xuất. */
-export function setOnUnauthorized(handler: (() => void) | null) {
+export function setOnUnauthorized(handler: ((message?: string) => void) | null) {
   onUnauthorized = handler;
 }
 
@@ -41,9 +41,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Đang có token mà vẫn bị 401 → token hết hạn hoặc tài khoản bị khoá
-    if (axios.isAxiosError(error) && error.response?.status === 401 && authToken) {
-      onUnauthorized?.();
+    // Đang có token mà vẫn bị 401 → token hết hạn hoặc tài khoản bị khoá (backend ghi lý do trong message)
+    if (axios.isAxiosError<ApiErrorBody>(error) && error.response?.status === 401 && authToken) {
+      onUnauthorized?.(error.response.data?.message);
     }
     return Promise.reject(error);
   },

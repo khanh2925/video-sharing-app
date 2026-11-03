@@ -126,7 +126,9 @@ export default function CommentsScreen({ navigation, route }: RootScreenProps<'C
           accessibilityLabel={`Hồ sơ ${item.user.displayName}`}
         />
         <View style={styles.rowBody}>
-          <AppText weight="semibold" size={13}>{item.user.displayName}</AppText>
+          <Pressable onPress={() => openProfile(item.user.id)} hitSlop={4} style={styles.nameBtn} accessibilityRole="button">
+            <AppText weight="semibold" size={13}>{item.user.displayName}</AppText>
+          </Pressable>
           <AppText size={14}>{item.content}</AppText>
           <View style={styles.metaRow}>
             <AppText size={12} color={colors.muted}>{timeAgo(item.createdAt)}</AppText>
@@ -243,6 +245,7 @@ export default function CommentsScreen({ navigation, route }: RootScreenProps<'C
 }
 
 const styles = StyleSheet.create({
+  nameBtn: { alignSelf: 'flex-start' },
   root: { flex: 1 },
   backdrop: { flex: 3, backgroundColor: colors.overlay },
   panel: { flex: 7, backgroundColor: colors.background, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, marginTop: -radius.xl },

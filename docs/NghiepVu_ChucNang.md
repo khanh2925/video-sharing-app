@@ -74,7 +74,7 @@ Công nghệ: Expo + React Native + TypeScript (mobile), Spring Boot 4 REST API 
 | R12 | **Livestream giả lập**: luồng hình là một video **của chính người phát** được phát lặp. Chat, cảm xúc, số người xem đi qua **WebSocket STOMP** (`/ws`). |
 | R13 | Danh sách trả về **phân trang** `{content, page, size, totalElements, totalPages, last}`; bình luận 20 mục / trang (`app.paging.comment-page-size`), mới nhất trước. |
 | R14 | Mọi lỗi API trả JSON thống nhất `{"status": 400, "message": "…", "timestamp": "…"}`. |
-| R15 | Quản trị viên **không khoá được tài khoản quản trị**. Video bị ẩn không xoá khỏi DB (để tra lại khi cần) và **không bỏ ẩn được** (MVP). |
+| R15 | Quản trị viên **không khoá được tài khoản quản trị**. Video bị ẩn không xoá khỏi DB (để tra lại khi cần), quản trị viên **bỏ ẩn được** khi ẩn nhầm (C4). |
 | R17 | **Thông số không viết cứng**, chia 3 loại (C12): thông số quản trị viên chỉnh trên hệ thống (bảng `system_settings`, UC19); cấu hình kỹ thuật trong `application.yaml`; giới hạn gắn với cột DB trong `AppConstants`. |
 | R16 | Các nút có trong thiết kế nhưng **ngoài phạm vi MVP** (Buy now, Message, Also post on, chia sẻ sang Facebook / Instagram / sao chép liên kết) vẫn hiện, bấm vào thì báo "Tính năng sẽ có ở phiên bản sau". |
 
@@ -340,11 +340,11 @@ Mỗi use case ghi: **Actor**, **Mục đích**, **Điều kiện trước**, **
 #### UC12. Theo dõi người dùng
 - **Actor**: Người dùng.
 - **Luồng chính**: bấm "Follow" → lưu `Follow`, nút đổi thành "Following", cập nhật số followers → tab Friends hiện 2 tab "x followers" / "y following" + "Suggestions for you".
-- **Luồng phụ**: bấm "Following" → bỏ theo dõi; bấm X ở một gợi ý → ẩn gợi ý đó (chỉ ẩn trên app).
+- **Luồng phụ**: bấm "Following" → bỏ theo dõi; bấm X ở một gợi ý → ẩn gợi ý đó, **lưu trên máy chủ** (bảng `suggestion_dismissals`) nên mở lại app hay đổi máy cũng không gợi ý lại.
 - **Lỗi**: tự theo dõi chính mình → "Bạn không thể tự theo dõi chính mình".
-- **Quy tắc**: R6. Gợi ý = người dùng mình **chưa** theo dõi, trừ chính mình.
-- **API**: `POST/DELETE /api/users/{id}/follow`, `GET /api/users/{id}/followers`, `GET /api/users/{id}/following`, `GET /api/users/suggestions`.
-- **Dữ liệu**: Follow, User.
+- **Quy tắc**: R6. Gợi ý lấy lần lượt 3 nhóm, nhóm trước xếp trên: (1) **bạn của bạn** – người mà những người mình đang theo dõi cũng theo dõi, nhiều bạn chung xếp trước; (2) **theo dõi lại** – người đang theo dõi mình mà mình chưa theo dõi lại; (3) **người nổi bật** – nhiều người theo dõi nhất (cho tài khoản mới). Luôn loại: chính mình, người đã theo dõi, người đã bấm X, quản trị viên, tài khoản bị khoá.
+- **API**: `POST/DELETE /api/users/{id}/follow`, `GET /api/users/{id}/followers`, `GET /api/users/{id}/following`, `GET /api/users/suggestions`, `POST /api/users/suggestions/{id}/dismiss`.
+- **Dữ liệu**: Follow, User, SuggestionDismissal.
 
 ### 5.5 Nhóm tin (story)
 
@@ -406,13 +406,14 @@ Mỗi use case ghi: **Actor**, **Mục đích**, **Điều kiện trước**, **
 #### UC15. Kiểm duyệt video
 - **Actor**: Quản trị viên.
 - **Luồng chính**: gửi yêu cầu ẩn video → `status = HIDDEN` → video biến khỏi trang chủ, tìm kiếm, hồ sơ.
+- **Luồng phụ**: ẩn nhầm → "Hiện lại" → `status = PUBLISHED`, video xuất hiện lại (C4); video đang không bị ẩn → 409.
 - **Lỗi**: người gọi không có vai trò `ADMIN` → 403.
-- **API**: `PUT /api/admin/videos/{id}/hide`.
+- **API**: `PUT /api/admin/videos/{id}/hide`, `PUT /api/admin/videos/{id}/unhide`.
 - **Dữ liệu**: Video.
 
 #### UC16. Quản lý người dùng
 - **Actor**: Quản trị viên.
-- **Luồng chính**: khoá tài khoản → `locked = true`, mọi token của tài khoản bị từ chối; mở khoá → `locked = false`.
+- **Luồng chính**: khoá tài khoản → `locked = true`, mọi token của tài khoản bị từ chối; người bị khoá đang mở app **nhận thông báo "Tài khoản của bạn đã bị quản trị viên khóa"** (WebSocket `/user/queue/account`, hoặc lỗi 401 ở lần gọi API kế tiếp), bấm "Đã hiểu" mới bị đăng xuất; mở khoá → `locked = false`.
 - **Lỗi**: không phải quản trị viên → 403; khoá tài khoản quản trị → báo lỗi (R15).
 - **API**: `PUT /api/admin/users/{id}/lock`, `PUT /api/admin/users/{id}/unlock`.
 - **Dữ liệu**: User.
@@ -494,7 +495,7 @@ Danh sách Service dự kiến: `AuthService`, `UserService`, `VideoService`, `C
 
 | # | Nội dung | Đã chốt |
 |---|---|---|
-| C4 | Bỏ ẩn video | **Không làm** ở MVP. Video `HIDDEN` giữ nguyên (R15) |
+| C4 | Bỏ ẩn video | **Thêm API** `PUT /api/admin/videos/{id}/unhide` (sau góp ý khi test): video `HIDDEN` → `PUBLISHED` |
 | C5 | Mở khoá tài khoản | **Thêm API** `PUT /api/admin/users/{id}/unlock` (đã thêm vào bảng API trên Google Docs) |
 | C6 | Một người mở nhiều live | **Chặn**: đang có phiên `LIVE` thì báo lỗi "Bạn đang có một buổi live chưa kết thúc" |
 | C7 | Đếm người xem live | **Đếm trong bộ nhớ** (`Map<liveStreamId, viewerCount>` trong `LiveStreamService`), phát số mới qua WebSocket mỗi lần có người vào / ra; ghi `viewerCount` vào DB khi kết thúc live |

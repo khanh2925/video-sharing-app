@@ -50,7 +50,9 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(e -> e
-                        .authenticationEntryPoint((req, res, ex) -> writeError(res, 401, "Bạn cần đăng nhập"))
+                        // Tài khoản bị khoá: JwtAuthFilter ghi lý do → báo đúng lý do để app hiện cho người dùng
+                        .authenticationEntryPoint((req, res, ex) -> writeError(res, 401,
+                                req.getAttribute(JwtAuthFilter.AUTH_ERROR) instanceof String reason ? reason : "Bạn cần đăng nhập"))
                         .accessDeniedHandler((req, res, ex) -> writeError(res, 403, "Bạn không có quyền thực hiện thao tác này")))
                 .authorizeHttpRequests(auth -> auth
                         // Đăng ký / đăng nhập, kiểm tra hệ thống, file tĩnh, WebSocket

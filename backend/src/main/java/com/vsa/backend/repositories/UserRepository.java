@@ -41,8 +41,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
             """)
     Page<User> searchAccounts(@Param("query") String query, Pageable pageable);
 
-    // UC12 gợi ý: người dùng thường (không gợi ý quản trị viên), chưa bị khoá, không phải mình,
-    // mình chưa theo dõi; nhiều người theo dõi xếp trước
+    // UC12 gợi ý (nhóm 3 – người nổi bật): người dùng thường (không gợi ý quản trị viên), chưa bị khoá, không phải mình,
+    // mình chưa theo dõi, mình chưa bấm X; nhiều người theo dõi xếp trước
     @Query("""
             select u from User u
             left join Follow f on f.following = u
@@ -50,6 +50,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
               and u.role = com.vsa.backend.enums.Role.USER
               and u.locked = false
               and u.id not in (select f2.following.id from Follow f2 where f2.follower.id = :viewerId)
+              and u.id not in (select d.dismissedUser.id from SuggestionDismissal d where d.user.id = :viewerId)
             group by u
             order by count(f) desc, u.id asc
             """)

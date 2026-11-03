@@ -34,7 +34,7 @@ export default function FriendsScreen({ navigation }: TabScreenProps<'Friends'>)
 
   const [tab, setTab] = useState<Tab>('followers');
   const [query, setQuery] = useState('');
-  const [hidden, setHidden] = useState<Record<number, boolean>>({}); // gợi ý đã bấm X (chỉ ẩn trên máy)
+  const [hidden, setHidden] = useState<Record<number, boolean>>({}); // gợi ý vừa bấm X (ẩn ngay, backend lưu lại cho lần sau)
 
   // Số người theo dõi / đang theo dõi lấy từ hồ sơ của mình
   const profile = useFetch(() => (user ? userApi.profile(user.id) : Promise.resolve(null)), [user?.id]);
@@ -96,6 +96,16 @@ export default function FriendsScreen({ navigation }: TabScreenProps<'Friends'>)
   const people = list.items.filter((u) => !key || `${u.displayName} ${u.username}`.toLowerCase().includes(key));
   const suggestions = (suggest.data ?? []).filter((u) => !hidden[u.id]);
 
+  // Bấm X: ẩn ngay trên màn, rồi báo backend để lần sau (mở lại app, máy khác) không gợi ý nữa.
+  // Gửi lỗi (mất mạng) thì hiện lại gợi ý đó để người dùng bấm lại.
+  const dismissSuggestion = (u: FollowUser) => {
+    setHidden((h) => ({ ...h, [u.id]: true }));
+    userApi.dismissSuggestion(u.id).catch((e) => {
+      setHidden((h) => ({ ...h, [u.id]: false }));
+      Alert.alert('Không ẩn được gợi ý', getErrorMessage(e));
+    });
+  };
+
   const openProfile = (u: FollowUser) => navigation.navigate('Profile', { userId: u.id });
 
   const tabs: { key: Tab; label: string }[] = [
@@ -122,7 +132,7 @@ export default function FriendsScreen({ navigation }: TabScreenProps<'Friends'>)
                   onPress={() => toggleFollow(u)}
                 />
                 <Pressable
-                  onPress={() => setHidden((h) => ({ ...h, [u.id]: true }))}
+                  onPress={() => dismissSuggestion(u)}
                   style={styles.hideBtn}
                   accessibilityRole="button"
                   accessibilityLabel={`Ẩn gợi ý ${u.displayName}`}

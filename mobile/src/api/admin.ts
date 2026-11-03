@@ -14,6 +14,7 @@ export const adminApi = {
   videos: (q: string, status: AdminVideoFilter, page = 0, size = 20) =>
     api.get<PageResponse<Video>>('/admin/videos', { params: { q, status, page, size } }).then((r) => r.data),
   hideVideo: (id: number) => api.put<Video>(`/admin/videos/${id}/hide`).then((r) => r.data),
+  unhideVideo: (id: number) => api.put<Video>(`/admin/videos/${id}/unhide`).then((r) => r.data),
 
   users: (q: string, status: AdminUserFilter, page = 0, size = 20) =>
     api.get<PageResponse<AdminUser>>('/admin/users', { params: { q, status, page, size } }).then((r) => r.data),

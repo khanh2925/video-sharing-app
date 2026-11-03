@@ -36,6 +36,8 @@ export const userApi = {
     api.get<PageResponse<FollowUser>>(`/users/${id}/following`, { params: { page, size } }).then((r) => r.data),
   /** Cần đăng nhập */
   suggestions: (size = 10) => api.get<FollowUser[]>('/users/suggestions', { params: { size } }).then((r) => r.data),
+  /** Bấm X ở một gợi ý: backend lưu lại, lần sau không gợi ý người đó nữa */
+  dismissSuggestion: (id: number) => api.post(`/users/suggestions/${id}/dismiss`),
   follow: (id: number) => api.post(`/users/${id}/follow`),
   unfollow: (id: number) => api.delete(`/users/${id}/follow`),
 

@@ -21,6 +21,7 @@ import com.vsa.backend.repositories.VideoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.mock.env.MockEnvironment;
 
 import java.util.List;
@@ -38,6 +39,7 @@ class AdminServiceTest {
     private UserRepository userRepository;
     private SystemSettingRepository systemSettingRepository;
     private SystemSettingService systemSettingService;
+    private SimpMessagingTemplate messagingTemplate;
     private AdminService adminService;
 
     @BeforeEach
@@ -46,12 +48,13 @@ class AdminServiceTest {
         userRepository = mock(UserRepository.class);
         systemSettingRepository = mock(SystemSettingRepository.class);
         systemSettingService = mock(SystemSettingService.class);
+        messagingTemplate = mock(SimpMessagingTemplate.class);
         VideoMapper videoMapper = new VideoMapper(new UserMapper(), new CatalogMapper());
         MockEnvironment environment = new MockEnvironment()
                 .withProperty("spring.servlet.multipart.max-file-size", "500MB");   // giống application.yaml
 
         adminService = new AdminService(videoRepository, userRepository, systemSettingRepository,
-                systemSettingService, videoMapper, new AdminMapper(), environment);
+                systemSettingService, videoMapper, new AdminMapper(), environment, messagingTemplate);
     }
 
     // ---------- UC15 ----------
@@ -86,6 +89,27 @@ class AdminServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, e.getStatus());
     }
 
+    @Test
+    void unhideVideo_dangAn_chuyenVePublished() {
+        Video video = taoVideo(6L, VideoStatus.HIDDEN);
+        when(videoRepository.findById(6L)).thenReturn(Optional.of(video));
+
+        VideoResponse response = adminService.unhideVideo(6L);
+
+        assertEquals(VideoStatus.PUBLISHED, response.status());
+        verify(videoRepository).save(video);
+    }
+
+    @Test
+    void unhideVideo_khongBiAn_bao409() {
+        when(videoRepository.findById(6L)).thenReturn(Optional.of(taoVideo(6L, VideoStatus.PUBLISHED)));
+
+        ApiException e = assertThrows(ApiException.class, () -> adminService.unhideVideo(6L));
+
+        assertEquals(HttpStatus.CONFLICT, e.getStatus());
+        verify(videoRepository, never()).save(any());
+    }
+
     // ---------- UC16 ----------
 
     @Test
@@ -96,6 +120,8 @@ class AdminServiceTest {
 
         assertTrue(response.locked());
         verify(userRepository).save(argThat(u -> u.isLocked()));
+        // báo ngay cho người bị khoá (kênh riêng /user/queue/account của user 5)
+        verify(messagingTemplate).convertAndSendToUser(eq("5"), eq("/queue/account"), any(Object.class));
     }
 
     @Test

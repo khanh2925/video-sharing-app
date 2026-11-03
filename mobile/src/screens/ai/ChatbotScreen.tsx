@@ -3,19 +3,25 @@
  *
  * - Hỏi bằng tiếng Việt: tìm video, hỏi quy định của app, hỏi video nào của mình nhiều lượt xem nhất.
  * - POST /api/chat trả { reply, videos }: reply có thể có **chữ đậm**, videos hiện thành thẻ bấm để xem.
- * - Nút làm mới ở góc phải: xoá trí nhớ hội thoại trên máy chủ (DELETE /api/chat), có hỏi xác nhận.
+ * - Lịch sử chat lưu TRÊN MÁY theo tài khoản (utils/chatHistory: AsyncStorage, web là localStorage):
+ *   mở lại màn vẫn thấy tin cũ; mỗi câu hỏi gửi kèm lịch sử để trợ lý hiểu câu hỏi nối tiếp.
+ *   Server giới hạn lịch sử theo token, vượt thì bỏ tin cũ nhất và báo lại → app xoá theo.
+ * - Nút thùng rác ở góc phải: hỏi xác nhận (chạy cả bản web) → xoá lịch sử trên máy, về câu chào.
  * - Lỗi (vd 503 hết lượt) hiện thành 1 tin nhắn màu đỏ, không văng hộp thoại.
  * Mở từ icon ✨ ở Trang chủ, bọc trong requireAuth (API chat cần đăng nhập).
  */
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View,
+  ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText, Chip, Header, Screen } from '../../components';
 import { colors, fonts, radius, spacing } from '../../constants/theme';
 import { aiApi } from '../../api/ai';
+import { useAuth } from '../../context/AuthContext';
+import { clearChatHistory, loadChatHistory, saveChatHistory, type StoredChatMessage } from '../../utils/chatHistory';
 import { getErrorMessage } from '../../api/client';
+import { confirmAsync } from '../../utils/confirm';
 import { mediaUrl } from '../../utils/media';
 import type { Video } from '../../types/models';
 import type { RootScreenProps } from '../../navigation/types';
@@ -62,44 +68,74 @@ function RichText({ text, color }: { text: string; color: string }) {
 }
 
 export default function ChatbotScreen({ navigation }: RootScreenProps<'Chatbot'>) {
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
+  const { user } = useAuth();
+  const userId = user?.id ?? 0;                                   // màn này chỉ mở được khi đã đăng nhập
+  const [history, setHistory] = useState<StoredChatMessage[]>([]); // tin đã lưu trên máy
+  const [pending, setPending] = useState<ChatMessage[]>([]);       // câu đang hỏi / lỗi: hiện trên màn, không lưu
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);     // dòng báo nhỏ dưới tiêu đề, tự ẩn sau 2,5 giây
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
-  const send = async (raw: string) => {
+  const messages: ChatMessage[] = [WELCOME, ...history, ...pending];
+
+  // Mở màn: đọc lịch sử đã lưu trên máy của tài khoản này
+  useEffect(() => {
+    let alive = true;
+    loadChatHistory(userId).then((list) => {
+      if (!alive) return;
+      setHistory(list);
+      setLoadingHistory(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [userId]);
+
+  const send = useCallback(async (raw: string) => {
     const text = raw.trim();
-    if (!text || sending) return;
+    if (!text || sending || loadingHistory) return;
     setInput('');
-    setMessages((prev) => [...prev, { id: newId(), role: 'user', text }]);
+    const userMsg: StoredChatMessage = { id: newId(), role: 'user', text };
+    setPending([userMsg]);
     setSending(true);
     try {
-      const res = await aiApi.chat(text);
-      setMessages((prev) => [...prev, { id: newId(), role: 'bot', text: res.reply, videos: res.videos }]);
+      const res = await aiApi.chat(text, history.map((m) => ({ role: m.role, text: m.text })));
+      // Server đã bỏ `trimmed` tin cũ nhất vì vượt giới hạn token → xoá theo trên máy, rồi thêm câu hỏi + trả lời
+      const next = [...history.slice(res.trimmed), userMsg, { id: newId(), role: 'bot' as const, text: res.reply, videos: res.videos }];
+      setHistory(next);
+      setPending([]);
+      await saveChatHistory(userId, next);
+      if (res.trimmed > 0) setNotice('Đã xoá bớt tin cũ để có chỗ cho tin mới');
     } catch (e) {
-      setMessages((prev) => [...prev, { id: newId(), role: 'error', text: getErrorMessage(e) }]);
+      // Lỗi: giữ câu hỏi + tin lỗi đỏ trên màn, không lưu vào lịch sử
+      setPending([userMsg, { id: newId(), role: 'error', text: getErrorMessage(e) }]);
     } finally {
       setSending(false);
     }
-  };
+  }, [sending, loadingHistory, history, userId]);
 
-  // Cuộc trò chuyện mới: hỏi trước, rồi xoá trí nhớ trên máy chủ và trên màn
-  const confirmReset = () =>
-    Alert.alert('Cuộc trò chuyện mới', 'Xoá toàn bộ tin nhắn hiện tại?', [
-      { text: 'Huỷ', style: 'cancel' },
-      {
-        text: 'Xoá',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await aiApi.resetChat();
-            setMessages([WELCOME]);
-          } catch (e) {
-            Alert.alert('Lỗi', getErrorMessage(e));
-          }
-        },
-      },
-    ]);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 2500);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  // Xoá lịch sử chat: hỏi trước, rồi xoá trên máy (server không lưu gì). Trợ lý không còn nhớ các câu trước.
+  const confirmClear = async () => {
+    if (sending) return;
+    if (history.length === 0 && pending.length === 0) {
+      setNotice('Chưa có lịch sử chat');
+      return;
+    }
+    if (!(await confirmAsync('Xoá lịch sử chat?', 'Toàn bộ tin nhắn trên máy này sẽ bị xoá, trợ lý sẽ không nhớ các câu trước nữa.', 'Xoá'))) return;
+    await clearChatHistory(userId);
+    setHistory([]);
+    setPending([]);
+    setInput('');
+    setNotice('Đã xoá lịch sử chat');
+  };
 
   const openVideo = (v: Video) => navigation.navigate('Watch', { videoId: v.id });
 
@@ -160,11 +196,17 @@ export default function ChatbotScreen({ navigation }: RootScreenProps<'Chatbot'>
       <Header
         title="Trợ lý AI"
         right={
-          <Pressable onPress={confirmReset} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Cuộc trò chuyện mới">
-            <Ionicons name="refresh" size={22} color={colors.text} />
+          <Pressable onPress={confirmClear} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Xoá lịch sử chat">
+            <Ionicons name="trash-outline" size={22} color={colors.text} />
           </Pressable>
         }
       />
+      {!!notice && (
+        <View style={styles.notice} accessibilityLiveRegion="polite">
+          <Ionicons name="checkmark-circle" size={16} color={colors.white} />
+          <AppText size={13} color={colors.white}>{notice}</AppText>
+        </View>
+      )}
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <FlatList
           ref={listRef}
@@ -216,6 +258,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   flexShrink: { flexShrink: 1 },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  notice: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    paddingVertical: spacing.sm, backgroundColor: colors.text,
+  },
   list: { padding: spacing.lg, gap: spacing.md },
   bubble: { maxWidth: '82%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.lg },
   userBubble: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: 4 },
