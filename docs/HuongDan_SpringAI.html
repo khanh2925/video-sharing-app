@@ -1,5 +1,5 @@
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Spring AI trong Video Sharing App</title>
+<title>Spring AI trong LikTok</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
 <style>
@@ -29,7 +29,7 @@ nav{background:var(--card);border-radius:10px;padding:10px 16px;position:sticky;
 .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0}.node{border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--card);text-align:center;font-weight:600}
 .node small{font-weight:400;color:var(--mut)}.node.t{border-color:var(--t)}.node.k{border-color:var(--k)}.node.l{border-color:var(--l)}.arr{color:var(--mut);font-size:20px}
 </style></head><body><main>
-<h1>Spring AI trong Video Sharing App</h1>
+<h1>Spring AI trong LikTok</h1>
 <p class="sub">Tài liệu cho cả nhóm · Spring AI 2.0 · PostgreSQL + pgvector · cập nhật 02/11/2026</p>
 <nav><a href="#tong">1. Tổng quan</a><a href="#chay">2. Cách chạy</a><a href="#chung">3. Phần chung</a><a href="#thanh">4. Thanh</a><a href="#khanh">5. Khánh</a><a href="#long">6. Long</a><a href="#mobile">7. App</a><a href="#demo">8. Demo</a><a href="#gioihan">9. Giới hạn</a></nav>
 
@@ -1009,7 +1009,7 @@ import java.util.stream.Collectors;
 public class ChatbotService {
 
     private static final String SYSTEM_PROMPT = &quot;&quot;&quot;
-            Bạn là trợ lý của ứng dụng chia sẻ video ngắn Video Sharing App (giống TikTok).
+            Bạn là trợ lý của LikTok, ứng dụng chia sẻ video ngắn. Khi được hỏi tên, bạn là "Trợ lý LikTok".
             Luôn trả lời bằng tiếng Việt, ngắn gọn, thân thiện, tối đa khoảng 5 câu.
             Chỉ trả lời về app và các video trong app. Câu hỏi ngoài lề thì lịch sự từ chối.
             Khi người dùng muốn tìm video: chỉ giới thiệu video có trong phần ngữ cảnh được cung cấp,
@@ -1213,7 +1213,7 @@ public class ChatbotController {
 <h2>7. Trên app</h2>
 <ul>
 <li><b>Trang chủ</b>: thêm tab <b>"Dành cho bạn"</b> và icon <b>Trợ lý AI</b> ở đầu trang (khách bấm thì hiện bảng mời đăng nhập).</li>
-<li><b>Tìm kiếm</b>: thêm lựa chọn <b>"Theo ý nghĩa (AI)"</b>.</li>
+<li><b>Tìm kiếm</b>: tab Video tự tìm thêm video gần nghĩa (mục <b>"Video có nội dung liên quan"</b>), không cần chọn riêng.</li>
 <li><b>Xem video</b>: rời video thì gửi WATCH / SKIP (người dùng không thấy gì).</li>
 <li><b>Màn Trợ lý AI</b>: chat, câu hỏi gợi ý, thẻ video bấm vào xem được, nút cuộc trò chuyện mới.</li>
 </ul>
@@ -1570,4 +1570,4 @@ docker exec vsa-pgvector psql -U vsa -d vsa_vectors -c "SELECT content, metadata
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>hljs.highlightAll();</script>
-</body></html>
+</body></html>
