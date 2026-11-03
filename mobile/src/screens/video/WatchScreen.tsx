@@ -50,9 +50,9 @@ const FEEDS: { kind: FeedKind; label: string }[] = [
 const EMPTY_PAGE: PageResponse<Video> = { content: [], page: 0, size: 0, totalElements: 0, totalPages: 0, last: true };
 
 /** Gọi đúng API theo nguồn danh sách */
-function fetchSource(source: WatchSource, page: number, size: number): Promise<PageResponse<Video>> {
+function fetchSource(source: WatchSource, page: number, size: number, since: number): Promise<PageResponse<Video>> {
   switch (source.kind) {
-    case 'trending': return videoApi.trending(page, size);
+    case 'trending': return videoApi.trending(page, size, since);
     case 'following': return videoApi.following(page, size);
     // AI trả 1 danh sách duy nhất → gói thành 1 trang cuối cùng
     case 'forYou':
@@ -86,7 +86,12 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
 
   // Video được bấm mở (nếu có) + danh sách để vuốt tiếp
   const opened = useFetch(() => (videoId != null ? videoApi.getById(videoId) : Promise.resolve(null)), [videoId]);
-  const list = usePagedList((page, size) => (source ? fetchSource(source, page, size) : Promise.resolve(EMPTY_PAGE)), [sourceKey, user?.id]);
+  // Mốc lúc tải trang đầu: trang sau gửi lại mốc này để Trending không bị lệch khi vừa xem thêm video
+  const since = useRef(Date.now());
+  const list = usePagedList((page, size) => {
+    if (page === 0) since.current = Date.now();
+    return source ? fetchSource(source, page, size, since.current) : Promise.resolve(EMPTY_PAGE);
+  }, [sourceKey, user?.id]);
 
   // Thả tim, số bình luận... đổi trên máy, ghi đè lên dữ liệu tải về (theo id video)
   const [patches, setPatches] = useState<Record<number, Partial<Video>>>({});

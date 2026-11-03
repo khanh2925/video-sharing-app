@@ -11,9 +11,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /** Test lịch sử xem, không cần MySQL. */
@@ -39,13 +42,13 @@ class WatchHistoryServiceTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(2L, null, List.of()));
         service.record(10L);
-        verify(watchHistoryRepository).upsert(2L, 10L);
+        verify(watchHistoryRepository).upsert(eq(2L), eq(10L), any(LocalDateTime.class));
     }
 
     @Test
     void record_khach_khongGhi() {
         service.record(10L);
-        verify(watchHistoryRepository, never()).upsert(anyLong(), anyLong());
+        verify(watchHistoryRepository, never()).upsert(anyLong(), anyLong(), any());
     }
 
     @Test

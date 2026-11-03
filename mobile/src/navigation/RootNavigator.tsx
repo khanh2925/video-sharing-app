@@ -5,6 +5,7 @@
  * - Màn cần đăng nhập vẫn khai báo ở đây; chỗ mở chúng phải bọc trong useRequireAuth().
  * - Đang đăng nhập mà bị đăng xuất (bấm Đăng xuất, hoặc token hết hạn → 401) thì đưa về MainTabs,
  *   tránh kẹt lại ở màn cần đăng nhập (Đăng video, Video nháp...).
+ * - HostLiveProvider giữ kết nối live của người phát khi thu nhỏ live, hiện nút nổi "LIVE" để quay lại.
  */
 import { useContext, useEffect, useRef } from 'react';
 import { NavigationContainerRefContext } from '@react-navigation/native';
@@ -12,6 +13,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import { LoginPromptProvider } from '../context/LoginPromptContext';
 import { NotificationProvider } from '../context/NotificationContext';
+import { HostLiveProvider } from '../context/HostLiveContext';
 import { Loading } from '../components';
 import type { RootStackParamList } from './types';
 import MainTabs from './MainTabs';
@@ -66,6 +68,7 @@ export default function RootNavigator() {
   return (
     <LoginPromptProvider>
       <NotificationProvider>
+      <HostLiveProvider>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="Watch" component={WatchScreen} />
@@ -101,6 +104,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Register" component={RegisterScreen} />
         </Stack.Group>
       </Stack.Navigator>
+      </HostLiveProvider>
       </NotificationProvider>
     </LoginPromptProvider>
   );

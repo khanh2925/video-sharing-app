@@ -33,8 +33,12 @@ export interface UpdateVideoBody {
 }
 
 export const videoApi = {
-  trending: (page = 0, size = 10) =>
-    api.get<PageResponse<Video>>('/videos/trending', { params: { page, size } }).then((r) => r.data),
+  /**
+   * Đã đăng nhập: video chưa xem lên trước, đã xem xuống cuối.
+   * before (mili giây): mốc lúc tải trang đầu, gửi lại khi tải trang sau để thứ tự không bị lệch.
+   */
+  trending: (page = 0, size = 10, before?: number) =>
+    api.get<PageResponse<Video>>('/videos/trending', { params: { page, size, before } }).then((r) => r.data),
   /** Feed "Đang theo dõi": video của người mình theo dõi, mới nhất trước. Cần đăng nhập. */
   following: (page = 0, size = 10) =>
     api.get<PageResponse<Video>>('/videos/following', { params: { page, size } }).then((r) => r.data),

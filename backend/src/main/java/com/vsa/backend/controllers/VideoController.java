@@ -18,6 +18,9 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -37,11 +40,16 @@ public class VideoController {
     private final WatchHistoryService watchHistoryService;
     private final TrackingService trackingService;   // ghi hành vi cho gợi ý video (AI)
 
+    // GET /api/videos/trending?page=0&size=10&before=1793625000000
+    // before (mili giây, không bắt buộc): mốc app tải trang đầu, giữ thứ tự ổn định khi tải các trang sau
     @GetMapping("/trending")
     public PageResponse<VideoResponse> getTrending(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return videoService.getTrending(PageUtils.of(page, size));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Long before) {
+        LocalDateTime cutoff = before == null ? null
+                : LocalDateTime.ofInstant(Instant.ofEpochMilli(before), ZoneId.systemDefault());
+        return videoService.getTrending(PageUtils.of(page, size), cutoff);
     }
 
     // GET /api/videos/following?page=0&size=10 → feed "Đang theo dõi" (cần đăng nhập)

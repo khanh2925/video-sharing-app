@@ -5,9 +5,11 @@
  * - Phát lặp video nguồn (R12), nhãn LIVE + thời gian đã phát + số người xem.
  * - Chat và tim nhận qua WebSocket STOMP (connectLive), người phát cũng chat được.
  * - "Kết thúc" hoặc bấm quay lại đều hỏi xác nhận → gọi API kết thúc → hiện bảng tổng kết.
+ * - Nút thu nhỏ (mũi tên xuống): rời màn mà live vẫn chạy, đi làm việc khác; góc phải hiện nút nổi
+ *   "LIVE 05:12" để quay lại. Kết nối WebSocket giữ ở HostLiveContext, vì đóng kết nối là backend kết thúc live.
  * - Đã kết thúc mà bấm quay lại (Android) thì về Hồ sơ, không quay về màn Quay video.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,21 +17,21 @@ import { usePreventRemove } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, Button, ErrorView, Loading, Screen } from '../../components';
 import { colors, fonts, radius, spacing } from '../../constants/theme';
-import { liveApi, connectLive, LIVE_MESSAGE_MAX } from '../../api/lives';
-import { getAuthToken, getErrorMessage } from '../../api/client';
+import { liveApi, LIVE_MESSAGE_MAX } from '../../api/lives';
+import { getErrorMessage } from '../../api/client';
 import { useFetch } from '../../hooks/useFetch';
 import { useAuth } from '../../context/AuthContext';
+import { useHostLive } from '../../context/HostLiveContext';
 import { formatCount, formatDuration } from '../../utils/format';
 import { mergeLiveMessages } from '../../utils/live';
 import type { LiveMessage, LiveSocketEvent } from '../../types/models';
 import type { RootScreenProps } from '../../navigation/types';
 import { ChatBubble, FloatingHearts, LiveNotice, LiveVideo, liveColors, NOT_CONNECTED_TEXT, useFloatingHearts, useLiveNotice } from './LiveParts';
 
-type Connection = ReturnType<typeof connectLive>;
-
 export default function LiveHostScreen({ navigation, route }: RootScreenProps<'LiveHost'>) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const hostLive = useHostLive();
   const { liveId } = route.params;
   const { data: live, loading, error, reload } = useFetch(() => liveApi.getById(liveId), [liveId]);
 
@@ -42,10 +44,10 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
   const [draft, setDraft] = useState('');
   const [ended, setEnded] = useState(false);
   const [ending, setEnding] = useState(false);
-  const [leaving, setLeaving] = useState(false); // true = cho phép rời màn (về hồ sơ)
+  // Rời màn: 'profile' = về hồ sơ sau khi kết thúc, 'minimize' = thu nhỏ, live vẫn chạy
+  const [exitTo, setExitTo] = useState<'profile' | 'minimize' | null>(null);
   const { hearts, addHeart } = useFloatingHearts();
   const { notice, showNotice } = useLiveNotice();
-  const connRef = useRef<Connection | null>(null);
 
   const commentCount = messages.filter((m) => m.type === 'COMMENT').length;
 
@@ -58,6 +60,12 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
       if (live.status === 'ENDED') setEnded(true);
     }
   }, [live]);
+
+  // Live đang chạy → mở (hoặc dùng lại) kết nối giữ ở HostLiveContext
+  const { attach, listen, detach } = hostLive;
+  useEffect(() => {
+    if (live?.status === 'LIVE') attach(live);
+  }, [live, attach]);
 
   // Đồng hồ: số giây từ lúc bắt đầu live, mỗi giây tính lại 1 lần
   useEffect(() => {
@@ -102,15 +110,18 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
       }
     };
 
-    // join: false → người phát không bị tính là 1 người xem
-    const conn = connectLive(liveId, getAuthToken(), onEvent, { join: false, onError: showNotice });
-    connRef.current = conn;
+    // Chỉ huỷ nghe khi rời màn, KHÔNG đóng kết nối (đóng là backend kết thúc live)
+    const unlisten = listen({ onEvent, onError: showNotice });
     return () => {
       alive = false;
-      conn.close();
-      connRef.current = null;
+      unlisten();
     };
-  }, [liveId, addHeart, showNotice]);
+  }, [liveId, addHeart, showNotice, listen]);
+
+  // Đã kết thúc → đóng kết nối, ẩn nút nổi
+  useEffect(() => {
+    if (ended) detach();
+  }, [ended, detach]);
 
   const endLive = async () => {
     if (ending || ended) return;
@@ -132,20 +143,22 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
     ]);
   };
 
-  // Về hồ sơ: bật cờ leaving để usePreventRemove thôi chặn, rồi mới popTo (xem effect dưới)
-  const goProfile = () => setLeaving(true);
+  // Rời màn: bật cờ exitTo để usePreventRemove thôi chặn, rồi mới popTo (xem effect dưới)
+  const goProfile = () => setExitTo('profile');
+  const minimize = () => setExitTo('minimize');
   useEffect(() => {
-    if (leaving) navigation.popTo('MainTabs', { screen: 'MyProfile' });
-  }, [leaving, navigation]);
+    if (exitTo === 'profile') navigation.popTo('MainTabs', { screen: 'MyProfile' });
+    if (exitTo === 'minimize') navigation.popTo('MainTabs');
+  }, [exitTo, navigation]);
 
   // Chặn nút quay lại của Android: đang live thì hỏi xác nhận, đã kết thúc thì về hồ sơ
-  usePreventRemove(!!user && !!live && !leaving, () => (ended ? goProfile() : confirmEnd()));
+  usePreventRemove(!!user && !!live && !exitTo, () => (ended ? goProfile() : confirmEnd()));
 
   const sendChat = () => {
     const text = draft.trim();
     if (!text) return;
     // Chưa kết nối xong → giữ nguyên chữ đã gõ để gửi lại
-    if (!connRef.current?.chat(text)) {
+    if (!hostLive.chat(text)) {
       showNotice(NOT_CONNECTED_TEXT);
       return;
     }
@@ -184,6 +197,12 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
           <Ionicons name="eye-outline" size={14} color={colors.white} />
           <AppText weight="semibold" size={12} color={colors.white}>{formatCount(viewers)}</AppText>
         </View>
+        <View style={styles.spacer} />
+        {!ended && (
+          <Pressable onPress={minimize} style={styles.minBtn} accessibilityRole="button" accessibilityLabel="Thu nhỏ, live vẫn tiếp tục">
+            <Ionicons name="chevron-down" size={22} color={colors.white} />
+          </Pressable>
+        )}
         <Pressable onPress={confirmEnd} style={styles.endBtn} accessibilityRole="button">
           <AppText weight="bold" size={14} color={colors.danger}>Kết thúc</AppText>
         </Pressable>
@@ -251,7 +270,7 @@ export default function LiveHostScreen({ navigation, route }: RootScreenProps<'L
           <AppText weight="bold" size={22} color={colors.white}>Buổi live đã kết thúc</AppText>
           <View style={styles.statsRow}>
             <Stat value={formatDuration(elapsed)} label="Thời lượng" />
-            <Stat value={formatCount(peakViewers)} label="Lượt xem" />
+            <Stat value={formatCount(Math.max(peakViewers, hostLive.peakViewers))} label="Lượt xem" />
             <Stat value={formatCount(heartCount)} label="Tim" />
           </View>
           <Button title="Về hồ sơ" onPress={goProfile} style={styles.summaryBtn} />
@@ -278,7 +297,9 @@ const styles = StyleSheet.create({
   liveBadge: { height: 28, paddingHorizontal: 10, borderRadius: 6, backgroundColor: colors.live, flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.white },
   viewerBadge: { height: 28, paddingHorizontal: 10, borderRadius: 6, backgroundColor: colors.overlay, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  endBtn: { marginLeft: 'auto', height: 40, paddingHorizontal: spacing.lg, borderRadius: 20, backgroundColor: colors.white, justifyContent: 'center' },
+  spacer: { flex: 1 },
+  minBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center' },
+  endBtn: { height: 40, paddingHorizontal: spacing.lg, borderRadius: 20, backgroundColor: colors.white, justifyContent: 'center' },
   titleTag: { position: 'absolute', top: 96, left: spacing.lg, maxWidth: '80%', height: 28, paddingHorizontal: 10, borderRadius: radius.sm, backgroundColor: liveColors.input, justifyContent: 'center' },
   bottomArea: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: 34, gap: 10 },
   chat: { maxHeight: 220, flexGrow: 0 },

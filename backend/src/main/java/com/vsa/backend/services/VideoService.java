@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,11 +61,19 @@ public class VideoService {
 
     // ===================== UC05: xem video =====================
 
+    /**
+     * Khách: xếp theo lượt xem. Đã đăng nhập: video chưa xem lên trước, đã xem xuống cuối.
+     * before = mốc thời gian app tải trang đầu (null = bây giờ).
+     */
     @Transactional(readOnly = true)
-    public PageResponse<VideoResponse> getTrending(Pageable pageable) {
+    public PageResponse<VideoResponse> getTrending(Pageable pageable, LocalDateTime before) {
         Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();
-        return toPage(videoRepository.findByStatusAndVisibilityOrderByViewCountDesc(
-                VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable), currentUserId);
+        if (currentUserId == null) {
+            return toPage(videoRepository.findByStatusAndVisibilityOrderByViewCountDesc(
+                    VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable), null);
+        }
+        LocalDateTime cutoff = before != null ? before : LocalDateTime.now();
+        return toPage(videoRepository.findTrendingUnwatchedFirst(currentUserId, cutoff, pageable), currentUserId);
     }
 
     /**

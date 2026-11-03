@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 
 // Video. JpaRepository có sẵn: findById, findAll(Pageable), save, delete, count...
@@ -38,6 +39,28 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
 
     Page<Video> findByStatusAndVisibilityOrderByViewCountDesc(
             VideoStatus status, Visibility visibility, Pageable pageable);
+
+    /**
+     * Trending cho người đã đăng nhập: video CHƯA xem lên trước, video đã xem xuống cuối,
+     * trong mỗi nhóm vẫn xếp theo lượt xem. "Đã xem" tính các lượt xem trước mốc :before
+     * (lúc app tải trang đầu), để đang lướt mà xem thêm video thì các trang sau không bị lệch.
+     */
+    @Query(value = """
+            select v from Video v
+            where v.status = com.vsa.backend.enums.VideoStatus.PUBLISHED
+              and v.visibility = com.vsa.backend.enums.Visibility.PUBLIC
+            order by (select count(h) from WatchHistory h
+                      where h.user.id = :userId and h.video = v and h.watchedAt < :before) asc,
+                     v.viewCount desc, v.id desc
+            """,
+            countQuery = """
+            select count(v) from Video v
+            where v.status = com.vsa.backend.enums.VideoStatus.PUBLISHED
+              and v.visibility = com.vsa.backend.enums.Visibility.PUBLIC
+            """)
+    Page<Video> findTrendingUnwatchedFirst(@Param("userId") Long userId,
+                                           @Param("before") LocalDateTime before,
+                                           Pageable pageable);
 
     Page<Video> findByTopicIdAndStatusAndVisibilityOrderByCreatedAtDesc(
             Long topicId, VideoStatus status, Visibility visibility, Pageable pageable);

@@ -9,17 +9,19 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 
 public interface WatchHistoryRepository extends JpaRepository<WatchHistory, Long> {
 
     // Thêm dòng mới, hoặc đã có (cùng người, cùng video) thì chỉ cập nhật thời điểm xem. Câu lệnh riêng của MySQL.
+    // watchedAt lấy giờ của app (không dùng now() của MySQL) để so được với mốc "before" của Trending.
     @Modifying
     @Query(value = """
-            insert into watch_history (user_id, video_id, watched_at) values (:userId, :videoId, now(6))
-            on duplicate key update watched_at = now(6)
+            insert into watch_history (user_id, video_id, watched_at) values (:userId, :videoId, :watchedAt)
+            on duplicate key update watched_at = :watchedAt
             """, nativeQuery = true)
-    void upsert(@Param("userId") Long userId, @Param("videoId") Long videoId);
+    void upsert(@Param("userId") Long userId, @Param("videoId") Long videoId, @Param("watchedAt") LocalDateTime watchedAt);
 
     // Video đã xem, mới xem nhất trước. Bỏ video không còn xem được: nháp, bị ẩn, riêng tư của người khác.
     @Query(value = """
