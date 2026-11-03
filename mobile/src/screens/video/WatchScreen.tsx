@@ -13,7 +13,7 @@
  * - Khách bấm thả tim / theo dõi → bảng "Đăng nhập để tiếp tục" (requireAuth).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Platform, Pressable, RefreshControl, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +23,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { AppText, Avatar, ErrorView, Header, Loading, Screen } from '../../components';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
+import { PULL_THRESHOLD, useWebPullToRefresh } from '../../hooks/useWebPullToRefresh';
 import { useRequireAuth } from '../../context/LoginPromptContext';
 import { videoApi } from '../../api/videos';
 import { aiApi } from '../../api/ai';
@@ -148,6 +149,14 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
     }
     await list.refresh();
   };
+
+  // Bản web: RefreshControl không chạy trên trình duyệt → tự nghe kéo / lăn chuột ở đầu danh sách
+  const webPull = useWebPullToRefresh(
+    () => (feedRef.current as unknown as { getScrollableNode?: () => unknown } | null)?.getScrollableNode?.(),
+    refreshVideos,
+    videos.length > 0 && !list.refreshing,
+    sourceKey,
+  );
 
   // Video nào hiện quá 80% màn hình thì là video đang xem
   const viewabilityConfig = useMemo(() => ({ itemVisiblePercentThreshold: 80 }), []);
@@ -319,6 +328,25 @@ export default function WatchScreen({ navigation, route }: RootScreenProps<'Watc
         )}
       />
       {topBar}
+      {/* Bản web: vòng tròn chỉ báo khi kéo xuống / đang tải lại (điện thoại đã có RefreshControl) */}
+      {Platform.OS === 'web' && (webPull > 0 || list.refreshing) && (
+        <View
+          pointerEvents="none"
+          style={[styles.webPull, { top: insets.top + 56 + Math.min(webPull, PULL_THRESHOLD) / 2 }]}
+          accessibilityLabel="Đang tải lại video"
+        >
+          {list.refreshing ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <Ionicons
+              name="refresh"
+              size={20}
+              color={webPull >= PULL_THRESHOLD ? colors.primary : colors.text}
+              style={{ transform: [{ rotate: `${(webPull / PULL_THRESHOLD) * 270}deg` }] }}
+            />
+          )}
+        </View>
+      )}
       {/* Vẫn xem được video đang mở nhưng danh sách vuốt tiếp bị lỗi */}
       {!!list.error && (
         <Pressable
@@ -658,6 +686,7 @@ const styles = StyleSheet.create({
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: spacing.md, paddingHorizontal: spacing.lg, gap: spacing.md },
   commentBox: { height: 44, borderRadius: radius.xl, backgroundColor: colors.whiteSoft, justifyContent: 'center', paddingHorizontal: spacing.lg },
   commentHint: { opacity: 0.85 },
+  webPull: { position: 'absolute', alignSelf: 'center', width: 40, height: 40, borderRadius: 20, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
   retryPill: {
     position: 'absolute', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6,
     minHeight: 36, paddingHorizontal: spacing.md, borderRadius: radius.full, backgroundColor: colors.overlay,
