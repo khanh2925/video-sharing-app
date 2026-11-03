@@ -1,4 +1,4 @@
-# Video Sharing App – Đề tài 1 (TBDD)
+# LikTok – Video Sharing App – Đề tài 1 (TBDD)
 
 Nhóm: Phạm Quốc Khánh (NT) · Nguyễn Anh Long · Huỳnh Hoài Thanh
 

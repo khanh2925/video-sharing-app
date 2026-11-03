@@ -26,7 +26,11 @@ import { aiApi } from '../../api/ai';
 import { formatCount } from '../../utils/format';
 import { mediaUrl } from '../../utils/media';
 import type { SearchTab, TabScreenProps } from '../../navigation/types';
+
 import type { Audio, LiveStream, StoryGroup, Topic, Video } from '../../types/models';
+
+// Logo LikTok (trái tim có nút phát) – cùng hình với icon app
+const LOGO = require('../../../assets/logo-mark.png');
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -122,11 +126,10 @@ export default function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
       {/* Đầu trang: logo + chuông (đã đăng nhập) hoặc nút Đăng nhập (khách) */}
       <View style={styles.header}>
         <View style={styles.logo}>
-          <View style={styles.logoMark}>
-            <View style={styles.logoStroke} />
-            <View style={styles.logoStroke} />
-          </View>
-          <AppText weight="bold" size={20}>Video Sharing</AppText>
+          <Image source={LOGO} style={styles.logoMark} accessibilityIgnoresInvertColors />
+          <AppText weight="bold" size={20} accessibilityRole="header">
+            Lik<AppText weight="bold" size={20} color={colors.primary}>Tok</AppText>
+          </AppText>
         </View>
         <View style={styles.headerRight}>
         {/* Trợ lý AI (cần đăng nhập) */}
@@ -424,8 +427,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   logo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logoMark: { flexDirection: 'row', gap: 5, transform: [{ skewX: '-24deg' }] },
-  logoStroke: { width: 5, height: 20, borderRadius: 3, backgroundColor: colors.primary },
+  logoMark: { width: 30, height: 30 },
   bell: {
     width: 44,
     height: 44,
