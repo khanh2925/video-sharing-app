@@ -1,0 +1,133 @@
+@startuml class_layers_moi
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam dpi 130
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam nodesep 25
+skinparam ranksep 45
+hide empty members
+hide circle
+title Sơ đồ lớp các tầng - Thông báo, lịch sử xem, quản trị và AI
+
+package "Tầng Controller" #F3F8FF {
+  class NotificationController <<RestController>> {
+    + getMine(page, size)
+    + countUnread()
+    + markAllRead() / markRead(id)
+    + share(videoId, request)
+  }
+  class AdminDashboardController <<RestController>> {
+    + getStats()
+    + getVideos(q, status, page, size)
+    + getUsers(q, status, page, size)
+  }
+  class RecommendationController <<RestController>> {
+    + forYou()
+    + semanticSearch(q)
+    + reindex()
+  }
+  class ChatbotController <<RestController>> {
+    + ask(request)
+    + reset()
+  }
+  class TrackingController <<RestController>> {
+    + track(request)
+  }
+}
+
+package "Tầng Service" #F4FFF4 {
+  class NotificationService <<Service>> {
+    + notify(recipient, actorId, type, video, text)
+    + getMine(pageable) / countUnread()
+    + shareVideo(videoId, request)
+  }
+  class WatchHistoryService <<Service>> {
+    + record(videoId)
+    + getMine(pageable)
+    + clearMine()
+  }
+  class AdminDashboardService <<Service>> {
+    + getStats()
+    + getVideos(q, status, pageable)
+    + getUsers(q, status, pageable)
+  }
+  class TrackingService <<Service>> {
+    + videoEvent(type, videoId)
+    + search(query)
+    + recordFromClient(request)
+  }
+  class RecommendationService <<Service>> {
+    + forYou()
+    + semanticSearch(query)
+  }
+  class VideoEmbeddingService <<Service>> {
+    + index(video) / remove(videoId)
+  }
+  class ChatbotService <<Service>> {
+    + ask(message)
+    + reset()
+  }
+  class ChatTools <<@Tool>> {
+    + getAppRules()
+    + getMyVideos()
+  }
+  class SimpMessagingTemplate <<Spring>>
+}
+
+package "Tầng Repository / kho dữ liệu" #FFF7E6 {
+  interface NotificationRepository
+  interface WatchHistoryRepository {
+    + upsert(userId, videoId)
+    + findWatchedVideos(userId, pageable)
+  }
+  interface UserEventRepository
+  interface VideoStore <<VectorStore (pgvector)>>
+  interface ChatModel <<Gemini / OpenAI>>
+  interface EmbeddingModel <<Gemini embedding 768>>
+}
+
+package "Tầng Entity" #F7F0FF {
+  class Notification <<Entity>> {
+    - recipient, actor: User
+    - type: NotificationType
+    - video, text, read, createdAt
+  }
+  class WatchHistory <<Entity>> {
+    - user, video, watchedAt
+  }
+  class UserEvent <<Entity>> {
+    - userId, videoId
+    - eventType: EventType
+    - watchMs, durationMs, query, createdAt
+  }
+}
+
+NotificationController --> NotificationService
+AdminDashboardController --> AdminDashboardService
+RecommendationController --> RecommendationService
+RecommendationController --> VideoEmbeddingService
+ChatbotController --> ChatbotService
+TrackingController --> TrackingService
+
+NotificationService --> NotificationRepository
+NotificationService --> SimpMessagingTemplate : đẩy /user/queue/notifications
+WatchHistoryService --> WatchHistoryRepository
+TrackingService --> UserEventRepository
+RecommendationService --> UserEventRepository
+RecommendationService --> VideoStore
+VideoEmbeddingService --> VideoStore
+VideoStore --> EmbeddingModel
+ChatbotService --> ChatModel
+ChatbotService --> VideoStore : RAG (top 5)
+ChatbotService --> ChatTools
+
+NotificationRepository ..> Notification
+WatchHistoryRepository ..> WatchHistory
+UserEventRepository ..> UserEvent
+
+AdminDashboardService -[hidden]down- WatchHistoryService
+RecommendationService -[hidden]down- VideoEmbeddingService
+TrackingService -[hidden]down- RecommendationService
+@enduml

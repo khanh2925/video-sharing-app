@@ -1,0 +1,41 @@
+@startuml seq_chatbot
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam dpi 150
+skinparam shadowing false
+skinparam ParticipantPadding 12
+skinparam BoxPadding 8
+title Sơ đồ Sequence - UC22 Trợ lý AI (RAG + Tool calling)
+
+actor "Người dùng" as U
+participant "ChatbotScreen\n(app)" as App
+participant "ChatbotController" as C
+participant "ChatbotService\n(Spring AI ChatClient)" as S
+participant "MessageChatMemoryAdvisor\n(nhớ 10 tin gần nhất)" as M
+participant "QuestionAnswerAdvisor\n(RAG)" as R
+database "pgvector\nvideo_vectors" as V
+participant "Mô hình chat\n(Gemini / OpenAI)" as LLM
+participant "ChatTools\n(@Tool)" as T
+
+U -> App : gõ câu hỏi, bấm Gửi
+App -> C : POST /api/chat {message}\nAuthorization: Bearer JWT
+C -> S : ask(message)
+S -> M : thêm lịch sử hội thoại của "user-{id}"
+S -> R : tìm video liên quan
+R -> V : similaritySearch(câu hỏi)\ntopK = 5, ngưỡng 0.55
+V --> R : 5 video gần nghĩa nhất
+R --> S : chèn danh sách video vào prompt
+S -> LLM : system prompt + lịch sử + video + câu hỏi
+alt Cần quy định app hoặc video của chính người hỏi
+  LLM -> T : getAppRules() / getMyVideos()
+  T --> LLM : dữ liệu thật từ system_settings / videos
+end
+LLM --> S : câu trả lời
+S -> M : lưu câu hỏi và câu trả lời
+S --> C : ChatReply {reply, videos[]}
+C --> App : 200 OK
+App --> U : hiện câu trả lời + thẻ video bấm xem được
+alt Hết lượt / sai key / mất mạng
+  S --> C : 503 "Trợ lý đang bận hoặc hết lượt, thử lại sau ít phút"
+end
+@enduml
