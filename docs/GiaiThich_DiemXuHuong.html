@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Điểm xu hướng</title>
+<style>
+  :root {
+    --bg: #fbf9fc; --card: #ffffff; --ink: #1f1a22; --muted: #6b6270; --line: #ece7ee;
+    --accent: #db2766; --accent-soft: #fde7ef; --code-bg: #f6f3f7; --ok: #157a4a; --bad: #b4232c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151217; --card: #1e1a21; --ink: #f1ecf3; --muted: #a79eab; --line: #2f2933;
+      --accent: #ff5c93; --accent-soft: #3a1b27; --code-bg: #241f28; --ok: #4cd38f; --bad: #ff7a80; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 880px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  h2 { font-size: 20px; margin: 40px 0 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  code { font: 13.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code-bg);
+    padding: 1px 5px; border-radius: 4px; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+    overflow-x: auto; margin: 10px 0 14px; }
+  pre code { background: none; padding: 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin: 14px 0; }
+  .formula { font-size: 17px; text-align: center; padding: 18px; background: var(--accent-soft); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 15px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: 14px; }
+  .arrow { color: var(--muted); }
+  .note { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; color: var(--muted); }
+  .wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+<h1>Điểm xu hướng cho mục Top trending</h1>
+<p class="sub">Làm theo tài liệu "Thiết kế thuật toán Top Trending &amp; Dành cho bạn" (04/11/2026), chỉnh lại cho khớp với dữ liệu app đang có.</p>
+
+<h2>1. Ý tưởng</h2>
+<p>Lúc trước, Top trending xếp theo tổng lượt xem tích luỹ. Cách này có hai điểm dở:</p>
+<ul>
+  <li>Video cũ nhiều view đứng top mãi.</li>
+  <li>Mở đi mở lại một video là đẩy được nó lên.</li>
+</ul>
+<p>Giờ mỗi video có một điểm xu hướng. Điểm được tính từ hành vi trong 72 giờ gần nhất, lấy ở bảng <code>user_events</code> (bảng mà phần gợi ý AI đang dùng) và lượt chia sẻ trong bảng <code>notifications</code>.</p>
+<p class="note">Đây là thuật toán chấm điểm, không gọi Gemini. Tài liệu cũng ghi rằng không nhất thiết dùng AI hay embedding để tính Top Trending, vì vector chủ yếu dùng cho mục Dành cho bạn. Nhờ vậy, mục xu hướng vẫn chạy khi tắt AI.</p>
+
+<div class="flow">
+  <span class="step">App gửi WATCH / SKIP<br>backend ghi LIKE, COMMENT</span><span class="arrow">→</span>
+  <span class="step"><code>user_events</code> + <code>notifications</code> (SHARE)</span><span class="arrow">→</span>
+  <span class="step"><code>TrendingScoreService</code><br>10 phút chạy 1 lần</span><span class="arrow">→</span>
+  <span class="step">Cột <code>videos.trending_score</code></span><span class="arrow">→</span>
+  <span class="step"><code>GET /api/videos/trending</code><br>ORDER BY điểm</span>
+</div>
+
+<h2>2. Công thức</h2>
+<div class="formula">TrendingScore = max(0, 100 × (0.35R + 0.25E + 0.30V + 0.10F) − P)</div>
+<p>R, E, V, F đều nằm trong khoảng 0 tới 1. P là điểm phạt, tính trên thang 0 tới 100.</p>
+
+<div class="wrap"><table>
+  <tr><th>Ký hiệu</th><th>Ý nghĩa</th><th>Cách tính trong app</th></tr>
+  <tr><td><b>R</b> Retention</td><td>Người xem có xem hết không</td><td>R = 0.65 × tỉ lệ xem hết + 0.35 × tỉ lệ thời gian xem. Xem từ 90% video trở lên thì tính là xem hết. Cả hai tỉ lệ đều được làm trơn Bayes.</td></tr>
+  <tr><td><b>E</b> Engagement</td><td>Mức tương tác</td><td>Gồm tỉ lệ thích, bình luận, chia sẻ trên số người đã tới video, có làm trơn. Mỗi tỉ lệ được chia cho video cao nhất để đưa về 0–1, rồi gộp lại: E = (0.10·L + 0.20·C + 0.30·S) / 0.60. App chưa có chức năng "lưu video" nên không có phần B.</td></tr>
+  <tr><td><b>V</b> Velocity</td><td>Tốc độ tăng</td><td>log(1 + số lượt xem hợp lệ trong 24 giờ qua), chia cho video cao nhất.</td></tr>
+  <tr><td><b>F</b> Freshness</td><td>Độ mới</td><td>F = exp(−tuổi video theo giờ / 48). Video vừa đăng có F = 1, sau 48 giờ còn khoảng 0.37.</td></tr>
+  <tr><td><b>P</b> Penalty</td><td>Điểm phạt chất lượng</td><td>P = 20 × tỉ lệ lướt qua (có làm trơn).</td></tr>
+</table></div>
+
+<h3>Lượt xem hợp lệ và chống spam</h3>
+<ul>
+  <li><b>Lượt xem hợp lệ</b> là một sự kiện WATCH. App chỉ gửi WATCH khi người dùng xem từ 2 giây trở lên, còn dưới 2 giây thì gửi SKIP.</li>
+  <li>Với mỗi video, mỗi người chỉ có <b>1 lượt xem hợp lệ</b> (lấy lần xem lâu nhất), 1 lượt thích, 1 bình luận, 1 lượt chia sẻ.
+    <ul>
+      <li>Mở đi mở lại không tăng điểm.</li>
+      <li>Thích rồi bỏ thích thì không còn lượt thích.</li>
+      <li>Chia sẻ cho 5 bạn vẫn chỉ tính 1 lượt chia sẻ.</li>
+    </ul>
+  </li>
+  <li>Lướt qua rồi quay lại xem thì tính là xem, không tính là lướt.</li>
+  <li>Khách không có tài khoản nên không gộp được. Mỗi sự kiện của khách được tính riêng.</li>
+  <li><b>Hành vi của chính tác giả không được tính.</b> Tác giả tự xem hết, tự thích, tự chia sẻ video của mình cũng không đẩy được video lên.</li>
+</ul>
+
+<h3>Làm trơn Bayes</h3>
+<div class="formula">tỉ lệ = (số lần + m × trung bình cả kho) / (số mẫu + m), với m = 10</div>
+<p>Một video có 1 lượt xem và người đó xem hết thì tỉ lệ thô là 100%. Sau khi làm trơn, tỉ lệ bị kéo về gần mức trung bình của cả kho. Nhờ vậy, video này không vượt được video có 30 lượt xem với 80% xem hết. Đây đúng là test bắt buộc ở mục 7.3 của tài liệu.</p>
+
+<h3>Chỗ chỉnh khác tài liệu</h3>
+<ul>
+  <li><b>Video chưa ai tới trong 72 giờ thì R = E = P = 0, chỉ còn F.</b> Nếu làm trơn Bayes với 0 mẫu, video sẽ nhận đúng mức trung bình, và khi chạy thử trên DB, video im lặng lại đứng trên video có người xem và thích thật. Dữ liệu đồ án thưa nên phải chặn trường hợp này.</li>
+  <li><b>Mẫu số của E</b> là số người đã tới video (xem hợp lệ, thích, bình luận hoặc chia sẻ), không phải số lượt xem. Lý do là có người thích hoặc chia sẻ mà không có sự kiện WATCH, nếu chia cho lượt xem thì tỉ lệ vượt quá 1.</li>
+  <li><b>Cửa sổ 72 giờ</b> thay vì 24 giờ, và <b>V đếm trong 24 giờ</b> thay vì 1–3 giờ. Đồ án ít người dùng nên cửa sổ ngắn thì V hầu như luôn bằng 0.</li>
+  <li><b>V chỉ chia cho video cao nhất,</b> chưa so theo nhóm video cùng độ tuổi. Kho video còn nhỏ nên mỗi nhóm có quá ít video để so.</li>
+</ul>
+
+<h3>Ví dụ trong tài liệu</h3>
+<div class="card">
+  Video A: R 0.65, E 0.70, V 0.10, F 0.25 → 100 × (0.2275 + 0.175 + 0.03 + 0.025) = <b>45.75</b><br>
+  Video B: R 0.78, E 0.60, V 0.95, F 0.90 → 100 × (0.273 + 0.15 + 0.285 + 0.09) = <b>79.80</b><br>
+  → B đứng trên A dù tổng lượt xem tích luỹ có thể ít hơn, vì B đang tăng nhanh và còn mới.
+</div>
+
+<h2>3. Các file đã đổi</h2>
+<div class="wrap"><table>
+  <tr><th>File</th><th>Đổi gì</th></tr>
+  <tr><td><code>ai/trending/TrendingScoreService.java</code> (mới)</td><td>Tính R, E, V, F, P và điểm, ghi vào DB, giữ bảng xếp hạng lần gần nhất</td></tr>
+  <tr><td><code>ai/trending/TrendingConfig.java</code> (mới)</td><td>Bật đọc thông số và chạy tác vụ định kỳ (<code>@Scheduled</code>)</td></tr>
+  <tr><td><code>ai/trending/TrendingProperties.java</code> (mới)</td><td>Đọc khối <code>app.trending</code> trong <code>application.yaml</code></td></tr>
+  <tr><td><code>ai/trending/TrendingBreakdown.java</code> (mới)</td><td>Điểm và các thành phần của từng video</td></tr>
+  <tr><td><code>ai/trending/TrendingAdminController.java</code> (mới)</td><td>API cho quản trị viên xem R, E, V, F và bấm tính lại</td></tr>
+  <tr><td><code>entities/Video.java</code></td><td>Thêm cột <code>trendingScore</code> và chỉ mục</td></tr>
+  <tr><td><code>repositories/VideoRepository.java</code></td><td>Thêm hàm lấy vài cột của video công khai, hàm UPDATE riêng cột điểm, đổi thứ tự sắp xếp của Trending</td></tr>
+  <tr><td><code>repositories/NotificationRepository.java</code></td><td>Thêm hàm lấy lượt chia sẻ (thông báo SHARE)</td></tr>
+  <tr><td><code>ai/tracking/UserEventRepository.java</code></td><td>Thêm hàm lấy hành vi từ một mốc thời gian</td></tr>
+  <tr><td><code>services/VideoService.java</code></td><td>Trending của khách xếp theo điểm</td></tr>
+  <tr><td><code>TrendingScoreServiceTest.java</code> (mới)</td><td>11 test không cần MySQL, gồm các test bắt buộc ở mục 7.3 của tài liệu</td></tr>
+</table></div>
+
+<h2>4. Đọc code từng đoạn</h2>
+
+<h3>4.1 Chạy định kỳ, để ở lớp riêng</h3>
+<pre><code>@Scheduled(initialDelayString = "${app.trending.initial-delay:PT10S}",
+        fixedDelayString = "${app.trending.refresh-interval:PT10M}")
+void refreshPeriodically() {
+    try {
+        int updated = trendingScoreService.refresh(LocalDateTime.now());
+        log.info("Đã tính lại điểm xu hướng cho {} video", updated);
+    } catch (RuntimeException e) {
+        log.warn("Không tính được điểm xu hướng: {}", e.getMessage());
+    }
+}</code></pre>
+<p>Lần đầu chạy sau khi bật backend 10 giây, sau đó cứ 10 phút một lần. <code>PT10M</code> là cách viết "10 phút" theo chuẩn ISO.</p>
+<p><b>Vì sao để ở lớp <code>TrendingScheduler</code> riêng?</b> Lúc chạy thử, mình để hàm này ngay trong <code>TrendingScoreService</code> rồi gọi <code>this.refresh()</code>, và gặp lỗi "No active transaction". <code>@Transactional</code> chỉ có tác dụng khi lời gọi đi từ bên ngoài vào, qua proxy của Spring. Gọi nội bộ trong cùng lớp thì không qua proxy nên không có transaction.</p>
+
+<h3>4.2 Gom lượt xem: mỗi người một kết quả</h3>
+<pre><code>String who = ev.getUserId() == null ? "guest" + (guest++) : "u" + ev.getUserId();
+Watch w = perUser.computeIfAbsent(who + "-" + ev.getVideoId(), k -> new Watch(who, ev.getVideoId()));
+if (ev.getEventType() == EventType.WATCH) {
+    w.bestRatio = Math.max(w.bestRatio, watchRatio(ev));
+    // ...
+}</code></pre>
+<p>Khoá <code>người-video</code> gom mọi lần xem của một người. <code>bestRatio</code> bắt đầu là −1, nghĩa là chỉ lướt qua. Chỉ cần có một lần WATCH thì nó thành tỉ lệ xem lâu nhất. Khoá của khách có thêm số thứ tự nên không bị gộp.</p>
+
+<h3>4.3 Làm trơn và đưa về 0–1</h3>
+<pre><code>private double smooth(double count, double samples, double prior) {
+    double m = properties.smoothingViews();
+    return (count + m * prior) / (samples + m);
+}
+
+private static double scale(double value, double max) {
+    return max &lt;= 0 ? 0 : Math.min(1, value / max);
+}</code></pre>
+
+<h3>4.4 Ghép thành điểm</h3>
+<pre><code>double score = Math.max(0, 100 * (mix.retention() * r + mix.engagement() * e
+        + mix.velocity() * vel + mix.freshness() * f) - p);</code></pre>
+
+<h3>4.5 Ghi điểm: UPDATE riêng một cột</h3>
+<pre><code>@Modifying
+@Query("update Video v set v.trendingScore = :score where v.id = :videoId")
+int updateTrendingScore(@Param("videoId") Long videoId, @Param("score") double score);</code></pre>
+<p>Không dùng <code>save(video)</code>, vì Hibernate sẽ ghi lại mọi cột, kể cả <code>viewCount</code> và <code>likeCount</code>. Nếu đúng lúc đó có người xem hoặc thích video, lượt vừa cộng sẽ bị ghi đè bằng số cũ.</p>
+
+<h3>4.6 Query Trending của người đã đăng nhập</h3>
+<pre><code>order by (select count(h) from WatchHistory h
+          where h.user.id = :userId and h.video = v and h.watchedAt &lt; :before) asc,
+         v.trendingScore desc, v.viewCount desc, v.id desc</code></pre>
+<p>Video chưa xem vẫn lên trước như cũ. Trong mỗi nhóm, video xếp theo điểm.</p>
+
+<h2>5. Xem điểm và demo (mục 7.1 của tài liệu)</h2>
+<p>Đăng nhập bằng tài khoản <code>admin</code>, lấy token rồi gọi:</p>
+<pre><code>GET  /api/admin/trending?limit=20     # bảng xếp hạng lần tính gần nhất kèm R, E, V, F, P
+POST /api/admin/trending/refresh      # tính lại ngay, không chờ 10 phút</code></pre>
+<p>Mỗi phần tử có <code>score, retention, engagement, velocity, freshness, penalty</code> cùng các số thô <code>validViews, completes, skips, likes, comments, shares</code>. Nhờ đó giải thích được vì sao video đứng hạng đó.</p>
+<p>Kịch bản demo:</p>
+<ol>
+  <li>Dùng 2–3 tài khoản xem hết, thích, chia sẻ một video mới.</li>
+  <li>Gọi <code>POST /api/admin/trending/refresh</code>.</li>
+  <li>Thấy video đó lên đầu, có V cao vì vừa được xem trong 24 giờ qua. Lưu ý: tác giả tự tương tác thì không tính.</li>
+</ol>
+
+<h2>6. Chỉnh thông số</h2>
+<p>Mọi hệ số nằm trong khối <code>app.trending</code> của <code>application.yaml</code> (theo quy tắc R17). Sửa xong thì chạy lại backend.</p>
+<pre><code>trending:
+  refresh-interval: PT10M
+  initial-delay: PT10S
+  window-hours: 72
+  velocity-hours: 24
+  complete-ratio: 0.9
+  smoothing-views: 10
+  freshness-hours: 48
+  skip-penalty: 20
+  mix: { retention: 0.35, engagement: 0.25, velocity: 0.30, freshness: 0.10 }
+  retention: { completion: 0.65, watch-ratio: 0.35 }
+  engagement: { like: 0.10, comment: 0.20, share: 0.30 }</code></pre>
+
+<h2>7. Giới hạn hiện tại</h2>
+<ul>
+  <li>Điểm cập nhật 10 phút một lần. Muốn thấy ngay thì quản trị viên gọi API refresh.</li>
+  <li>Bảng xếp hạng chi tiết (R, E, V, F) chỉ giữ trong bộ nhớ. Chạy lại backend thì mất, rồi có lại sau 10 giây. Riêng điểm thì đã lưu trong DB.</li>
+  <li>Video vừa đăng có điểm 0 cho tới lần tính kế tiếp (tối đa 10 phút).</li>
+  <li>Chưa có các phần sau của tài liệu: bảng <code>video_metrics_hourly</code>, chuẩn hoá V theo nhóm cùng độ tuổi, sự kiện "lưu video", "không quan tâm", và phát hiện tương tác bất thường.</li>
+  <li>Mỗi lần tính sẽ đọc toàn bộ hành vi trong 72 giờ vào bộ nhớ. Với dữ liệu đồ án thì rất nhẹ. Khi dữ liệu lớn, nên cộng dồn theo giờ bằng SQL.</li>
+</ul>
+</main>
+</body>
+</html>

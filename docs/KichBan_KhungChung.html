@@ -1,0 +1,963 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kịch bản Đọc code</title><style>
+:root{--bg:#fff;--fg:#1d1a22;--mut:#6d6577;--card:#f6f3f7;--line:#ece7ee;--pink:#db2766}
+@media (prefers-color-scheme:dark){:root{--bg:#121016;--fg:#eee9f3;--mut:#9c95a8;--card:#1d1a25;--line:#2c2838}}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,system-ui,sans-serif;max-width:900px;margin:0 auto;padding:24px 16px}
+h1{color:var(--pink);margin-top:48px}h2{border-top:2px solid var(--line);padding-top:24px;margin-top:40px}
+h3{font-size:16px;margin:0 0 8px}section{background:var(--card);border-radius:12px;padding:14px 16px;margin:14px 0}
+.old,.new{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;margin-left:6px}
+.old{background:var(--line);color:var(--mut)}.new{background:rgba(219,39,102,.15);color:var(--pink)}
+.say{border-left:3px solid var(--pink);padding-left:12px;color:var(--fg)}.say p{margin:4px 0}
+.it{color:var(--mut);margin:0 0 8px}table{border-collapse:collapse;width:100%;font-size:14px;margin-bottom:10px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}th{color:var(--mut)}
+.nodes{color:var(--mut)}pre{font:13px/1.45 ui-monospace,Menlo,monospace;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto}.toc li.p{font-weight:700;margin-top:8px;list-style:none}a{color:var(--pink)}
+</style></head><body><h1 style="margin-top:0">Kịch bản video · Đọc code cùng tôi · Khung dùng chung</h1>
+<p>Khung xám là code thật hiện trên video (số dòng khớp VS Code). Dòng có vạch hồng là lời đọc, cũng là phụ đề.</p>
+<ul class="toc"><li class="p"><a href="#Đọc code cùng tôi · Khung dùng chung">Đọc code cùng tôi · Khung dùng chung</a></li><li><a href="#c1">01 · Mở đầu: khung dùng chung là gì</a></li><li><a href="#c2">02 · Điểm vào app</a></li><li><a href="#c3">03 · Thanh tab và danh bạ màn</a></li><li><a href="#c4">04 · Gọi server một chỗ</a></li><li><a href="#c5">05 · Các file api: mỗi hàm một dòng</a></li><li><a href="#c6">06 · AuthContext: giữ người đang đăng nhập</a></li><li><a href="#c7">07 · Chế độ khách: cổng gác requireAuth</a></li><li><a href="#c8">08 · Hook tải dữ liệu 1: useFetch</a></li><li><a href="#c9">09 · Hook tải dữ liệu 2: usePagedList</a></li><li><a href="#c10">10 · Component form: TextField, Button, Screen, Header</a></li><li><a href="#c11">11 · Component danh sách: VideoGrid, Chip, SegmentedTabs, BottomSheet, StateViews</a></li><li><a href="#c12">12 · Theme, utils và hook nhỏ</a></li><li><a href="#c13">13 · Tổng kết</a></li></ul><h1 id="Đọc code cùng tôi · Khung dùng chung">Đọc code cùng tôi · Khung dùng chung</h1><h2 id="c1">Chương 01 · Mở đầu: khung dùng chung là gì</h2><section><h3>Đọc code cùng tôi · Khung dùng chung — Video Sharing App · phần 2 </h3><div class="say"><p>Video trước đi qua chín màn của bạn.</p><p>Màn nào cũng chỉ mượn: mượn use Auth, mượn video Api, mượn Text Field.</p><p>Video này mở từng thứ được mượn ra xem bên trong nó làm gì, ở file nào, dòng nào.</p><p>Xem xong, bạn đọc được cả app chứ không chỉ chín màn.</p></div></section><section><h3>Ba câu hỏi cho mỗi file khung </h3><ol class='it'><li>1. AI GỌI nó?  →  màn nào của bạn, dòng nào</li><li>2. Nó LÀM GÌ bên trong?  →  đoạn code chính</li><li>3. Nó TRẢ VỀ hoặc VẼ RA gì?  →  return, hoặc JSX</li></ol><div class="say"><p>Câu một: ai gọi nó. Mỗi chương tôi sẽ chỉ đúng dòng trong màn của bạn đang gọi, nối ngược về video chín màn.</p><p>Câu hai: bên trong nó làm gì. Đọc đoạn code chính theo đường đi của dữ liệu.</p><p>Câu ba: nó trả về gì hoặc vẽ ra gì.</p><p>Hàm thì xem return, component thì xem JSX.</p><p>Biết cái trả về là biết cách dùng.</p></div></section><section><h3>Bảy tầng của app, từ bật máy tới server </h3><p class='nodes'><b>App.tsx</b> <small>bọc Provider</small> → <b>navigation/</b> <small>Stack, Tabs</small> → <b>screens/</b> <small>9 màn của bạn</small> → <b>components, context, hooks</b> <small>đồ mượn</small> → <b>api/</b> <small>client, videos, auth</small> → <b>Backend</b> <small>Spring Boot</small></p><div class="say"><p>Tầng một, App chấm tsx. Bật app lên là chạy file này đầu tiên.</p><p>Nó bọc mọi thứ trong các Provider rồi giao cho tầng điều hướng.</p><p>Tầng hai, thư mục navigation. Quyết định có những màn nào, màn nào mở kiểu nào, thanh tab có gì.</p><p>Tầng ba, screens. Chín màn của bạn nằm đây.</p><p>Màn chỉ ghép đồ, không tự làm việc nặng.</p><p>Tầng bốn là đồ mượn: components để vẽ, context để chia sẻ người dùng đang đăng nhập, hooks để tải dữ liệu. Video này tập trung vào tầng này.</p><p>Tầng năm, thư mục api. Mỗi hàm là một dòng gọi server.</p><p>Tất cả đi qua một file client duy nhất.</p><p>Tầng sáu, backend Spring Boot. Video này dừng ở cửa backend, không đi vào trong.</p></div></section><section><h3>Mười một chương, xếp theo đường đi của dữ liệu </h3><table><tr><th>#</th><th>Chương</th><th>File</th></tr><tr><td>1</td><td>Điểm vào app</td><td>App.tsx, RootNavigator.tsx</td></tr><tr><td>2</td><td>Thanh tab và danh bạ màn</td><td>MainTabs.tsx, types.ts</td></tr><tr><td>3</td><td>Gọi server một chỗ</td><td>api/client.ts</td></tr><tr><td>4</td><td>Các file api</td><td>auth, videos, catalog, stories</td></tr><tr><td>5</td><td>AuthContext</td><td>context/AuthContext.tsx</td></tr><tr><td>6</td><td>Chế độ khách</td><td>context/LoginPromptContext.tsx</td></tr><tr><td>7</td><td>Hook tải dữ liệu</td><td>useFetch.ts, usePagedList.ts</td></tr><tr><td>8</td><td>Component form</td><td>TextField, Button, Screen, Header</td></tr><tr><td>9</td><td>Component danh sách</td><td>VideoGrid, Chip, SegmentedTabs, BottomSheet</td></tr><tr><td>10</td><td>Theme, utils, hook nhỏ</td><td>theme, config, format, media</td></tr></table><div class="say"><p>Chương một, điểm vào app: App chấm tsx và Root Navigator.</p><p>Chương hai, thanh tab và danh bạ màn.</p><p>Chương ba, file client, nơi duy nhất gọi server.</p><p>Chương bốn, các file api nhỏ, mỗi hàm một dòng.</p><p>Chương năm, Auth Context, giữ người dùng đang đăng nhập.</p><p>Chương sáu, Login Prompt Context, cổng gác cho chế độ khách.</p><p>Chương bảy, hai hook tải dữ liệu và phân trang.</p><p>Chương tám, các component dùng trong form.</p><p>Chương chín, các component dùng trong danh sách.</p><p>Chương mười, theme, utils và hook nhỏ. Những file không màn nào của bạn dùng, như lives chấm ts, Avatar, User Row, tôi chỉ nhắc tên, không giảng.</p></div></section><section><h3>Cách xem </h3><ol class='it'><li>VS Code một bên, video một bên, mở theo file được gọi tên</li><li>Mỗi chương bắt đầu từ dòng trong màn của bạn, rồi mới nhảy sang file khung</li><li>Khó thì bấm dừng, đọc lại trong VS Code</li><li>Tới cảnh Tự kiểm tra thì tự trả lời trước</li></ol><div class="say"><p>Cách xem giống video trước: VS Code một bên, video một bên, tôi gọi tên file nào thì bạn mở file đó.</p><p>Mỗi chương bắt đầu từ một dòng trong màn của bạn mà bạn đã quen, rồi mới nhảy sang file khung.</p><p>Nhờ vậy luôn biết mình đang ở đâu.</p><p>Khó thì bấm dừng, đọc lại đoạn đó trong VS Code rồi chạy tiếp.</p><p>Tới cảnh Tự kiểm tra thì tự trả lời trước, sai cũng không sao.</p></div></section><h2 id="c2">Chương 02 · Điểm vào app</h2><section><h3>Điểm vào app — mobile/App.tsx · src/navigation/RootNavigator.tsx </h3><div class="say"><p>Chương một: điểm vào app. Mở hai file.</p><p>App chấm tsx nằm ngay thư mục mobile, chỉ bốn mươi lăm dòng.</p><p>Root Navigator chấm tsx trong thư mục src, navigation, tám mươi sáu dòng.</p><p>Hai file này quyết định app bật lên thì thấy gì.</p></div></section><section><h3>Ai gọi · làm gì · trả về gì </h3><ol class='it'><li>Ai gọi: Expo tự chạy App.tsx khi bật app, không màn nào gọi</li><li>Làm gì: tải font, bọc Provider, rồi giao cho RootNavigator khai báo 23 màn</li><li>Trả về: cây giao diện có MainTabs ở dưới cùng, Login và Register là modal</li></ol><div class="say"><p>Ai gọi: không màn nào gọi cả. Expo tự chạy App chấm tsx khi bạn bật app, giống hàm main trong Java.</p><p>Làm gì: tải font, bọc mọi thứ trong vài lớp Provider, rồi giao cho Root Navigator khai báo hai mươi ba màn.</p><p>Trả về: một cây giao diện mà Main Tabs nằm dưới cùng, các màn khác chồng lên, còn Login và Register mở dạng modal trượt từ dưới.</p></div></section><section><h3> </h3><p class='nodes'>mobile/App.tsx</p><pre>export default function App() {
+  const [fontsLoaded] = useFonts({
+  if (!fontsLoaded) {
+    return null; // chờ font tải xong (rất nhanh) rồi mới vẽ
+  }
+  return (
+    &lt;GestureHandlerRootView style={{ flex: 1 }}&gt;
+      &lt;SafeAreaProvider&gt;
+        &lt;AuthProvider&gt;
+          &lt;NavigationContainer theme={navTheme}&gt;
+            &lt;RootNavigator /&gt;
+          &lt;/NavigationContainer&gt;
+        &lt;/AuthProvider&gt;
+      &lt;/SafeAreaProvider&gt;
+    &lt;/GestureHandlerRootView&gt;
+  );
+}</pre><div class="say"><p>Dòng hai mươi hai, hàm App. Dòng hai mươi ba, use Fonts tải bốn kiểu chữ Be Vietnam Pro.</p><p>Hook trả về mảng, phần tử đầu là cờ đã tải xong chưa.</p><p>Chưa tải xong thì return null, nghĩa là chưa vẽ gì.</p><p>Rất nhanh, bạn gần như không thấy. Nếu vẽ sớm, chữ sẽ nhảy font một nhịp.</p><p>Từ dòng ba mươi lăm là các lớp bọc.</p><p>Gesture Handler Root View để cử chỉ vuốt hoạt động.</p><p>Safe Area Provider để biết tai thỏ và thanh home ở đâu.</p><p>Bọc nghĩa là: thứ nằm trong được dùng dịch vụ của lớp ngoài.</p><p>Auth Provider ở dòng ba mươi bảy là lớp quan trọng với bạn.</p><p>Nhờ nó mà mọi màn bên trong gọi use Auth đều lấy được cùng một user. Chương năm sẽ mở file này.</p><p>Navigation Container là cái hộp của React Navigation, theme lấy màu hồng từ file theme.</p><p>Bên trong là Root Navigator, nơi khai báo mọi màn.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/navigation/RootNavigator.tsx</p><pre>export default function RootNavigator() {
+  const { user, isBootstrapping } = useAuth();
+  const rootNav = useContext(NavigationContainerRefContext);
+  // user từ có → null: xoá hết các màn đang mở, về lại MainTabs
+  const wasLoggedIn = useRef(false);
+  useEffect(() =&gt; {
+    if (wasLoggedIn.current &amp;&amp; !user &amp;&amp; rootNav?.isReady()) {
+      rootNav.reset({ index: 0, routes: [{ name: &#x27;MainTabs&#x27; }] });
+    }
+    wasLoggedIn.current = !!user;
+  }, [user, rootNav]);
+  if (isBootstrapping) {
+    return &lt;Loading /&gt;;
+  }</pre><div class="say"><p>Sang Root Navigator, dòng ba mươi chín. Dòng bốn mươi lấy user và is Bootstrapping từ use Auth.</p><p>Bootstrapping là lúc app vừa mở, đang đọc token trong máy.</p><p>Dòng bốn mươi bốn tới năm mươi xử lý một tình huống: đang đăng nhập mà user chuyển về null, do bấm Đăng xuất hoặc token hết hạn.</p><p>Khi đó reset về Main Tabs, xoá hết màn đang mở, để không kẹt lại ở màn Đăng video khi đã là khách.</p><p>was Logged In là một ref ghi nhớ lần trước có user hay không, vì state không nhớ được quá khứ.</p><p>Dòng năm mươi hai: còn đang bootstrapping thì chỉ hiện Loading.</p><p>Nhờ vậy tắt app mở lại không bị chớp màn khách rồi mới sang màn đã đăng nhập.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/navigation/RootNavigator.tsx</p><pre>  return (
+    &lt;LoginPromptProvider&gt;
+      &lt;Stack.Navigator screenOptions={{ headerShown: false }}&gt;
+        &lt;Stack.Screen name=&quot;MainTabs&quot; component={MainTabs} /&gt;
+        &lt;Stack.Screen name=&quot;Watch&quot; component={WatchScreen} /&gt;
+        &lt;Stack.Screen name=&quot;Camera&quot; component={CameraScreen} options={{ animation: &#x27;slide_from_bottom&#x27; }} /&gt;
+        &lt;Stack.Screen name=&quot;Filter&quot; component={FilterScreen} options={{ presentation: &#x27;transparentModal&#x27;,
+          animation: &#x27;slide_from_bottom&#x27; }} /&gt;</pre><div class="say"><p>Dòng năm mươi bảy bọc Login Prompt Provider, lớp cho chế độ khách, chương sáu sẽ mở.</p><p>Dòng năm mươi tám, Stack Navigator. Stack là chồng màn: mở màn mới thì đè lên, lùi thì bỏ màn trên cùng.</p><p>header Shown false vì mỗi màn tự vẽ tiêu đề.</p><p>Dòng năm mươi chín, Main Tabs là màn đầu tiên nên luôn ở dưới cùng.</p><p>Khách hay đã đăng nhập đều vào đây, đúng quy tắc R ba.</p><p>Mỗi dòng Stack Screen là một màn: name là tên gọi khi navigate, component là file màn.</p><p>Tên này phải khớp với danh bạ trong types chấm ts, chương hai.</p><p>Nhìn tiếp dòng sáu mươi chín, bảy mươi: Camera trượt từ dưới lên, Filter là transparent Modal, nghĩa là nền trong suốt, thấy camera phía sau.</p><p>Đó là lý do bảng Bộ lọc đè lên camera.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/navigation/RootNavigator.tsx</p><pre>        &lt;Stack.Screen name=&quot;Music&quot; component={MusicScreen} options={{ presentation: &#x27;transparentModal&#x27;,
+          animation: &#x27;slide_from_bottom&#x27; }} /&gt;
+        &lt;Stack.Screen name=&quot;PostVideo&quot; component={PostVideoScreen} /&gt;
+        &lt;Stack.Screen name=&quot;Drafts&quot; component={DraftsScreen} /&gt;
+        &lt;Stack.Screen name=&quot;MyVideo&quot; component={MyVideoScreen} /&gt;
+        &lt;Stack.Screen name=&quot;EditVideo&quot; component={EditVideoScreen} /&gt;
+        &lt;Stack.Group screenOptions={{ presentation: &#x27;modal&#x27;, animation: &#x27;slide_from_bottom&#x27; }}&gt;
+          &lt;Stack.Screen name=&quot;Login&quot; component={LoginScreen} /&gt;
+          &lt;Stack.Screen name=&quot;Register&quot; component={RegisterScreen} /&gt;
+        &lt;/Stack.Group&gt;
+      &lt;/Stack.Navigator&gt;
+    &lt;/LoginPromptProvider&gt;
+  );
+}</pre><div class="say"><p>Dòng bảy mươi mốt tới bảy mươi lăm là các màn của bạn: Music, Post Video, Drafts, My Video, Edit Video. Chỉ khai báo, không có logic.</p><p>Dòng bảy mươi chín, một Group riêng cho Login và Register với presentation modal.</p><p>Nhờ vậy màn Đăng nhập trượt từ dưới lên và có nút X đóng, như bạn thấy ở video chín màn.</p><p>Vì Login nằm trong Stack, không phải một nhánh riêng, nên đăng nhập xong chỉ cần go Back là về đúng chỗ đang xem.</p><p>Đây là câu trả lời cho câu tự kiểm tra một của chương Đăng nhập.</p></div></section><section><h3>Bật app lên thì chuyện gì xảy ra </h3><p class='nodes'><b>Expo</b> <small>chạy App.tsx</small> → <b>useFonts</b> <small>tải chữ</small> → <b>AuthProvider</b> <small>đọc token</small> → <b>RootNavigator</b> <small>Loading?</small> → <b>MainTabs</b> <small>Trang chủ</small></p><div class="say"><p>Expo chạy App chấm tsx.</p><p>Tải font, chưa xong thì chưa vẽ.</p><p>Auth Provider đọc token trong Secure Store. Có token thì gọi server lấy thông tin người dùng.</p><p>Root Navigator thấy đang bootstrapping thì hiện Loading. Xong thì dựng Stack.</p><p>Màn đầu tiên luôn là Main Tabs, tức Trang chủ.</p><p>Có user thì tab Hồ sơ hiện hồ sơ thật, chưa có thì hiện nút Đăng ký.</p></div></section><section><h3>Tự kiểm tra trước khi qua chương kế </h3><ol class='it'><li>Tìm dòng rootNav.reset trong RootNavigator. Nếu bỏ đi, bấm Đăng xuất khi đang ở Video nháp thì sao?</li><li>Tìm Stack.Group ở cuối file. Vì sao Login không đặt chung với các màn trên?</li><li>Trong App.tsx, đổi chỗ AuthProvider ra ngoài SafeAreaProvider có sao không?</li></ol><div class="say"><p>Câu một: tìm dòng root Nav chấm reset.</p><p>Nếu bỏ đi, đang ở Video nháp mà đăng xuất thì màn Video nháp vẫn còn, dù đã là khách. Gợi ý: xem comment đầu file.</p><p>Câu hai: tìm Stack Group ở cuối file.</p><p>Vì sao Login không đặt chung với các màn trên?</p><p>Gợi ý: presentation modal là cách mở khác, cần nhóm riêng.</p><p>Câu ba: trong App chấm tsx, đổi Auth Provider ra ngoài Safe Area Provider có sao không?</p><p>Gợi ý: hai lớp này không phụ thuộc nhau, nên đổi được.</p><p>Nhưng Navigation Container phải nằm trong Auth Provider, vì Root Navigator gọi use Auth.</p></div></section><h2 id="c3">Chương 03 · Thanh tab và danh bạ màn</h2><section><h3>Thanh tab và danh bạ màn — src/navigation/MainTabs.tsx · src/navigation/types.ts </h3><div class="say"><p>Chương hai: thanh tab và danh bạ màn.</p><p>Mở hai file trong thư mục src, navigation.</p><p>Main Tabs chấm tsx, chín mươi hai dòng, vẽ thanh tab dưới đáy với năm ô.</p><p>types chấm ts, chín mươi ba dòng, là danh bạ ghi tên mọi màn và tham số, nhờ nó mà gõ sai tên màn là VS Code báo đỏ ngay.</p></div></section><section><h3>Ai gọi · làm gì · trả về gì </h3><ol class='it'><li>Ai gọi: RootNavigator dòng 59 đặt MainTabs làm màn đầu; mọi màn của bạn import RootScreenProps từ types.ts</li><li>Làm gì: MainTabs vẽ 5 tab, nút + chặn chuyển tab rồi mở Camera; types.ts liệt kê tên màn + params</li><li>Trả về: MainTabs trả về Tab.Navigator; types.ts không trả gì, chỉ là kiểu để TypeScript kiểm tra lúc gõ</li></ol><div class="say"><p>Ai gọi: Main Tabs được Root Navigator dòng năm mươi chín đặt làm màn đầu, bạn đã thấy ở chương một.</p><p>Còn types chấm ts thì mọi màn của bạn đều import Root Screen Props từ đó, như Login Screen dòng hai mươi sáu.</p><p>Làm gì: Main Tabs vẽ năm tab, riêng nút cộng không có màn thật, bấm vào thì chặn chuyển tab rồi mở Camera ở Stack ngoài.</p><p>types chấm ts liệt kê tên từng màn và tham số nó nhận.</p><p>Trả về: Main Tabs trả về một Tab chấm Navigator.</p><p>types chấm ts không trả gì lúc chạy, nó chỉ là kiểu để TypeScript kiểm tra lúc bạn gõ.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/navigation/MainTabs.tsx</p><pre>const Tab = createBottomTabNavigator&lt;MainTabParamList&gt;();
+type IconName = keyof typeof Ionicons.glyphMap;
+const icons: Record&lt;Exclude&lt;keyof MainTabParamList, &#x27;Create&#x27;&gt;, [IconName, IconName]&gt; = {
+  Home: [&#x27;home&#x27;, &#x27;home-outline&#x27;],
+  Search: [&#x27;search&#x27;, &#x27;search-outline&#x27;],
+  Friends: [&#x27;people&#x27;, &#x27;people-outline&#x27;],
+  MyProfile: [&#x27;person&#x27;, &#x27;person-outline&#x27;],
+};
+function EmptyScreen() {
+  return null;
+}
+export default function MainTabs() {
+  const rootNavigation = useNavigation(); // điều hướng của Stack ngoài (có màn Camera)
+  const requireAuth = useRequireAuth();   // khách bấm + hoặc Bạn bè → bảng đăng nhập</pre><div class="say"><p>Dòng mười tám tạo Tab bằng create Bottom Tab Navigator.</p><p>Phần trong ngoặc nhọn, Main Tab Param List, là danh sách năm tab lấy từ types chấm ts.</p><p>Dòng hai mươi mốt tới hai mươi sáu là bảng icon, mỗi tab một cặp: icon đặc khi đang chọn, icon viền khi không chọn.</p><p>Exclude Create nghĩa là bỏ tab Create ra khỏi bảng, vì nút cộng tự vẽ riêng.</p><p>Dòng hai mươi tám, Empty Screen trả về null, tức màn trống.</p><p>Tab Create cần một component cho đủ thủ tục, nhưng không bao giờ được hiện.</p><p>Dòng ba mươi ba lấy use Navigation: Main Tabs là một màn của Stack ngoài, nên navigation này là của Stack, nơi có màn Camera.</p><p>Dòng ba mươi bốn lấy require Auth, cổng gác cho khách, chương sáu sẽ mở file đó.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/navigation/MainTabs.tsx</p><pre>    &lt;Tab.Navigator
+      screenOptions={({ route }) =&gt; ({
+        headerShown: false,
+        tabBarActiveTintColor: colors.primaryText,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 11 },
+        tabBarStyle: { borderTopColor: colors.border },
+        tabBarIcon: ({ focused, color, size }) =&gt; {
+          if (route.name === &#x27;Create&#x27;) return null; // nút + tự vẽ ở tabBarButton bên dưới
+          const [on, off] = icons[route.name];
+          return &lt;Ionicons name={focused ? on : off} size={size} color={color} /&gt;;
+        },
+      })}</pre><div class="say"><p>Dòng ba mươi sáu, Tab chấm Navigator bọc năm tab.</p><p>screen Options nhận một hàm có route, để mỗi tab tự biết tên mình mà chọn icon.</p><p>Dòng ba mươi tám tới bốn mươi hai là trang trí: ẩn header, màu chọn và không chọn, cỡ chữ, tất cả lấy từ file theme chứ không viết cứng.</p><p>Dòng bốn mươi ba, tab Bar Icon. Tab Create thì trả null, vì nút cộng vẽ chỗ khác.</p><p>Còn lại tra bảng icons theo tên tab, focused là đang chọn thì lấy icon đặc, không thì icon viền.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/navigation/MainTabs.tsx</p><pre>      &lt;Tab.Screen name=&quot;Home&quot; component={HomeScreen} options={{ title: &#x27;Trang chủ&#x27; }} /&gt;
+      &lt;Tab.Screen name=&quot;Search&quot; component={SearchScreen} options={{ title: &#x27;Tìm kiếm&#x27; }} /&gt;
+      &lt;Tab.Screen
+        name=&quot;Create&quot;
+        component={EmptyScreen}
+        options={{
+          tabBarButton: ({ onPress }) =&gt; (
+            &lt;Pressable onPress={onPress} style={styles.createSlot} accessibilityRole=&quot;button&quot;
+              accessibilityLabel=&quot;Tạo video&quot;&gt;
+            &lt;/Pressable&gt;
+        }}
+        listeners={{
+          tabPress: (e) =&gt; {
+            e.preventDefault(); // không chuyển sang tab trống
+            requireAuth(() =&gt; rootNavigation.navigate(&#x27;Camera&#x27;));
+          },
+        }}
+      /&gt;</pre><div class="say"><p>Dòng năm mươi, năm mươi mốt: tab Home và Search, mỗi tab một dòng, title là chữ tiếng Việt hiện dưới icon.</p><p>Dòng năm mươi hai, tab Create, component là Empty Screen vừa nói.</p><p>Toàn bộ sức nặng nằm ở options và listeners bên dưới.</p><p>Dòng năm mươi tám, tab Bar Button: thay cả nút tab bằng Pressable của mình, nhận on Press từ thanh tab.</p><p>Bên trong là ô hồng chứa icon add, chính là nút cộng giữa thanh tab, có accessibility Label vì nút chỉ có icon.</p><p>Dòng sáu mươi sáu, listeners tab Press, chạy khi bấm vào tab này.</p><p>Dòng sáu mươi tám, e chấm prevent Default chặn việc chuyển sang tab trống.</p><p>Dòng sáu mươi chín, require Auth: đã đăng nhập thì chạy hàm bên trong, mở Camera bằng navigation của Stack ngoài. Khách thì chỉ hiện bảng đăng nhập.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/navigation/MainTabs.tsx</p><pre>      &lt;Tab.Screen
+        name=&quot;Friends&quot;
+        component={FriendsScreen}
+        options={{ title: &#x27;Bạn bè&#x27; }}
+        listeners={{
+          tabPress: (e) =&gt; {
+            // Khách bấm tab Bạn bè → hiện bảng đăng nhập, ở lại tab cũ
+            if (!requireAuth()) e.preventDefault();
+          },
+        }}
+      /&gt;
+      &lt;Tab.Screen name=&quot;MyProfile&quot; component={MyProfileScreen} options={{ title: &#x27;Hồ sơ&#x27; }} /&gt;
+    &lt;/Tab.Navigator&gt;</pre><div class="say"><p>Dòng bảy mươi ba, tab Bạn bè, màn của Long.</p><p>Khách bấm vào thì require Auth gọi không kèm hàm, nó trả về false và hiện bảng đăng nhập, prevent Default giữ nguyên tab cũ.</p><p>Đã đăng nhập thì không chặn, chuyển tab bình thường.</p><p>Dòng tám mươi bốn, tab Hồ sơ không có listener.</p><p>Khách vẫn vào được, vì My Profile Screen tự kiểm tra user: có thì hiện hồ sơ, không thì hiện màn Đăng ký tài khoản, đúng quy tắc R ba.</p></div></section><section><h3>Bấm nút + thì chuyện gì xảy ra </h3><p class='nodes'><b>Nút +</b> <small>tab Create</small> → <b>tabPress</b> <small>preventDefault</small> → <b>requireAuth</b> <small>có user chưa?</small> → <b>BottomSheet</b> <small>Đăng nhập để tiếp tục</small> → <b>Camera</b> <small>Stack ngoài</small></p><div class="say"><p>Bạn bấm nút cộng giữa thanh tab, đây là tab Create, nhưng không có màn thật phía sau.</p><p>Listener tab Press chạy trước, prevent Default chặn chuyển tab, thanh tab vẫn sáng ở tab bạn đang xem.</p><p>require Auth hỏi Auth Context xem đã có user đăng nhập hay chưa.</p><p>Chưa có thì hiện Bottom Sheet Đăng nhập để tiếp tục, hàm mở Camera không chạy.</p><p>Có user thì root Navigation chấm navigate Camera.</p><p>Camera là màn của Stack ngoài, đè lên cả thanh tab, nên lúc quay bạn không thấy tab.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/auth/LoginScreen.tsx</p><pre>export default function LoginScreen({ navigation }: RootScreenProps&lt;&#x27;Login&#x27;&gt;) {
+  const { login } = useAuth();
+  const [usernameOrEmail, setUsernameOrEmail] = useState(&#x27;&#x27;);
+  const [password, setPassword] = useState(&#x27;&#x27;);</pre><div class="say"><p>Sang file thứ hai, types chấm ts. Ai gọi?</p><p>Mở Login Screen dòng hai mươi sáu, bạn đã thấy dòng này ở video chín màn.</p><p>Root Screen Props với chữ Login trong ngoặc nhọn là kiểu của props, import từ types chấm ts.</p><p>Nhờ kiểu này, navigation biết hết tên màn và tham số của từng màn, gõ navigation chấm navigate rồi mở ngoặc là VS Code gợi ý ngay.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/navigation/types.ts</p><pre>/** 5 tab dưới đáy. Tab &quot;Create&quot; chỉ là nút +, bấm vào mở màn Camera. */
+export type MainTabParamList = {
+  Home: undefined;
+  Search: { q?: string; tab?: SearchTab; nonce?: number } | undefined;
+  Create: undefined;
+  Friends: undefined;
+  MyProfile: undefined;
+};
+export type RootStackParamList = {
+  MainTabs: NavigatorScreenParams&lt;MainTabParamList&gt; | undefined;
+  Login: undefined;
+  Register: undefined;</pre><div class="say"><p>Dòng ba mươi hai, Main Tab Param List: năm tab, mỗi dòng là tên tab và tham số, undefined nghĩa là không cần tham số.</p><p>Search nhận q là từ khoá và tab là tab kết quả mở sẵn, hoặc không nhận gì.</p><p>Dòng bốn mươi mốt, Root Stack Param List, danh bạ của Stack ngoài.</p><p>Dòng bốn mươi ba, Main Tabs nhận Navigator Screen Params, nhờ vậy màn Đăng video gọi pop To Main Tabs kèm screen My Profile mới nhảy đúng tab Hồ sơ.</p><p>Dòng bốn mươi bốn, bốn mươi lăm: Login và Register không có tham số.</p><p>Danh bạ chỉ ghi tên và tham số, còn file màn ghi ở Root Navigator như chương một.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/navigation/types.ts</p><pre>  // Cần đăng nhập (mở qua useRequireAuth)
+  EditProfile: undefined;
+  StoryCreate: { uri: string; mediaType: MediaType; audio?: Audio; durationSec?: number };
+  MyStory: undefined;
+  Camera: { filter?: string; audio?: Audio } | undefined;
+  Filter: { videoUri?: string; current?: string } | undefined;
+  Music: { current?: number } | undefined;
+  PostVideo: { videoUri?: string; filter?: string; audio?: Audio } | undefined;
+  Drafts: undefined;
+  MyVideo: { videoId: number };
+  EditVideo: { videoId: number };
+  GoLive: undefined;
+  LiveHost: { liveId: number };
+};
+/** Props cho màn nằm trong Stack */
+export type RootScreenProps&lt;T extends keyof RootStackParamList&gt; = NativeStackScreenProps&lt;RootStackParamList,
+  T&gt;;</pre><div class="say"><p>Dòng sáu mươi tám tới bảy mươi là các màn của bạn.</p><p>Camera nhận filter và audio, đều có dấu hỏi, nghĩa là có cũng được, không có cũng được.</p><p>Dấu hỏi vì màn Filter và Music gửi ngược về bằng pop To kèm merge true, còn mở Camera từ nút cộng thì không gửi gì.</p><p>Dòng bảy mươi mốt, Post Video nhận video Uri, filter, audio, lát nữa sẽ đối chiếu với Camera Screen.</p><p>Dòng bảy mươi hai tới bảy mươi tư: Drafts không tham số, còn My Video và Edit Video bắt buộc có video Id kiểu số, không dấu hỏi.</p><p>Gõ navigate My Video mà quên video Id là báo đỏ ngay.</p><p>Dòng tám mươi, Root Screen Props. Chữ T trong ngoặc nhọn là generic: một chỗ trống để bạn điền tên màn, giống tờ đơn in sẵn để trống phần tên.</p><p>Điền Login thì ra props của màn Login, điền Camera thì ra props của màn Camera, cùng một khuôn.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/CameraScreen.tsx</p><pre>  const goToPost = (videoUri: string) =&gt; {
+    navigation.navigate(&#x27;PostVideo&#x27;, { videoUri, filter, audio });
+  };</pre><div class="say"><p>Ai gọi tiếp: Camera Screen dòng một trăm hai mươi ba, trong hàm go To Post, bạn đã thấy ở video chín màn.</p><p>navigation chấm navigate Post Video kèm video Uri, filter, audio, khớp từng chữ với dòng bảy mươi mốt của types chấm ts.</p><p>Thử gõ sai video Url thay vì video Uri, VS Code gạch đỏ ngay, vì danh bạ không có tham số tên đó.</p><p>Đổi tên màn thành Post Videos cũng đỏ, lỗi bắt được lúc gõ chứ không đợi tới lúc chạy trên máy.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/navigation/types.ts</p><pre>/** Props cho màn nằm trong Tab (vẫn navigate được sang mọi màn của Stack) */
+export type TabScreenProps&lt;T extends keyof MainTabParamList&gt; = CompositeScreenProps&lt;
+  BottomTabScreenProps&lt;MainTabParamList, T&gt;,
+  NativeStackScreenProps&lt;RootStackParamList&gt;
+&gt;;
+// Cho useNavigation() biết danh sách màn → gõ navigate(&#x27;...&#x27;) có gợi ý và báo lỗi sai tên
+declare global {
+  namespace ReactNavigation {
+    interface RootParamList extends RootStackParamList {}
+  }
+}</pre><div class="say"><p>Dòng tám mươi ba, Tab Screen Props cho màn nằm trong tab, như My Profile của Long.</p><p>Composite nghĩa là ghép props của tab với props của Stack, để từ tab Hồ sơ vẫn navigate sang Register được, như nút Đăng ký của khách.</p><p>Dòng tám mươi chín, declare global: khai báo cho cả app biết Root Param List chính là Root Stack Param List.</p><p>Nhờ dòng này, use Navigation ở Main Tabs dòng ba mươi ba không cần ghi kiểu mà vẫn gợi ý và bắt lỗi tên màn.</p></div></section><section><h3>Tự kiểm tra trước khi qua chương kế </h3><ol class='it'><li>Tìm e.preventDefault() ở tab Create. Bỏ đi thì bấm + rồi đóng Camera, thấy gì?</li><li>Tìm useNavigation() dòng 33. Nó trả về navigation của Tab hay của Stack? Vì sao?</li><li>Trong types.ts, đổi MyVideo: { videoId: number } thành videoId?: number thì MyVideoScreen gặp gì?</li></ol><div class="say"><p>Câu một: tìm e chấm prevent Default ở tab Create.</p><p>Bỏ đi thì Camera vẫn mở, nhưng phía dưới đã chuyển sang tab Create trống, đóng Camera là thấy vùng trống.</p><p>Gợi ý: xem comment dòng sáu mươi tám.</p><p>Câu hai: tìm use Navigation dòng ba mươi ba, nó trả về navigation của Tab hay của Stack?</p><p>Gợi ý: use Navigation lấy navigator gần nhất bọc ngoài component, mà Main Tabs là màn của Stack ngoài, nên là Stack.</p><p>Câu ba: trong types chấm ts, đổi video Id của My Video thành có dấu hỏi thì My Video Screen gặp gì?</p><p>Gợi ý: route chấm params chấm video Id có thể là undefined, mọi chỗ dùng nó phải kiểm tra thêm, nên để bắt buộc là đúng.</p></div></section><h2 id="c4">Chương 04 · Gọi server một chỗ</h2><section><h3>Gọi server một chỗ — mobile/src/api/client.ts · src/constants/config.ts </h3><div class="say"><p>Chương ba: gọi server một chỗ. Mở file client chấm ts trong thư mục src, api, bảy mươi bốn dòng.</p><p>Mở thêm config chấm ts trong thư mục constants, chỉ tám dòng.</p><p>Mọi lần app nói chuyện với backend, từ đăng nhập tới đăng video, đều đi qua file client này.</p><p>Hiểu nó là hiểu vì sao token tự được gắn, vì sao hết hạn thì tự đăng xuất, và câu lỗi tiếng Việt từ đâu ra.</p></div></section><section><h3>Ai gọi · làm gì · trả về gì </h3><ol class='it'><li>Ai gọi: màn của bạn gọi getErrorMessage(e); các file api gọi api và postMultipart</li><li>Làm gì: tạo một axios có baseURL từ .env, gắn token vào mọi request, bắt lỗi 401</li><li>Trả về: api (axios dùng chung), postMultipart (dữ liệu đã bóc), getErrorMessage (một câu tiếng Việt)</li></ol><div class="say"><p>Ai gọi: màn của bạn chỉ gọi đúng một hàm trong file này là get Error Message.</p><p>Còn biến api và hàm post Multipart thì các file api nhỏ ở chương bốn gọi, màn không đụng tới.</p><p>Làm gì: tạo một axios dùng chung, có sẵn địa chỉ server đọc từ file env.</p><p>Trước mỗi request thì gắn token, sau mỗi response thì canh lỗi bốn trăm lẻ một để tự đăng xuất.</p><p>Trả về ba thứ: biến api là axios dùng chung, post Multipart trả dữ liệu đã bóc vỏ, get Error Message trả một câu tiếng Việt.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/auth/LoginScreen.tsx</p><pre>  const onSubmit = async () =&gt; {
+    setServerError(null);
+    if (!validate()) return;
+    setSubmitting(true);
+    try {
+      await login({ usernameOrEmail: usernameOrEmail.trim(), password });
+      navigation.goBack(); // đóng modal, quay về màn đang xem
+    } catch (e) {
+      setServerError(getErrorMessage(e)); // vd &quot;Sai tên đăng nhập hoặc mật khẩu&quot;
+    } finally {
+      setSubmitting(false);
+    }
+  };</pre><div class="say"><p>Ai gọi. Dòng bốn mươi bốn của Login Screen, hàm on Submit.</p><p>Bạn đã thấy đoạn này ở video chín màn.</p><p>Dòng bốn mươi chín gọi login của use Auth.</p><p>Bên trong, Auth Context gọi auth Api chấm login, rồi auth Api gọi biến api của file client.</p><p>Nghĩa là màn của bạn gọi client gián tiếp qua hai lớp.</p><p>Dòng năm mươi hai là chỗ gọi trực tiếp: get Error Message nhận lỗi e, trả về câu chữ để đặt vào server Error.</p><p>Câu Tên đăng nhập hoặc mật khẩu không đúng là do backend trả, hàm này chỉ lấy ra.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/constants/config.ts</p><pre>/**
+ * Địa chỉ backend, đọc từ file .env.local:  EXPO_PUBLIC_API_URL=http://&lt;IP-máy-chạy-backend&gt;:8080
+ * Đổi .env.local xong phải tắt `npx expo start` rồi chạy lại mới ăn.
+ */
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? &#x27;http://localhost:8080&#x27;;
+/** Số phần tử mỗi trang khi gọi API có phân trang. */
+export const PAGE_SIZE = 10;</pre><div class="say"><p>Trước khi vào client, ghé config chấm ts.</p><p>Dòng hai nói địa chỉ backend đọc từ file env local, biến expo public api url.</p><p>Dòng ba nhắc: đổi file env xong phải tắt expo start chạy lại, vì Expo chỉ đọc file env lúc khởi động.</p><p>Dòng năm, api url bằng process env expo public api url.</p><p>Hai dấu hỏi nghĩa là: nếu bên trái không có thì lấy bên phải, tức local host cổng tám không tám không.</p><p>Expo chỉ đưa vào app những biến bắt đầu bằng expo public, nên tên phải có tiền tố đó.</p><p>Dòng tám, page size bằng mười, số phần tử mỗi trang.</p><p>Hook phân trang ở chương bảy sẽ dùng.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/api/client.ts</p><pre>import axios from &#x27;axios&#x27;;
+import { API_URL } from &#x27;../constants/config&#x27;;
+import type { ApiErrorBody } from &#x27;../types/models&#x27;;
+let authToken: string | null = null;
+let onUnauthorized: (() =&gt; void) | null = null;
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+export function getAuthToken() {
+  return authToken;
+}
+export function setOnUnauthorized(handler: (() =&gt; void) | null) {
+  onUnauthorized = handler;
+}
+export const api = axios.create({
+  baseURL: `${API_URL}/api`,
+  timeout: 15000,
+});</pre><div class="say"><p>Sang client chấm ts. Dòng bảy tới chín import axios, api url vừa xem, và kiểu Api Error Body, tức hình dạng body lỗi của backend: status, message, timestamp.</p><p>Dòng mười một, mười hai là hai biến nằm ngoài mọi hàm.</p><p>auth Token giữ token hiện tại, null là khách.</p><p>on Unauthorized là một hàm sẽ được gọi khi gặp bốn trăm lẻ một.</p><p>Dòng mười lăm, set Auth Token. Auth Context gọi hàm này lúc đăng nhập thành công và lúc đăng xuất. Màn của bạn không bao giờ gọi.</p><p>Dòng hai mươi lăm, set On Unauthorized nhận một hàm và cất vào biến.</p><p>Auth Context đưa hàm logout vào đây. Cách này gọi là đăng ký: bạn để lại số điện thoại, khi có chuyện thì người ta gọi.</p><p>Dòng hai mươi chín, axios chấm create tạo ra một axios riêng tên là api.</p><p>base URL là api url cộng thêm slash api, nên các file api chỉ cần ghi slash videos là đủ.</p><p>timeout mười lăm nghìn mili giây, tức mười lăm giây, quá thì báo lỗi.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/api/client.ts</p><pre>api.interceptors.request.use((config) =&gt; {
+  if (authToken) {
+    config.headers.Authorization = `Bearer ${authToken}`;
+  }
+  return config;
+});
+api.interceptors.response.use(
+  (response) =&gt; response,
+  (error) =&gt; {
+    // Đang có token mà vẫn bị 401 → token hết hạn hoặc tài khoản bị khoá
+    if (axios.isAxiosError(error) &amp;&amp; error.response?.status === 401 &amp;&amp; authToken) {
+      onUnauthorized?.();
+    }
+    return Promise.reject(error);
+  },
+);</pre><div class="say"><p>Dòng ba mươi bốn, interceptor request. Interceptor là trạm kiểm soát: mọi request đi ra đều ghé qua đây trước.</p><p>Có token thì gắn header Authorization, Bearer cộng token, rồi return config để request đi tiếp.</p><p>Nhờ trạm này mà không màn nào phải tự gắn token.</p><p>Dòng bốn mươi mốt, interceptor response, trạm kiểm soát chiều về.</p><p>Tham số đầu là hàm cho response thành công, chỉ trả nguyên response, không làm gì.</p><p>Tham số hai là hàm cho lỗi. Dòng bốn mươi lăm kiểm tra ba điều: đúng là lỗi axios, mã bốn trăm lẻ một, và đang có token.</p><p>Đủ ba điều nghĩa là token hết hạn hoặc tài khoản bị khoá, nên dòng bốn mươi sáu gọi on Unauthorized, tức logout.</p><p>Dấu hỏi trước ngoặc là optional chaining: biến null thì bỏ qua, không gọi, không lỗi.</p><p>Dòng bốn mươi tám, Promise reject error, ném lỗi tiếp ra ngoài.</p><p>Nếu quên dòng này, màn của bạn sẽ tưởng gọi thành công.</p><p>Lưu ý khách đăng nhập sai cũng bị bốn trăm lẻ một, nhưng khi đó auth Token là null nên không rơi vào nhánh đăng xuất.</p></div></section><section><h3>Một request đi từ màn tới backend rồi quay về </h3><p class='nodes'><b>LoginScreen</b> <small>login(...)</small> → <b>AuthContext · authApi</b> <small>api.post(...)</small> → <b>interceptor request</b> <small>gắn Bearer</small> → <b>Backend</b> <small>/api/auth/login</small> → <b>interceptor response</b> <small>401 → logout</small> → <b>getErrorMessage</b> <small>câu tiếng Việt</small></p><div class="say"><p>Màn Đăng nhập gọi login của use Auth.</p><p>Auth Context gọi auth Api chấm login, hàm này gọi api chấm post với đường dẫn slash auth slash login.</p><p>Request ghé trạm kiểm soát chiều đi. Có token thì gắn header Bearer, chưa đăng nhập thì để nguyên.</p><p>Request bay tới backend. Địa chỉ ghép từ api url trong file env cộng slash api cộng đường dẫn.</p><p>Response ghé trạm chiều về. Thành công thì đi thẳng.</p><p>Lỗi bốn trăm lẻ một khi đang có token thì gọi logout, rồi vẫn ném lỗi tiếp.</p><p>Lỗi về tới màn, catch e, đưa vào get Error Message để lấy câu tiếng Việt hiện lên khung đỏ.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/api/client.ts</p><pre>export function postMultipart&lt;T&gt;(url: string, form: FormData) {
+  return api
+    .post&lt;T&gt;(url, form, { headers: { &#x27;Content-Type&#x27;: &#x27;multipart/form-data&#x27; }, timeout: 300000 })
+    .then((res) =&gt; res.data);
+}
+export function getErrorMessage(error: unknown): string {
+  if (axios.isAxiosError&lt;ApiErrorBody&gt;(error)) {
+    const message = error.response?.data?.message;
+    if (message) return message;
+    if (error.code === &#x27;ECONNABORTED&#x27;) return &#x27;Máy chủ phản hồi quá lâu, thử lại sau&#x27;;
+    if (!error.response) return &#x27;Không kết nối được máy chủ. Kiểm tra mạng hoặc EXPO_PUBLIC_API_URL&#x27;;
+    return `Có lỗi xảy ra (mã ${error.response.status})`;
+  }
+  if (error instanceof Error &amp;&amp; error.message) return error.message;
+  return &#x27;Có lỗi xảy ra, thử lại sau&#x27;;
+}</pre><div class="say"><p>Trả về gì. Dòng năm mươi sáu, post Multipart có chữ T trong ngoặc nhọn, gọi là generic.</p><p>T là chỗ trống cho kiểu dữ liệu: ai gọi thì điền vào, videos chấm ts điền Video, stories chấm ts điền Story. Một hàm dùng cho nhiều kiểu.</p><p>Dòng năm mươi chín gọi api chấm post với header multipart form data, là kiểu gửi form có file.</p><p>timeout năm phút thay vì mười lăm giây, vì video lớn tải lâu.</p><p>Dòng sáu mươi, then res chấm data: bóc dữ liệu khỏi vỏ response, nên người gọi nhận thẳng Video, không phải mò vào res chấm data.</p><p>Dòng sáu mươi bốn, get Error Message nhận error kiểu unknown, nghĩa là chưa biết là gì, phải kiểm tra từng trường hợp.</p><p>Dòng sáu mươi lăm: nếu là lỗi axios, dòng sáu mươi sáu lấy message trong body backend.</p><p>Có thì dòng sáu mươi bảy trả luôn, đây là đường đi của câu Tên đăng nhập hoặc mật khẩu không đúng.</p><p>Không có message thì xét tiếp. Mã ECONNABORTED là quá thời gian chờ, trả câu máy chủ phản hồi quá lâu.</p><p>Không có response nghĩa là không nối được tới server, câu báo nhắc kiểm tra mạng hoặc expo public api url, lỗi hay gặp nhất khi đổi wifi.</p><p>Còn lại thì trả câu có mã lỗi.</p><p>Dòng bảy mươi hai, lỗi thường của JavaScript thì lấy error chấm message.</p><p>Dòng bảy mươi ba, không biết là gì thì trả câu chung.</p><p>Nhờ vậy hàm luôn trả về một chuỗi, màn của bạn cứ đặt thẳng vào App Text là xong.</p></div></section><section><h3>Tự kiểm tra trước khi qua chương kế </h3><ol class='it'><li>Tìm dòng `&amp;&amp; authToken` ở dòng 45. Bỏ điều kiện này thì khách gõ sai mật khẩu, chuyện gì xảy ra?</li><li>Tìm `baseURL` dòng 30. Vì sao auth.ts chỉ ghi &#x27;/auth/login&#x27; mà không ghi cả địa chỉ?</li><li>Trong getErrorMessage, nếu backend đổi tên field `message` thành `error`, màn Đăng nhập hiện câu gì?</li></ol><div class="say"><p>Câu một: tìm điều kiện và auth Token ở dòng bốn mươi lăm.</p><p>Bỏ đi thì khách gõ sai mật khẩu cũng bị bốn trăm lẻ một, app gọi logout dù chưa đăng nhập.</p><p>Gợi ý: đọc comment dòng bốn mươi bốn.</p><p>Câu hai: tìm base URL dòng ba mươi.</p><p>Vì sao auth chấm ts chỉ ghi slash auth slash login?</p><p>Gợi ý: axios tự ghép base URL với đường dẫn, nên đổi địa chỉ server chỉ sửa file env.</p><p>Câu ba: nếu backend đổi tên field message thành error thì sao?</p><p>Gợi ý: dòng sáu mươi sáu lấy ra undefined, rơi xuống dòng bảy mươi, màn hiện câu Có lỗi xảy ra kèm mã bốn trăm lẻ một.</p><p>Vì vậy kiểu Api Error Body trong models chấm ts phải khớp backend.</p></div></section><h2 id="c5">Chương 05 · Các file api: mỗi hàm một dòng</h2><section><h3>Các file api: mỗi hàm một dòng — mobile/src/api/ · auth.ts · videos.ts · catalog.ts · stories.ts </h3><div class="say"><p>Chương bốn: các file api, mỗi hàm một dòng.</p><p>Mở bốn file trong thư mục api: auth, videos, catalog, stories, ngắn nhất hai mươi dòng, dài nhất sáu mươi chín dòng.</p><p>Chúng là danh bạ của backend: muốn biết màn gọi tới đường dẫn nào, trả về kiểu gì, chỉ cần mở đúng file này.</p></div></section><section><h3>Ai gọi · làm gì · trả về gì </h3><ol class='it'><li>Ai gọi: PostVideo, Drafts, EditVideo, MyVideo, Music gọi videoApi, catalogApi; Login, Register gọi qua AuthContext</li><li>Làm gì: mỗi hàm = phương thức + đường dẫn + tham số, rồi .then(r =&gt; r.data) bóc vỏ</li><li>Trả về: Promise của Video, Page&lt;Video&gt;, Topic[], Audio[]... khai báo trong types/models.ts</li></ol><div class="say"><p>Ai gọi: năm màn tạo video của bạn gọi video Api và catalog Api trực tiếp, còn Login và Register đi qua Auth Context chứ không gọi auth Api.</p><p>Làm gì: mỗi hàm chỉ là một dòng, gồm phương thức get post put delete, đường dẫn, tham số, rồi then r chấm data để bóc vỏ response.</p><p>Trả về: một Promise, tức lời hứa sẽ có dữ liệu sau, kiểu Video, Page của Video, mảng Topic, mảng Audio, khai báo trong types, models chấm ts.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/PostVideoScreen.tsx</p><pre>    try {
+      await videoApi.create({
+        file: fileFromUri(videoUri),
+        thumbnail: coverUri ? fileFromUri(coverUri) : undefined,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        hashtags: finalTags.length ? finalTags.join(&#x27; &#x27;) : undefined,
+        topicId,
+        audioId: audio?.id,
+        filter,
+        visibility,
+        allowComments,
+        draft,
+      });</pre><div class="say"><p>Ai gọi. Dòng một trăm ba mươi bốn của Post Video Screen, video Api chấm create, bạn đã thấy dòng này ở video chín màn.</p><p>Dòng một trăm ba mươi lăm, file là file From Uri của video Uri.</p><p>Hàm này ở utils, media chấm ts, biến đường dẫn file trong máy thành một object có uri, name, type mà React Native chấp nhận.</p><p>Các dòng còn lại là chữ: title, description, hashtags ghép bằng dấu cách, topic Id, audio Id, filter, visibility, allow Comments, draft.</p><p>Mỗi tên ở đây phải khớp tên field trong interface Create Video Form của videos chấm ts, sai tên là TypeScript gạch đỏ ngay.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/api/auth.ts</p><pre>import { api } from &#x27;./client&#x27;;
+import type { AuthResponse, AuthUser } from &#x27;../types/models&#x27;;
+export interface LoginBody {
+  usernameOrEmail: string;
+  password: string;
+}
+export interface RegisterBody {
+  username: string;
+  displayName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+export const authApi = {
+  login: (body: LoginBody) =&gt; api.post&lt;AuthResponse&gt;(&#x27;/auth/login&#x27;, body).then((r) =&gt; r.data),
+  register: (body: RegisterBody) =&gt; api.post&lt;AuthResponse&gt;(&#x27;/auth/register&#x27;, body).then((r) =&gt; r.data),
+  me: () =&gt; api.get&lt;AuthUser&gt;(&#x27;/auth/me&#x27;).then((r) =&gt; r.data),
+};</pre><div class="say"><p>File auth chấm ts, đọc theo thứ tự từ trên xuống.</p><p>Dòng bốn import biến api từ client, chính là cái axios dùng chung ở chương ba.</p><p>Dòng năm import hai kiểu Auth Response và Auth User từ models chấm ts.</p><p>Dòng bảy, interface Login Body: hai field username Or Email và password.</p><p>Đây đúng là object màn Đăng nhập gửi ở dòng bốn mươi chín.</p><p>Dòng mười hai, Register Body năm field, khớp Register Request của backend, màn Đăng ký ba bước gom đủ rồi mới gửi một lần.</p><p>Dòng hai mươi, auth Api là một object chứa ba hàm.</p><p>Cách đọc một dòng: tên hàm login, gọi api chấm post, kiểu trả về Auth Response trong ngoặc nhọn.</p><p>Rồi tới đường dẫn slash auth slash login, body gửi đi, và then r chấm data để bóc vỏ.</p><p>Mọi dòng trong bốn file đều đọc theo công thức này.</p><p>Dòng hai mươi hai register, giống login nhưng đường dẫn slash auth slash register.</p><p>Dòng hai mươi ba me gọi get, không có body, trả về Auth User, Auth Context gọi nó lúc mở app để kiểm tra token còn dùng được không.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/api/videos.ts</p><pre>  create: (form: CreateVideoForm) =&gt; {
+    const data = new FormData();
+    Object.entries(form).forEach(([key, value]) =&gt; {
+      if (value === undefined || value === null || value === &#x27;&#x27;) return;
+      data.append(key, typeof value === &#x27;object&#x27; ? value : String(value));
+    });
+    return postMultipart&lt;Video&gt;(&#x27;/videos&#x27;, data);
+  },
+  myDrafts: (page = 0, size = 10) =&gt;
+    api.get&lt;PageResponse&lt;Video&gt;&gt;(&#x27;/videos/me/drafts&#x27;, { params: { page, size } }).then((r) =&gt; r.data),
+  update: (id: number, body: UpdateVideoBody) =&gt; api.put&lt;Video&gt;(`/videos/${id}`, body).then((r) =&gt; r.data),
+  remove: (id: number) =&gt; api.delete(`/videos/${id}`),</pre><div class="say"><p>Sang videos chấm ts, dòng bốn mươi sáu, hàm create.</p><p>Khác các hàm khác, hàm này nhiều dòng vì phải dựng Form Data trước khi gửi.</p><p>Dòng bốn mươi bảy tạo Form Data rỗng, dòng bốn mươi tám Object entries biến form thành các cặp tên và giá trị rồi đi qua từng cặp.</p><p>Dòng bốn mươi chín bỏ qua giá trị trống, nên description để trống thì không gửi.</p><p>Dòng năm mươi, append vào phong bì: file thì bỏ nguyên, còn lại ép thành chuỗi, vì multipart chỉ chở chuỗi và file.</p><p>Mỗi field là một phần riêng, không gói thành JSON, nếu gói Expo bị lỗi bốn trăm mười lăm.</p><p>Dòng năm mươi hai gửi bằng post Multipart của chương ba, điền kiểu Video vào chỗ T.</p><p>Vậy màn Post Video nhận về đúng một Video vừa tạo.</p><p>Dòng năm mươi bốn, my Drafts với page mặc định không và size mặc định mười.</p><p>Tham số đi trong params, tức phần sau dấu hỏi trên đường dẫn.</p><p>Màn Video nháp gọi hàm này ở dòng hai mươi hai qua use Paged List.</p><p>Dòng năm mươi sáu update, phương thức put, có id trong đường dẫn nhờ dấu huyền và ngoặc nhọn.</p><p>Màn Video nháp gửi publish true để đăng nháp, màn Sửa video gửi field đã đổi.</p><p>Dòng năm mươi bảy remove, phương thức delete, không có then vì backend không trả gì.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/api/catalog.ts</p><pre>import { api, postMultipart } from &#x27;./client&#x27;;
+import type { Audio, AuthUser, FollowUser, PageResponse, SearchResponse, SearchType, Topic, UserProfile,
+  Video } from &#x27;../types/models&#x27;;
+export const catalogApi = {
+  topics: () =&gt; api.get&lt;Topic[]&gt;(&#x27;/topics&#x27;).then((r) =&gt; r.data),
+  audios: () =&gt; api.get&lt;Audio[]&gt;(&#x27;/audios&#x27;).then((r) =&gt; r.data),
+};
+export const searchApi = {
+  /** type: videos | trending | accounts | streaming | audio. Kiểu phần tử trong content tuỳ theo type. */
+  search: &lt;T&gt;(q: string, type: SearchType, page = 0, size = 20) =&gt;
+    api.get&lt;SearchResponse&lt;T&gt;&gt;(&#x27;/search&#x27;, { params: { q, type, page, size } }).then((r) =&gt; r.data),
+  suggestions: (q: string) =&gt; api.get&lt;string[]&gt;(&#x27;/search/suggestions&#x27;, { params: { q } }).then((r) =&gt; r.data),
+};</pre><div class="say"><p>Sang catalog chấm ts. Dòng tám, catalog Api có hai hàm.</p><p>topics gọi get slash topics, trả về mảng Topic, màn Đăng video gọi ở dòng năm mươi bốn để vẽ dãy chủ đề.</p><p>audios gọi get slash audios, trả về mảng Audio, màn Chọn nhạc gọi ở dòng ba mươi hai.</p><p>Dòng mười ba, search Api là phần của Thanh, nhưng đáng xem vì có generic.</p><p>Hàm search có chữ T, kiểu phần tử tuỳ theo type: videos thì T là Video, accounts thì T là người dùng, người gọi tự điền.</p><p>Dòng mười bảy, suggestions trả về mảng chuỗi gợi ý.</p><p>Phần còn lại là user Api của Long, đọc cùng công thức.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/api/stories.ts</p><pre>import { api, postMultipart } from &#x27;./client&#x27;;
+import type { Story, StoryGroup } from &#x27;../types/models&#x27;;
+export const storyApi = {
+  /** Story của mình và người mình theo dõi, gom theo từng người. Nhóm của mình có mine = true. */
+  feed: () =&gt; api.get&lt;StoryGroup[]&gt;(&#x27;/stories/feed&#x27;).then((r) =&gt; r.data),
+  /** audioId: nhạc nền chọn ở màn Chọn nhạc (không bắt buộc) */
+  create: (file: Blob, durationSec: number, audioId?: number) =&gt; {
+    const form = new FormData();
+    form.append(&#x27;file&#x27;, file);
+    form.append(&#x27;durationSec&#x27;, String(durationSec));
+    if (audioId) form.append(&#x27;audioId&#x27;, String(audioId));
+    return postMultipart&lt;Story&gt;(&#x27;/stories&#x27;, form);
+  },
+  remove: (id: number) =&gt; api.delete(`/stories/${id}`),
+  markViewed: (id: number) =&gt; api.post(`/stories/${id}/view`),
+};</pre><div class="say"><p>File stories chấm ts, backend của bạn, màn của Long.</p><p>Dòng chín, feed gọi get slash stories slash feed, trả về mảng Story Group, mỗi nhóm là story của một người.</p><p>Dòng mười một, create dựng Form Data bằng tay thay vì vòng lặp như videos, vì chỉ có ba field.</p><p>file bỏ nguyên, duration Sec ép thành chuỗi, audio Id chỉ gửi khi có, rồi dòng mười sáu gửi bằng post Multipart với kiểu Story.</p><p>Dòng mười tám remove, dòng mười chín mark Viewed gọi post vào slash view để đánh dấu đã xem.</p><p>Cả hai không bóc data vì backend không trả gì cần dùng.</p></div></section><section><h3>Hàm nào → đường dẫn nào → màn nào của bạn gọi </h3><table><tr><th>Hàm</th><th>Phương thức · đường dẫn</th><th>Màn gọi (dòng)</th></tr><tr><td>authApi.login</td><td>POST /api/auth/login</td><td>AuthContext 86 ← Login 49</td></tr><tr><td>authApi.register</td><td>POST /api/auth/register</td><td>AuthContext 90 ← Register 69</td></tr><tr><td>authApi.me</td><td>GET /api/auth/me</td><td>AuthContext 57, 61 (mở app)</td></tr><tr><td>catalogApi.topics</td><td>GET /api/topics</td><td>PostVideo 54</td></tr><tr><td>catalogApi.audios</td><td>GET /api/audios</td><td>Music 32</td></tr><tr><td>videoApi.create</td><td>POST /api/videos (multipart)</td><td>PostVideo 134</td></tr><tr><td>videoApi.myDrafts</td><td>GET /api/videos/me/drafts</td><td>Drafts 22</td></tr><tr><td>videoApi.getById</td><td>GET /api/videos/{id}</td><td>EditVideo 27 · MyVideo 35</td></tr><tr><td>videoApi.update</td><td>PUT /api/videos/{id}</td><td>Drafts 64 · EditVideo 83</td></tr><tr><td>videoApi.remove</td><td>DELETE /api/videos/{id}</td><td>Drafts 86 · MyVideo 105</td></tr></table><div class="say"><p>auth Api chấm login, post tới slash api slash auth slash login.</p><p>Auth Context gọi ở dòng tám mươi sáu, mà Auth Context được Login Screen gọi ở dòng bốn mươi chín.</p><p>auth Api chấm register, Auth Context dòng chín mươi, bắt nguồn từ Register Screen dòng sáu mươi chín.</p><p>auth Api chấm me, Auth Context gọi lúc mở app ở dòng năm mươi bảy và sáu mươi mốt, để lấy lại người dùng từ token đã lưu.</p><p>catalog Api chấm topics, màn Đăng video dòng năm mươi bốn, qua use Fetch.</p><p>catalog Api chấm audios, màn Chọn nhạc dòng ba mươi hai, cũng qua use Fetch.</p><p>video Api chấm create, post multipart tới slash api slash videos, màn Đăng video dòng một trăm ba mươi bốn.</p><p>video Api chấm my Drafts, màn Video nháp dòng hai mươi hai, qua use Paged List.</p><p>video Api chấm get By Id, màn Sửa video dòng hai mươi bảy và màn Video của tôi dòng ba mươi lăm.</p><p>video Api chấm update, màn Video nháp dòng sáu mươi bốn gửi publish true, màn Sửa video dòng tám mươi ba gửi field đã đổi.</p><p>video Api chấm remove, màn Video nháp dòng tám mươi sáu và màn Video của tôi dòng một trăm lẻ năm, đều hỏi xác nhận trước.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/types/models.ts</p><pre>/** PageResponse&lt;T&gt; — mọi API có phân trang đều trả dạng này. */
+export interface PageResponse&lt;T&gt; {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+}
+/** ErrorResponse — body backend trả khi lỗi (400, 401, 403, 404...). */
+export interface ApiErrorBody {
+  status: number;
+  message: string;
+  timestamp: string;
+}</pre><div class="say"><p>Trả về gì. Mở types, models chấm ts, dòng chín mươi hai.</p><p>Page Response có chữ T: một khuôn chung cho mọi API phân trang, T là kiểu phần tử, videos chấm ts điền Video, catalog điền Follow User.</p><p>content là mảng dữ liệu của trang này, page và size là trang mấy và mỗi trang bao nhiêu, total Elements tổng số, total Pages tổng trang.</p><p>last true là trang cuối, hook phân trang nhìn cờ này để biết dừng tải thêm.</p><p>Dòng một trăm lẻ hai, Api Error Body: status, message, timestamp, đúng hình dạng lỗi backend trả.</p><p>get Error Message ở chương ba đọc field message của kiểu này.</p><p>Mọi kiểu ở đây chép theo DTO bên backend, backend đổi field thì sửa file này trước.</p></div></section><section><h3>Tự kiểm tra trước khi qua chương kế </h3><ol class='it'><li>Tìm `.then((r) =&gt; r.data)` ở auth.ts dòng 21. Bỏ đi thì màn Đăng nhập nhận được gì?</li><li>Tìm dòng 49 videos.ts. Vì sao bỏ qua giá trị rỗng trước khi append?</li><li>Trong bảng, hàm nào của videoApi được hai màn của bạn cùng gọi? Vì sao không viết hai hàm riêng?</li></ol><div class="say"><p>Câu một: tìm then r chấm data ở auth chấm ts dòng hai mươi mốt.</p><p>Bỏ đi thì Auth Context nhận cả vỏ response, token nằm ở res chấm data chấm token, code đọc sai chỗ.</p><p>Gợi ý: axios luôn gói dữ liệu trong data, nên phải bóc một lần ngay ở file api.</p><p>Câu hai: tìm dòng bốn mươi chín của videos chấm ts.</p><p>Vì sao bỏ qua giá trị rỗng? Gợi ý: gửi description rỗng thì backend lưu chuỗi rỗng thay vì null, và topic Id undefined thành chữ undefined.</p><p>Câu ba: hàm nào được hai màn cùng gọi?</p><p>Gợi ý: get By Id, update, remove, vì đường dẫn backend chỉ có một, sửa đường dẫn thì sửa đúng một dòng.</p></div></section><h2 id="c6">Chương 06 · AuthContext: giữ người đang đăng nhập</h2><section><h3>AuthContext: giữ người đang đăng nhập — mobile/src/context/AuthContext.tsx </h3><div class="say"><p>Chương năm: Auth Context. Mở file Auth Context chấm tsx trong thư mục src, context, một trăm lẻ bảy dòng.</p><p>Đây là file trả lời câu hỏi: ai đang đăng nhập.</p><p>Màn Đăng nhập, Đăng ký của bạn, tab Hồ sơ, Root Navigator đều hỏi file này.</p><p>Hiểu nó là hiểu vì sao tắt app mở lại vẫn còn đăng nhập.</p></div></section><section><h3>Ai gọi · làm gì · trả về gì </h3><ol class='it'><li>Ai gọi: LoginScreen dòng 27 và 49, RegisterScreen dòng 33 và 69, App.tsx dòng 37, RootNavigator dòng 40</li><li>Làm gì: giữ user trong state, lưu token vào SecureStore, lúc mở app đọc token rồi gọi /auth/me</li><li>Trả về: useAuth() cho { user, isBootstrapping, login, register, logout, updateUser }</li></ol><div class="say"><p>Ai gọi: màn Đăng nhập của bạn ở dòng hai mươi bảy và bốn mươi chín, màn Đăng ký ở dòng ba mươi ba và sáu mươi chín.</p><p>Ngoài ra App chấm tsx bọc Auth Provider ở dòng ba mươi bảy, Root Navigator hỏi user ở dòng bốn mươi.</p><p>Làm gì: giữ user trong một state duy nhất, lưu token vào Secure Store, và lúc mở app thì đọc token cũ rồi gọi auth me để lấy lại user.</p><p>Trả về: gọi use Auth là nhận một gói gồm user, is Bootstrapping, login, register, logout và update User.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/auth/LoginScreen.tsx</p><pre>export default function LoginScreen({ navigation }: RootScreenProps&lt;&#x27;Login&#x27;&gt;) {
+  const { login } = useAuth();
+  const onSubmit = async () =&gt; {
+    setServerError(null);
+    if (!validate()) return;
+    setSubmitting(true);
+    try {
+      await login({ usernameOrEmail: usernameOrEmail.trim(), password });
+      navigation.goBack(); // đóng modal, quay về màn đang xem
+    } catch (e) {
+      setServerError(getErrorMessage(e)); // vd &quot;Sai tên đăng nhập hoặc mật khẩu&quot;
+    } finally {
+      setSubmitting(false);
+    }
+  };</pre><div class="say"><p>Bắt đầu từ màn Đăng nhập, bạn đã thấy dòng này ở video chín màn.</p><p>Dòng hai mươi bảy gọi use Auth và chỉ lấy ra hàm login, dấu ngoặc nhọn ở vế trái là cách rút một món từ gói.</p><p>Dòng bốn mươi chín gọi login với tên đăng nhập và mật khẩu, có await vì phải chờ server.</p><p>Màn không biết token là gì, không biết Secure Store là gì.</p><p>Mọi việc đó nằm bên trong Auth Context.</p><p>Thành công thì dòng năm mươi go Back đóng modal.</p><p>Thất bại thì dòng năm mươi hai hiện câu lỗi.</p><p>Màn Đăng ký ở dòng sáu mươi chín làm y hệt với hàm register.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/context/AuthContext.tsx</p><pre>const TOKEN_KEY = &#x27;vsa_token&#x27;;
+interface AuthContextValue {
+  user: AuthUser | null;
+  /** true trong lúc mở app đang kiểm tra token cũ */
+  isBootstrapping: boolean;
+  login: (body: LoginBody) =&gt; Promise&lt;void&gt;;
+  register: (body: RegisterBody) =&gt; Promise&lt;void&gt;;
+  logout: () =&gt; Promise&lt;void&gt;;
+  /** Gọi sau khi sửa hồ sơ để cập nhật user mới mà không cần đăng nhập lại */
+  updateUser: (user: AuthUser) =&gt; void;
+}
+const AuthContext = createContext&lt;AuthContextValue | null&gt;(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState&lt;AuthUser | null&gt;(null);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);</pre><div class="say"><p>Dòng mười chín, hằng token key là tên ngăn kéo trong Secure Store.</p><p>Secure Store là kho lưu nhỏ được mã hoá của điện thoại, tắt app vẫn còn.</p><p>Dòng hai mươi mốt tới ba mươi là bản hợp đồng: Auth Context Value liệt kê đúng những gì gói trả về có.</p><p>user có thể null, nghĩa là khách. is Bootstrapping là cờ đang mở app.</p><p>Ba hàm login, register, logout trả Promise, tức là việc phải chờ.</p><p>Dòng ba mươi hai, create Context tạo ra một bảng tin chung.</p><p>Context giống bảng tin dán giữa nhà: ai trong nhà cũng đọc được, không cần chuyền tay từng người.</p><p>Dòng ba mươi tư, Auth Provider là component bọc ngoài, nhận children là mọi thứ nằm bên trong nó.</p><p>Dòng ba mươi lăm, ba mươi sáu là hai state thật: user bắt đầu là null, is Bootstrapping bắt đầu là true vì vừa mở app chưa biết gì.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/context/AuthContext.tsx</p><pre>  const logout = useCallback(async () =&gt; {
+    setAuthToken(null);
+    setUser(null);
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+  }, []);
+  // Mở app: thử đăng nhập lại bằng token đã lưu
+  useEffect(() =&gt; {
+    setOnUnauthorized(() =&gt; {
+      logout();
+    });
+    const isUnauthorized = (e: unknown) =&gt; axios.isAxiosError(e) &amp;&amp; e.response?.status === 401;
+    (async () =&gt; {
+      try {
+        const token = await SecureStore.getItemAsync(TOKEN_KEY);
+        if (!token) return;
+        setAuthToken(token);
+        try {
+          setUser(await authApi.me());</pre><div class="say"><p>Dòng ba mươi tám, hàm logout làm ba việc.</p><p>Xoá token khỏi file client để lần gọi server sau không gắn Bearer nữa, đặt user về null, rồi xoá ngăn kéo trong Secure Store.</p><p>Dòng bốn mươi lăm là use Effect, đoạn chạy một lần khi Provider vừa được dựng, tức là lúc mở app.</p><p>Dòng bốn mươi sáu đăng ký với file client: nếu server trả bốn trăm lẻ một thì gọi logout.</p><p>Nhờ vậy token hết hạn là app tự về chế độ khách.</p><p>Dòng bốn mươi chín, hàm nhỏ kiểm tra một lỗi có phải bốn trăm lẻ một hay không.</p><p>Dấu hỏi sau response là optional chaining: response không có thì trả undefined thay vì làm app sập.</p><p>Dòng năm mươi mốt, một hàm async được viết ra rồi gọi ngay, vì use Effect không cho dùng await trực tiếp.</p><p>Dòng năm mươi ba đọc token trong máy, không có thì return vì lần đầu cài app là khách, có thì dòng năm mươi lăm gắn token vào client.</p><p>Dòng năm mươi bảy gọi auth Api me, tức là hỏi server: token này của ai.</p><p>Server trả thông tin người dùng, set User ghi vào state, thế là đăng nhập lại xong mà không cần gõ mật khẩu.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/context/AuthContext.tsx</p><pre>        } catch (e) {
+          if (isUnauthorized(e)) throw e;
+          setUser(await authApi.me());
+        }
+      } catch (e) {
+        if (isUnauthorized(e)) {
+          await logout();
+        } else {
+          setAuthToken(null);
+        }
+      } finally {
+        setIsBootstrapping(false);
+      }
+    })();
+    return () =&gt; setOnUnauthorized(null);
+  }, [logout]);</pre><div class="say"><p>Dòng năm mươi tám, nếu gọi me bị lỗi bốn trăm lẻ một thì ném tiếp ra ngoài.</p><p>Còn lỗi khác, thường là mất mạng hoặc máy chủ chưa bật, thì dòng sáu mươi mốt thử gọi lại đúng một lần nữa.</p><p>Dòng sáu mươi ba bắt lỗi lần cuối.</p><p>Bốn trăm lẻ một nghĩa là token hỏng hoặc hết hạn, gọi logout xoá hẳn.</p><p>Còn vẫn lỗi mạng thì chỉ gỡ token khỏi client, vào chế độ khách, nhưng giữ token trong máy để lần mở app sau thử lại.</p><p>Dòng bảy mươi mốt, finally chạy dù thành công hay thất bại: đặt is Bootstrapping về false.</p><p>Root Navigator đang chờ cờ này để bỏ màn Loading và dựng Stack.</p><p>Dòng bảy mươi lăm trả về hàm dọn dẹp, gỡ đăng ký với client khi Provider bị huỷ.</p><p>Dòng bảy mươi sáu, mảng phụ thuộc chỉ có logout, nên effect này chạy đúng một lần.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/context/AuthContext.tsx</p><pre>  const saveSession = async (res: AuthResponse) =&gt; {
+    await SecureStore.setItemAsync(TOKEN_KEY, res.token);
+    setAuthToken(res.token);
+    setUser(res.user);
+  };
+  const login = useCallback(async (body: LoginBody) =&gt; {
+    await saveSession(await authApi.login(body));
+  }, []);
+  const register = useCallback(async (body: RegisterBody) =&gt; {
+    await saveSession(await authApi.register(body));
+  }, []);</pre><div class="say"><p>Dòng bảy mươi tám, save Session là chỗ dùng chung cho cả đăng nhập lẫn đăng ký.</p><p>Nhận res gồm token và user từ server, rồi làm ba việc: cất token vào Secure Store, gắn token vào client, ghi user vào state.</p><p>Dòng tám mươi lăm, hàm login mà màn của bạn gọi ở dòng bốn mươi chín.</p><p>Chỉ một dòng: gọi auth Api login, chờ kết quả, đưa cho save Session.</p><p>Sai mật khẩu thì auth Api ném lỗi, hàm này không bắt, để lỗi chạy thẳng ra màn Đăng nhập cho bạn hiện lên.</p><p>Dòng tám mươi chín, register giống hệt, chỉ đổi đường gọi sang auth Api register, nên đăng ký xong là có user ngay.</p></div></section><section><h3>Bấm Đăng nhập thì dữ liệu đi đâu </h3><p class='nodes'><b>LoginScreen</b> <small>dòng 49 login(...)</small> → <b>AuthContext</b> <small>login → saveSession</small> → <b>authApi.login</b> <small>POST /auth/login</small> → <b>SecureStore + client</b> <small>token</small> → <b>setUser</b> <small>user khác null</small> → <b>RootNavigator, MyProfile</b> <small>vẽ lại</small></p><div class="say"><p>Màn Đăng nhập của bạn gọi login ở dòng bốn mươi chín, gửi tên đăng nhập và mật khẩu.</p><p>Auth Context nhận, chuyển cho auth Api login.</p><p>Chương bốn đã mở file này: một dòng post lên auth login.</p><p>Server trả về token và user. Sai mật khẩu thì trả lỗi, lỗi chạy ngược về màn của bạn, dòng năm mươi hai.</p><p>save Session cất token vào Secure Store và gắn vào client.</p><p>Từ giờ mọi lần gọi server đều có Bearer token.</p><p>set User ghi user vào state của Provider. Bảng tin chung vừa đổi nội dung.</p><p>Mọi nơi đang gọi use Auth được vẽ lại.</p><p>Tab Hồ sơ đổi từ nút Đăng ký sang hồ sơ thật, Root Navigator thấy có user, màn của bạn chỉ cần go Back.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/context/AuthContext.tsx</p><pre>  const value = useMemo(
+    () =&gt; ({ user, isBootstrapping, login, register, logout, updateUser: setUser }),
+    [user, isBootstrapping, login, register, logout],
+  );
+  return &lt;AuthContext.Provider value={value}&gt;{children}&lt;/AuthContext.Provider&gt;;
+}
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error(&#x27;useAuth() phải nằm trong &lt;AuthProvider&gt;&#x27;);
+  }
+  return ctx;
+}</pre><div class="say"><p>Trả về gì. Dòng chín mươi ba gom sáu món vào một gói value.</p><p>use Memo giữ gói này nguyên nếu sáu món không đổi, để các màn bên dưới không bị vẽ lại vô ích.</p><p>update User chính là set User, cho màn Sửa hồ sơ ghi user mới mà không phải đăng nhập lại.</p><p>Dòng chín mươi tám là JSX duy nhất của file: Auth Context chấm Provider với value là cái gói, bên trong là children.</p><p>Provider là người dán bảng tin: ai nằm trong nó đều đọc được value, còn nó không vẽ thêm gì.</p><p>Dòng một trăm lẻ một, use Auth là hàm màn của bạn gọi.</p><p>use Context đọc bảng tin. Nếu đọc ra null nghĩa là quên bọc Auth Provider, ném lỗi ngay với câu tiếng Việt cho dễ sửa.</p></div></section><section><h3>Tự kiểm tra trước khi qua chương kế </h3><ol class='it'><li>Tìm dòng 54 `if (!token) return`. Lần đầu cài app, isBootstrapping về false ở đâu?</li><li>Tìm dòng 69 `setAuthToken(null)`. Vì sao không gọi logout() như dòng 66?</li><li>Tìm dòng 86. Nếu login tự bắt lỗi bằng try catch thì màn Đăng nhập của bạn thiếu gì?</li></ol><div class="say"><p>Câu một: tìm dòng năm mươi tư, không có token thì return.</p><p>Vậy lần đầu cài app, is Bootstrapping về false ở đâu?</p><p>Gợi ý: finally chạy cả khi return giữa chừng.</p><p>Câu hai: tìm dòng sáu mươi chín, chỉ gỡ token khỏi client.</p><p>Vì sao không gọi logout như dòng sáu mươi sáu?</p><p>Gợi ý: logout xoá cả Secure Store, mà lỗi mạng thì token vẫn còn tốt.</p><p>Câu ba: tìm dòng tám mươi sáu. Nếu login tự bắt lỗi bằng try catch rồi im lặng, màn Đăng nhập của bạn thiếu gì?</p><p>Gợi ý: dòng năm mươi hai của Login Screen sẽ không bao giờ chạy.</p></div></section><h2 id="c7">Chương 07 · Chế độ khách: cổng gác requireAuth</h2><section><h3>Chế độ khách: cổng gác requireAuth — mobile/src/context/LoginPromptContext.tsx </h3><div class="say"><p>Chương sáu: chế độ khách. Mở file Login Prompt Context chấm tsx, cùng thư mục context, bảy mươi chín dòng.</p><p>Quy tắc R ba nói khách được xem mọi thứ, nhưng bấm thả tim, bình luận, theo dõi hay đăng thì phải đăng nhập.</p><p>File này là cái cổng gác thực hiện quy tắc đó, và màn Đăng nhập của bạn là nơi cổng dẫn tới.</p></div></section><section><h3>Ai gọi · làm gì · trả về gì </h3><ol class='it'><li>Ai gọi: các màn của Thanh, Long qua useRequireAuth(): Home, Watch, Comments, Search, Profile, Friends, LiveWatch. Màn của bạn là đích đến</li><li>Làm gì: requireAuth(action) có user thì chạy action, không thì hiện bảng Đăng nhập để tiếp tục</li><li>Trả về: hàm requireAuth, kèm một BottomSheet vẽ chung cho cả app</li></ol><div class="say"><p>Ai gọi: không phải màn của bạn. Các màn của Thanh và Long gọi use Require Auth.</p><p>Đó là Trang chủ, Xem video, Bình luận, Tìm kiếm, Hồ sơ người dùng, Bạn bè, Xem live.</p><p>Nhưng khi khách bấm Đăng nhập trên bảng, nó mở đúng màn Login của bạn, nên bạn cần biết ai đưa khách tới cửa.</p><p>Làm gì: require Auth nhận một hành động.</p><p>Có user thì chạy hành động luôn. Là khách thì không chạy, chỉ hiện bảng Đăng nhập để tiếp tục.</p><p>Trả về: hàm require Auth cho màn dùng, và một Bottom Sheet được vẽ sẵn một lần cho cả app, màn không phải tự vẽ bảng.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/video/WatchScreen.tsx</p><pre>function WatchContent({ video, active, height, onChange, navigation }: ContentProps) {
+  const { user } = useAuth();
+  const requireAuth = useRequireAuth();
+  const insets = useSafeAreaInsets();</pre><div class="say"><p>Ai gọi: lấy màn Xem video của Thanh làm ví dụ, dòng hai trăm bảy mươi sáu.</p><p>Watch Content là một trang video trong danh sách vuốt.</p><p>Dòng hai trăm bảy mươi tám lấy user từ use Auth, chương năm vừa xem.</p><p>Dòng hai trăm bảy mươi chín gọi use Require Auth, nhận về hàm require Auth.</p><p>Hai hook đứng cạnh nhau vì một bên để biết ai, một bên để chặn cửa.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/video/WatchScreen.tsx</p><pre>  // ----- Thả tim (optimistic) -----
+  const onLike = () =&gt;
+    requireAuth(async () =&gt; {
+      if (likeBusy.current) return;
+      likeBusy.current = true;
+      const wasLiked = video.liked;
+      onChange({ liked: !wasLiked, likeCount: video.likeCount + (wasLiked ? -1 : 1) });
+      try {
+        await (wasLiked ? videoApi.unlike(video.id) : videoApi.like(video.id));
+      } catch (e) {
+        onChange({ liked: wasLiked, likeCount: video.likeCount });
+        Alert.alert(&#x27;Lỗi&#x27;, getErrorMessage(e));
+      } finally {
+        likeBusy.current = false;
+      }
+    });</pre><div class="say"><p>Dòng ba trăm bốn mươi lăm, on Like là hàm gắn vào nút tim.</p><p>Nó không thả tim ngay mà gọi require Auth, đưa cả đoạn thả tim vào làm tham số.</p><p>Đưa một hàm vào hàm khác giống đưa tờ giấy ghi việc cần làm cho người gác cổng: được qua thì người gác mới làm theo tờ giấy.</p><p>Từ dòng ba trăm bốn mươi bảy là việc thật.</p><p>Chặn bấm đúp, đổi trái tim trên màn trước, rồi dòng ba trăm năm mươi hai gọi video Api like hoặc unlike.</p><p>Khách bấm thì cả đoạn này không chạy, vì cổng không cho qua.</p><p>Lỗi thì trả trái tim về như cũ và hiện Alert.</p><p>Cách viết này gọi là optimistic: đổi giao diện trước, hỏi server sau.</p><p>Nhưng đó là chuyện của màn, ta quay về cổng gác.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/profile/MyProfileScreen.tsx</p><pre>export default function MyProfileScreen(props: TabScreenProps&lt;&#x27;MyProfile&#x27;&gt;) {
+  const { user } = useAuth();
+  // Tách 2 component để hook của phần đã đăng nhập không bị gọi khi là khách
+  return user ? &lt;ProfileContent {...props} user={user} /&gt; : &lt;GuestProfile {...props} /&gt;;</pre><div class="say"><p>Một kiểu khác ở tab Hồ sơ của Long, dòng bốn mươi sáu tới bốn mươi tám.</p><p>Màn này không dùng require Auth mà rẽ nhánh theo user.</p><p>Có user thì vẽ hồ sơ thật, null thì vẽ Guest Profile với nút Đăng ký và link Đăng nhập.</p><p>Vì cả màn khác nhau chứ không phải một nút, nên rẽ nhánh hợp hơn là chặn từng nút.</p><p>Hai cách này cùng thực hiện quy tắc R ba.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/context/LoginPromptContext.tsx</p><pre>type RequireAuth = (action?: () =&gt; void) =&gt; boolean;
+const LoginPromptContext = createContext&lt;RequireAuth | null&gt;(null);
+export function LoginPromptProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const navigation = useNavigation();
+  const [visible, setVisible] = useState(false);
+  const requireAuth = useCallback&lt;RequireAuth&gt;(
+    (action) =&gt; {
+      if (user) {
+        action?.();
+        return true;
+      }
+      setVisible(true);
+      return false;
+    },
+    [user],
+  );</pre><div class="say"><p>Vào file khung. Dòng mười tám khai báo kiểu Require Auth.</p><p>Đó là một hàm nhận action, có thể bỏ trống nhờ dấu hỏi, và trả về boolean cho biết đã qua cổng hay chưa.</p><p>Dòng hai mươi, create Context tạo bảng tin thứ hai của app.</p><p>Lần này bảng tin chỉ chứa đúng một hàm, không phải cả gói như Auth Context.</p><p>Dòng hai mươi hai, Login Prompt Provider. Dòng hai mươi ba hỏi Auth Context xem có user không, nên Provider này bắt buộc nằm trong Auth Provider.</p><p>Dòng hai mươi tư lấy navigation để lát nữa mở màn Login.</p><p>Dòng hai mươi lăm, visible là cờ bảng đang hiện hay ẩn.</p><p>Dòng hai mươi bảy tới ba mươi bảy là toàn bộ cổng gác.</p><p>Có user thì dòng ba mươi chạy action, dấu hỏi chấm để không sập khi action bỏ trống, rồi trả true.</p><p>Không có user thì dòng ba mươi ba bật bảng và trả false, action bị bỏ qua.</p><p>Mảng phụ thuộc có user, nên đăng nhập xong là hàm này được tạo lại, biết ngay cửa đã mở.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/context/LoginPromptContext.tsx</p><pre>  const goTo = (screen: &#x27;Login&#x27; | &#x27;Register&#x27;) =&gt; {
+    setVisible(false);
+    navigation.navigate(screen);
+  };
+export function useRequireAuth() {
+  const ctx = useContext(LoginPromptContext);
+  if (!ctx) {
+    throw new Error(&#x27;useRequireAuth() phải nằm trong &lt;LoginPromptProvider&gt;&#x27;);
+  }
+  return ctx;
+}</pre><div class="say"><p>Dòng ba mươi chín, go To nhận tên màn là Login hoặc Register.</p><p>Nó tắt bảng trước rồi mới navigate, để khi quay về không còn bảng đè lên.</p><p>Vì Login là modal trong Stack, chương một đã nói, nên màn của bạn trượt lên ngay trên màn khách đang xem.</p><p>Dòng sáu mươi lăm, use Require Auth là hook màn gọi.</p><p>Giống use Auth: đọc bảng tin, null thì ném lỗi quên bọc Provider, có thì trả về hàm require Auth.</p><p>Root Navigator bọc Login Prompt Provider ở dòng năm mươi bảy, nên mọi màn trong Stack đều gọi được.</p></div></section><section><h3>Khách bấm tim thì chuyện gì xảy ra </h3><p class='nodes'><b>Nút tim</b> <small>WatchScreen dòng 346</small> → <b>requireAuth</b> <small>user null?</small> → <b>BottomSheet</b> <small>Đăng nhập để tiếp tục</small> → <b>LoginScreen</b> <small>màn của bạn</small> → <b>AuthContext</b> <small>setUser</small> → <b>Về màn cũ</b> <small>bấm tim lại</small></p><div class="say"><p>Khách bấm nút tim, màn gọi require Auth kèm đoạn thả tim.</p><p>require Auth thấy user là null: không chạy đoạn thả tim, bật visible, trả false.</p><p>Bottom Sheet trượt lên với ba nút: Đăng nhập, Tạo tài khoản mới, Để sau.</p><p>Để sau thì chỉ tắt bảng, khách xem tiếp.</p><p>Bấm Đăng nhập: go To tắt bảng rồi navigate sang Login, màn của bạn mở dạng modal.</p><p>Màn của bạn gọi login, Auth Context ghi user vào bảng tin, rồi go Back đóng modal.</p><p>Về lại màn Xem video. Lưu ý: đoạn thả tim lúc nãy không tự chạy lại, cổng không nhớ tờ giấy.</p><p>Người dùng bấm tim lần nữa, giờ có user nên qua luôn.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/context/LoginPromptContext.tsx</p><pre>  return (
+    &lt;LoginPromptContext.Provider value={requireAuth}&gt;
+      {children}
+      &lt;BottomSheet visible={visible} onClose={() =&gt; setVisible(false)} heightPercent={48}&gt;
+        &lt;View style={styles.body}&gt;
+          &lt;AppText weight=&quot;bold&quot; size={21} align=&quot;center&quot;&gt;Đăng nhập để tiếp tục&lt;/AppText&gt;
+          &lt;AppText color={colors.muted} align=&quot;center&quot; style={styles.desc}&gt;
+            Thả tim, bình luận, theo dõi người bạn thích và đăng video của riêng bạn.
+          &lt;/AppText&gt;
+          &lt;Button title=&quot;Đăng nhập&quot; onPress={() =&gt; goTo(&#x27;Login&#x27;)} style={styles.full} /&gt;
+          &lt;Button title=&quot;Tạo tài khoản mới&quot; variant=&quot;secondary&quot; onPress={() =&gt; goTo(&#x27;Register&#x27;)}
+            style={styles.full} /&gt;
+          &lt;Button title=&quot;Để sau&quot; variant=&quot;secondary&quot; size=&quot;sm&quot; onPress={() =&gt; setVisible(false)}
+            style={styles.later} /&gt;
+        &lt;/View&gt;
+      &lt;/BottomSheet&gt;
+    &lt;/LoginPromptContext.Provider&gt;
+  );</pre><div class="say"><p>Vẽ ra gì. Dòng bốn mươi lăm, Provider với value là hàm require Auth.</p><p>Dòng bốn mươi sáu, children, tức toàn bộ Stack màn, vẽ ở đây.</p><p>Dòng bốn mươi bảy, Bottom Sheet đặt ngay sau children, nên nó nằm trên mọi màn.</p><p>visible nối với state, on Close tắt bảng khi chạm nền tối, cao bốn mươi tám phần trăm màn hình.</p><p>Nhờ đặt một lần ở đây mà bảy màn dùng chung một bảng, không ai phải vẽ lại.</p><p>Dòng năm mươi hai, năm mươi ba là tiêu đề và câu mời, đúng chữ bạn thấy trong ảnh.</p><p>Ba nút ở dòng năm mươi sáu tới năm mươi tám: Đăng nhập gọi go To Login, Tạo tài khoản mới gọi go To Register, Để sau chỉ tắt bảng.</p><p>Đây là ba lựa chọn R ba yêu cầu. Nút Button này chương tám sẽ mở.</p></div></section><section><h3>Tự kiểm tra trước khi qua chương kế </h3><ol class='it'><li>Tìm dòng 34 `return false`. Màn nào dùng giá trị trả về này? Gợi ý: grep requireAuth() không tham số</li><li>Tìm dòng 23 `useAuth()`. Nếu đổi chỗ LoginPromptProvider ra ngoài AuthProvider thì sao?</li><li>Tìm dòng 40 `setVisible(false)`. Bỏ dòng này, bấm Đăng nhập rồi quay lại thì thấy gì?</li></ol><div class="say"><p>Câu một: tìm dòng ba mươi tư, return false.</p><p>Có màn nào dùng giá trị này không?</p><p>Gợi ý: màn Bình luận gọi require Auth không tham số ở ô nhập, chỉ cần hiện bảng, không cần kết quả.</p><p>Câu hai: tìm dòng hai mươi ba, use Auth.</p><p>Nếu đổi chỗ Login Prompt Provider ra ngoài Auth Provider thì sao?</p><p>Gợi ý: use Auth đọc bảng tin được null, ném lỗi ngay khi mở app.</p><p>Câu ba: tìm dòng bốn mươi, set Visible false.</p><p>Bỏ dòng này, bấm Đăng nhập rồi đăng nhập xong quay lại thì thấy gì?</p><p>Gợi ý: bảng vẫn còn đè trên màn, dù đã có user.</p></div></section><h2 id="c8">Chương 08 · Hook tải dữ liệu 1: useFetch</h2><section><h3>Hook tải dữ liệu 1: useFetch — mobile/src/hooks/useFetch.ts </h3><div class="say"><p>Chương bảy chia hai phần. Phần một mở thư mục src, hooks, file use Fetch chấm ts, chỉ bốn mươi lăm dòng.</p><p>Bốn trong chín màn của bạn gọi server rồi chờ kết quả, màn nào cũng cần ba thứ giống nhau: dữ liệu, đang tải, và lỗi.</p><p>File này gom đoạn lặp đó lại một chỗ, để màn chỉ cần một dòng.</p></div></section><section><h3>Ai gọi · làm gì · trả về gì </h3><ol class='it'><li>Ai gọi: MusicScreen dòng 32, PostVideo dòng 54, MyVideo dòng 35, EditVideo dòng 27</li><li>Làm gì: gọi hàm API màn đưa vào, giữ data, loading, error; deps đổi thì gọi lại</li><li>Trả về: object { data, setData, loading, error, reload }, không vẽ gì</li></ol><div class="say"><p>Ai gọi: bốn màn của bạn. Music dòng ba mươi hai, Post Video dòng năm mươi bốn, My Video dòng ba mươi lăm, Edit Video dòng hai mươi bảy.</p><p>Làm gì: nhận một hàm gọi API, tự gọi nó, giữ ba trạng thái data, loading, error.</p><p>Giá trị trong deps đổi thì tự gọi lại.</p><p>Trả về: không vẽ gì cả, chỉ trả về một object năm thứ: data, set Data, loading, error, reload. Màn lấy ra rồi tự vẽ.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/MusicScreen.tsx</p><pre>  const insets = useSafeAreaInsets();
+  const currentId = route.params?.current;
+  const [query, setQuery] = useState(&#x27;&#x27;);
+  const [tab, setTab] = useState&lt;TabKey&gt;(&#x27;foryou&#x27;);
+  const { data, loading, error, reload } = useFetch(() =&gt; catalogApi.audios(), []);
+  // Bài đang nghe thử (null = không phát). Rời màn thì hook tự giải phóng trình phát
+  const [previewing, setPreviewing] = useState&lt;Audio | null&gt;(null);
+  useBackgroundMusic(previewing?.fileUrl, !!previewing);</pre><div class="say"><p>Màn Chọn nhạc, dòng ba mươi hai, bạn đã thấy ở video chín màn.</p><p>Một dòng: use Fetch nhận hàm mũi tên gọi catalog Api chấm audios, và một mảng rỗng.</p><p>Ra ngay bốn thứ: data, loading, error, reload.</p><p>Màn không viết try catch, không viết set Loading, hook lo hết.</p><p>Nhìn các dòng trên: use Safe Area Insets, use State, và dòng ba mươi hai use Fetch, đều bắt đầu bằng chữ use.</p><p>Đó là dấu hiệu của hook. Hook tự viết gọi là custom hook, là một hàm thường bên trong có dùng use State, use Effect.</p><p>Nó gom logic hay lặp lại để nhiều màn mượn chung, giống một công thức nấu ăn viết sẵn.</p><p>Ba màn còn lại cũng gọi y hệt.</p><p>Post Video dòng năm mươi bốn lấy danh sách chủ đề.</p><p>My Video dòng ba mươi lăm và Edit Video dòng hai mươi bảy lấy một video theo id.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/hooks/useFetch.ts</p><pre>export function useFetch&lt;T&gt;(fetcher: () =&gt; Promise&lt;T&gt;, deps: DependencyList) {
+  const [data, setData] = useState&lt;T | null&gt;(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState&lt;string | null&gt;(null);
+  const fetcherRef = useRef(fetcher);
+  useEffect(() =&gt; { fetcherRef.current = fetcher; });
+  const requestIdRef = useRef(0);</pre><div class="say"><p>Sang use Fetch, dòng mười một. Chữ T trong ngoặc nhọn là generic, nghĩa là kiểu chưa định trước.</p><p>Giống cái hộp chưa dán nhãn: Music bỏ mảng Audio vào thì T là mảng Audio, Edit Video bỏ Video vào thì T là Video.</p><p>Tham số fetcher là hàm trả Promise, tức là hàm gọi server, lát nữa mới có kết quả. deps là mảng phụ thuộc, nói sau.</p><p>Dòng mười hai tới mười bốn, ba state.</p><p>data bắt đầu là null vì chưa có gì.</p><p>loading bắt đầu true, vì vừa vào màn là tải ngay. error là chuỗi tiếng Việt hoặc null.</p><p>Dòng mười bảy, fetcher Ref. Ref là một cái ngăn nhớ giá trị qua các lần vẽ lại, đổi ruột không làm màn vẽ lại.</p><p>Vì sao cần: hàm mũi tên ở màn được tạo mới mỗi lần màn vẽ, nếu đưa thẳng vào deps thì gọi server liên tục.</p><p>Nên dòng mười tám cất hàm mới nhất vào ref sau mỗi lần vẽ, còn deps thì để màn tự quyết.</p><p>Dòng hai mươi mốt, request Id Ref, số thứ tự của lần gọi.</p><p>Dùng để nhận ra kết quả về muộn của lần gọi cũ, xem ngay bên dưới.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/hooks/useFetch.ts</p><pre>  const reload = useCallback(async () =&gt; {
+    const requestId = ++requestIdRef.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await fetcherRef.current();
+      if (requestId === requestIdRef.current) setData(result);
+    } catch (e) {
+      if (requestId === requestIdRef.current) setError(getErrorMessage(e));
+    } finally {
+      if (requestId === requestIdRef.current) setLoading(false);
+    }
+  }, []);</pre><div class="say"><p>Dòng hai mươi ba, hàm reload, bọc trong use Callback với mảng rỗng, nghĩa là tạo đúng một lần, màn gọi lúc nào cũng được.</p><p>Dòng hai mươi bốn tăng số thứ tự rồi ghi nhớ vào request Id.</p><p>Dòng hai mươi lăm, hai mươi sáu: bật loading, xoá lỗi cũ.</p><p>Màn thấy loading true thì vẽ vòng xoay.</p><p>Dòng hai mươi tám, await fetcher Ref chấm current, tức gọi hàm của màn và chờ server trả về.</p><p>Dòng hai mươi chín chỉ set Data khi số thứ tự vẫn là mới nhất.</p><p>Nếu deps đã đổi và có lần gọi mới hơn, kết quả cũ bị bỏ qua, màn không bị hiện nhầm dữ liệu cũ.</p><p>Dòng ba mươi, ba mươi mốt: lỗi thì đổi sang chuỗi tiếng Việt bằng get Error Message, đã học ở chương ba, rồi cất vào error.</p><p>finally chạy dù thành công hay lỗi, tắt loading.</p><p>Ba bước bật loading, gọi, tắt loading là thứ mọi màn đều phải làm, giờ nằm một chỗ.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/hooks/useFetch.ts</p><pre>  useEffect(() =&gt; {
+    reload();
+    return () =&gt; { requestIdRef.current += 1; };
+  }, deps);
+  return { data, setData, loading, error, reload };
+}</pre><div class="say"><p>Dòng ba mươi bảy, use Effect gọi reload, và mảng phụ thuộc chính là deps màn truyền vào.</p><p>Effect chạy sau khi vẽ lần đầu, và chạy lại khi giá trị trong deps đổi.</p><p>Music truyền mảng rỗng nên chỉ tải một lần.</p><p>Edit Video truyền video Id, đổi id là tự tải video khác.</p><p>Dòng bốn mươi là hàm dọn dẹp, chạy khi deps đổi hoặc rời màn.</p><p>Nó tăng số thứ tự, nên kết quả của lần gọi đang dở sẽ bị bỏ, không set state vào màn đã đóng.</p><p>Dòng bốn mươi bốn, trả về object năm thứ.</p><p>set Data có mặt để màn tự sửa dữ liệu không cần gọi lại server.</p><p>My Video dòng năm mươi bốn dùng nó: quay lại từ màn Sửa thì gọi get By Id rồi đưa thẳng vào set Data.</p></div></section><section><h3>Năm thứ useFetch trả về </h3><table><tr><th>Tên</th><th>Kiểu</th><th>Màn dùng để</th></tr><tr><td>data</td><td>T hoặc null</td><td>vẽ nội dung; null là chưa có</td></tr><tr><td>loading</td><td>boolean</td><td>hiện vòng xoay</td></tr><tr><td>error</td><td>string hoặc null</td><td>hiện câu lỗi tiếng Việt</td></tr><tr><td>reload</td><td>() =&gt; Promise</td><td>nút Thử lại</td></tr><tr><td>setData</td><td>hàm set state</td><td>tự sửa data, không gọi server</td></tr></table><div class="say"><p>data có kiểu T hoặc null. Màn phải tính trường hợp null, vì lúc mới vào chưa có gì.</p><p>loading là boolean, true thì màn vẽ vòng xoay, hết thì vẽ nội dung.</p><p>error là chuỗi tiếng Việt hoặc null, màn chỉ việc hiện ra, không cần dịch lỗi.</p><p>reload là hàm, gắn vào nút Thử lại.</p><p>Gọi nó là chạy lại ba bước bật loading, gọi, tắt loading.</p><p>set Data là hàm set state, cho màn tự sửa dữ liệu khi đã biết kết quả mà không cần gọi server lần nữa.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/PostVideoScreen.tsx</p><pre>            {topics.loading ? (
+              &lt;ActivityIndicator color={colors.primary} style={styles.topicLoading} /&gt;
+            ) : topics.error ? (
+              &lt;Pressable onPress={topics.reload} accessibilityRole=&quot;button&quot;&gt;
+                &lt;AppText size={13} color={colors.danger}&gt;{`${topics.error}. Chạm để thử lại`}&lt;/AppText&gt;
+              &lt;/Pressable&gt;
+            ) : (
+              &lt;ScrollView horizontal showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.topicRow}&gt;
+                {(topics.data ?? []).map((t) =&gt; (</pre><div class="say"><p>Xem màn dùng cái trả về thế nào.</p><p>Post Video dòng hai trăm năm mươi lăm: topics chấm loading thì vẽ vòng xoay.</p><p>Dòng hai trăm năm mươi bảy: có error thì hiện câu lỗi, chạm vào gọi topics chấm reload để thử lại.</p><p>reload chính là hàm ở dòng hai mươi ba của hook.</p><p>Hết loading, không lỗi, thì topics chấm data là mảng chủ đề, map ra từng Chip.</p><p>Dấu hỏi hỏi là optional, nếu data còn null thì dùng mảng rỗng cho khỏi vỡ.</p></div></section><section><h3>Tự kiểm tra trước khi qua chương kế </h3><ol class='it'><li>Tìm dòng 29 useFetch. Vì sao phải so requestId trước khi setData?</li><li>Tìm dòng 18. Bỏ fetcherRef, đưa fetcher thẳng vào deps ở dòng 42 thì sao?</li><li>Trong MyVideoScreen dòng 54, vì sao dùng setData thay vì reload?</li></ol><div class="say"><p>Câu một: tìm dòng hai mươi chín của use Fetch.</p><p>Vì sao phải so request Id trước khi set Data?</p><p>Gợi ý: Edit Video đổi video Id nhanh hai lần, kết quả của id cũ có thể về sau id mới.</p><p>Câu hai: tìm dòng mười tám. Bỏ fetcher Ref, đưa fetcher thẳng vào deps thì sao?</p><p>Gợi ý: hàm mũi tên là hàm mới sau mỗi lần vẽ, nên effect chạy lại, gọi server lặp không dứt.</p><p>Câu ba: My Video dòng năm mươi bốn, vì sao dùng set Data thay vì reload?</p><p>Gợi ý: reload bật loading, màn chớp vòng xoay thay cho video đang phát.</p><p>set Data chỉ đổi dữ liệu, êm hơn.</p></div></section><h2 id="c9">Chương 09 · Hook tải dữ liệu 2: usePagedList</h2><section><h3>Hook tải dữ liệu 2: usePagedList — mobile/src/hooks/usePagedList.ts </h3><div class="say"><p>Phần hai của chương bảy. Mở file use Paged List chấm ts, cùng thư mục hooks, một trăm mười hai dòng.</p><p>Nó là anh lớn của use Fetch: cũng tải, cũng giữ loading và error, nhưng thêm chuyện phân trang.</p><p>Chỉ một màn của bạn gọi nó, màn Video nháp, nhưng nháp là danh sách dài nên phải tải từng trang.</p></div></section><section><h3>Ai gọi · làm gì · trả về gì </h3><ol class='it'><li>Ai gọi: DraftsScreen dòng 22, rồi FlatList dòng 103 tới 111 dùng các thứ trả về</li><li>Làm gì: tải trang 0, kéo xuống thì làm mới, cuộn tới cuối thì tải trang kế; chốt busy chặn gọi trùng</li><li>Trả về: items, setItems, loading, refreshing, loadingMore, error, isLast, totalElements, reload, refresh, loadMore</li></ol><div class="say"><p>Ai gọi: Drafts Screen dòng hai mươi hai.</p><p>Rồi Flat List từ dòng một trăm lẻ ba tới một trăm mười một dùng gần hết các thứ trả về.</p><p>Làm gì: tải trang không khi vào màn, kéo xuống thì làm mới, cuộn tới cuối thì tải trang kế.</p><p>Có cái chốt busy để không gọi trùng.</p><p>Trả về: một object mười một thứ. Mảng items, ba cờ tải, error, is Last, total Elements, và ba hàm reload, refresh, load More.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/DraftsScreen.tsx</p><pre>      &lt;FlatList
+        data={list.items}
+        keyExtractor={(v) =&gt; String(v.id)}
+        contentContainerStyle={list.items.length ? styles.list : styles.flexGrow}
+        refreshing={list.refreshing}
+        onRefresh={list.refresh}
+        onEndReached={list.loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={list.loadingMore ? &lt;ActivityIndicator color={colors.primary}
+          style={styles.footer} /&gt; : undefined}</pre><div class="say"><p>Màn Video nháp, dòng hai mươi hai, bạn đã thấy: const list bằng use Paged List, hàm nhận page và size rồi gọi video Api chấm my Drafts.</p><p>Toàn bộ kết quả nằm trong biến list.</p><p>Flat List ở dòng một trăm lẻ ba dùng nó, data là list chấm items.</p><p>Dòng một trăm lẻ bảy, lẻ tám: refreshing và on Refresh.</p><p>Kéo danh sách xuống thì Flat List gọi list chấm refresh, và hiện vòng xoay khi refreshing true.</p><p>Dòng một trăm lẻ chín: on End Reached gọi list chấm load More khi cuộn gần cuối.</p><p>Threshold không phẩy năm nghĩa là còn nửa màn nữa là tới cuối thì gọi sớm, cho khỏi phải chờ.</p><p>Dòng một trăm mười một: đang tải thêm thì gắn vòng xoay nhỏ ở đáy danh sách.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/hooks/usePagedList.ts</p><pre>export function usePagedList&lt;T&gt;(
+  fetchPage: (page: number, size: number) =&gt; Promise&lt;PageResponse&lt;T&gt;&gt;,
+  deps: DependencyList,
+  size: number = PAGE_SIZE,
+) {
+  const [items, setItems] = useState&lt;T[]&gt;([]);
+  const [loading, setLoading] = useState(true);          // tải lần đầu
+  const [refreshing, setRefreshing] = useState(false);   // kéo xuống làm mới
+  const [loadingMore, setLoadingMore] = useState(false); // cuộn tải thêm
+  const [error, setError] = useState&lt;string | null&gt;(null);
+  const [isLast, setIsLast] = useState(false);
+  const [totalElements, setTotalElements] = useState(0);
+  const pageRef = useRef(0);
+  const generationRef = useRef(0);
+  const busyRef = useRef(false); // chặn gọi trùng khi onEndReached bắn nhiều lần
+  const fetchRef = useRef(fetchPage);
+  useEffect(() =&gt; { fetchRef.current = fetchPage; });</pre><div class="say"><p>Mở use Paged List, dòng hai mươi ba.</p><p>Vẫn generic T, nhưng fetch Page nhận page và size, và trả Promise của Page Response của T.</p><p>size mặc định là page size trong constants, là mười, không viết cứng. Backend đếm trang từ không.</p><p>Dòng hai mươi tám tới ba mươi bốn, bảy state.</p><p>items là mảng đang hiện. Ba cờ tải tách riêng: loading là lần đầu, refreshing là kéo xuống, loading More là cuộn tới cuối.</p><p>Tách ra vì mỗi cờ vẽ vòng xoay ở chỗ khác nhau.</p><p>is Last cho biết đã hết trang chưa.</p><p>Dòng ba mươi sáu, page Ref nhớ trang đang ở.</p><p>generation Ref giống request Id ở use Fetch, đánh số thế hệ.</p><p>busy Ref ở dòng ba mươi chín là cái chốt: Flat List hay bắn on End Reached nhiều lần liên tiếp, có chốt thì chỉ một lần được gọi server.</p><p>Dòng bốn mươi, bốn mươi mốt: fetch Ref cất hàm mới nhất, cùng lý do với fetcher Ref bên use Fetch.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/hooks/usePagedList.ts</p><pre>  const loadFirstPage = useCallback(async (mode: &#x27;initial&#x27; | &#x27;refresh&#x27;) =&gt; {
+    const generation = ++generationRef.current;
+    busyRef.current = true;
+    setLoadingMore(false);
+    if (mode === &#x27;initial&#x27;) setLoading(true);
+    else setRefreshing(true);
+    setError(null);
+    try {
+      const res = await fetchRef.current(0, size);
+      if (generation !== generationRef.current) return;
+      pageRef.current = 0;
+      setItems(res.content);
+      setIsLast(res.last);
+      setTotalElements(res.totalElements);</pre><div class="say"><p>Dòng bốn mươi ba, load First Page, dùng chung cho hai trường hợp: initial là lần đầu, refresh là kéo làm mới.</p><p>Dòng bốn mươi bốn tăng thế hệ, mọi phản hồi cũ hết hiệu lực.</p><p>Dòng bốn mươi lăm đóng chốt busy. Dòng bốn mươi bảy, bốn mươi tám: lần đầu thì bật loading, làm mới thì bật refreshing. Rồi xoá lỗi cũ.</p><p>Dòng năm mươi mốt gọi trang không. Dòng năm mươi hai: nếu thế hệ đã đổi trong lúc chờ thì bỏ qua, return luôn.</p><p>Dòng năm mươi ba tới năm mươi sáu: ghi lại đang ở trang không, items thay bằng content của trang mới, nhớ cờ last và tổng số phần tử.</p><p>Làm mới là thay cả danh sách, không nối thêm.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/hooks/usePagedList.ts</p><pre>    } catch (e) {
+      if (generation !== generationRef.current) return;
+      setError(getErrorMessage(e));
+    } finally {
+      if (generation === generationRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+        busyRef.current = false;
+      }
+    }
+  }, [size]);</pre><div class="say"><p>Lỗi ở lần đầu thì cất vào error, màn Drafts hiện Error View với nút thử lại.</p><p>finally: chỉ khi vẫn đúng thế hệ mới tắt loading, tắt refreshing và mở chốt busy.</p><p>Nếu đã có lượt mới, lượt đó sẽ tự tắt khi nó xong.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/hooks/usePagedList.ts</p><pre>  const loadMore = useCallback(async () =&gt; {
+    if (busyRef.current || isLast) return;
+    busyRef.current = true;
+    const generation = generationRef.current;
+    setLoadingMore(true);
+    try {
+      const next = pageRef.current + 1;
+      const res = await fetchRef.current(next, size);
+      if (generation !== generationRef.current) return;
+      pageRef.current = next;
+      setItems((prev) =&gt; [...prev, ...res.content]);
+      setIsLast(res.last);
+      if (generation === generationRef.current) {
+        setLoadingMore(false);
+        busyRef.current = false;
+      }
+  }, [isLast, size]);</pre><div class="say"><p>Dòng sáu mươi chín, load More. Dòng bảy mươi là chỗ tránh gọi trùng: đang bận hoặc đã là trang cuối thì return ngay, không làm gì.</p><p>Bỏ dòng này đi, cuộn mạnh một cái là gọi server ba bốn lần cùng lúc, danh sách bị lặp dòng.</p><p>Đóng chốt, ghi nhớ thế hệ hiện tại, bật loading More để vòng xoay ở đáy hiện ra.</p><p>Dòng bảy mươi lăm, trang kế là trang hiện tại cộng một.</p><p>Gọi server, kiểm tra thế hệ, rồi dòng bảy mươi chín nối thêm.</p><p>prev là mảng cũ, ba chấm là spread, nghĩa là trải hết phần tử cũ ra rồi nối content mới vào sau.</p><p>Dùng dạng hàm prev để chắc chắn nối vào mảng mới nhất.</p><p>Lỗi khi tải thêm thì bỏ qua, không hiện gì, vì cuộn lần sau sẽ thử lại. finally tắt loading More và mở chốt.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/hooks/usePagedList.ts</p><pre>  useEffect(() =&gt; {
+    loadFirstPage(&#x27;initial&#x27;);
+    return () =&gt; { ++generationRef.current; };
+  }, [...deps, size]);
+  return {
+    items,
+    setItems,
+    loading,
+    refreshing,
+    loadingMore,
+    error,
+    isLast,
+    totalElements,
+    reload: () =&gt; loadFirstPage(&#x27;initial&#x27;),
+    refresh: () =&gt; loadFirstPage(&#x27;refresh&#x27;),
+    loadMore,
+  };
+}</pre><div class="say"><p>Dòng chín mươi mốt, use Effect gọi load First Page kiểu initial.</p><p>Mảng phụ thuộc là deps của màn cộng thêm size.</p><p>Hàm dọn dẹp tăng thế hệ, giống use Fetch, để rời màn thì phản hồi về muộn không ghi vào màn đã đóng.</p><p>Dòng chín mươi chín, trả về. items và set Items, ba cờ tải, error, is Last, total Elements.</p><p>Drafts dòng năm mươi hai dùng set Items để bỏ ngay dòng vừa xoá cho nhanh, rồi gọi refresh tải lại từ trang đầu.</p><p>Ba hàm cuối: reload là tải lại kiểu initial, màn hình vòng xoay to.</p><p>refresh là kiểu kéo làm mới, vòng xoay trên đầu danh sách.</p><p>load More thì Flat List tự gọi khi cuộn tới cuối.</p></div></section><section><h3>Page&lt;T&gt;: một trang backend trả về </h3><table><tr><th>Trường</th><th>Nghĩa</th><th>Hook dùng ở</th></tr><tr><td>content</td><td>mảng phần tử của trang này</td><td>setItems, dòng 54 và 79</td></tr><tr><td>page</td><td>số trang hiện tại, đếm từ 0</td><td>pageRef, dòng 53 và 78</td></tr><tr><td>size</td><td>số phần tử mỗi trang</td><td>tham số size, mặc định 10</td></tr><tr><td>totalElements</td><td>tổng số phần tử tất cả trang</td><td>setTotalElements, dòng 56</td></tr><tr><td>totalPages</td><td>tổng số trang</td><td>không dùng</td></tr><tr><td>last</td><td>true nếu là trang cuối</td><td>setIsLast, dòng 55 và 80</td></tr></table><div class="say"><p>Kiểu Page Response của T nằm ở types, models chấm ts, dòng chín mươi hai.</p><p>Mọi API phân trang của backend đều trả đúng dạng này.</p><p>content là mảng phần tử của trang, hook đưa vào items.</p><p>page là số trang hiện tại, đếm từ không.</p><p>Hook nhớ nó trong page Ref để biết trang kế là bao nhiêu.</p><p>size là số phần tử mỗi trang, mặc định mười, lấy từ page size trong constants.</p><p>total Elements là tổng số phần tử của tất cả các trang, hook trả ra cho màn muốn hiện số đếm.</p><p>total Pages là tổng số trang, hook không cần vì đã có cờ last.</p><p>last là true khi đây là trang cuối.</p><p>Hook cất vào is Last, load More nhìn vào đó để thôi gọi server.</p></div></section><section><h3>Kéo làm mới và cuộn tải thêm ở màn Video nháp </h3><p class='nodes'><b>FlatList</b> <small>Drafts dòng 103</small> → <b>usePagedList</b> <small>page, busy, generation</small> → <b>videoApi.myDrafts</b> <small>videos.ts dòng 54</small> → <b>Backend</b> <small>/videos/me/drafts</small></p><div class="say"><p>Vào màn, effect gọi load First Page, hook hỏi trang không.</p><p>Hook gọi video Api chấm my Drafts với page và size, api gửi lên backend đường dẫn videos, me, drafts.</p><p>Backend trả Page Response. Hook đặt items, is Last, tắt loading. Flat List vẽ danh sách.</p><p>Cuộn gần cuối, Flat List gọi load More.</p><p>Chốt busy đang mở và chưa phải trang cuối thì hỏi trang kế, nối thêm vào items.</p><p>Kéo xuống, Flat List gọi refresh. Thế hệ tăng, hỏi lại trang không, thay cả danh sách.</p><p>Phản hồi của lượt load More cũ nếu về muộn sẽ bị bỏ.</p></div></section><section><h3>Tự kiểm tra trước khi qua chương kế </h3><ol class='it'><li>Tìm dòng 72 loadMore. Vì sao chỉ đọc generation, không tăng như loadFirstPage?</li><li>Tìm dòng 70. Bỏ busyRef.current đi thì cuộn nhanh xảy ra gì?</li><li>Trong DraftsScreen dòng 52, vì sao sau setItems còn gọi list.refresh()?</li></ol><div class="say"><p>Câu một: tìm dòng bảy mươi hai trong load More.</p><p>Vì sao chỉ đọc generation chứ không tăng?</p><p>Gợi ý: tải thêm là nối tiếp lượt hiện tại, chỉ làm mới hay đổi nguồn mới là lượt mới.</p><p>Câu hai: tìm dòng bảy mươi. Bỏ busy Ref đi thì cuộn nhanh xảy ra gì?</p><p>Gợi ý: on End Reached bắn nhiều lần, cùng một trang bị gọi và nối vào items nhiều lần.</p><p>Câu ba: trong Drafts Screen dòng năm mươi hai, vì sao sau set Items còn gọi list chấm refresh?</p><p>Gợi ý: đọc comment ngay trên hàm drop Item, xoá bớt thì các trang sau bị dồn lên.</p></div></section><h2 id="c10">Chương 10 · Component form: TextField, Button, Screen, Header</h2><section><h3>Component form: TextField, Button, Screen, Header — mobile/src/components/ </h3><div class="say"><p>Chương tám: bốn component bạn gặp ở mọi màn có form, nằm trong thư mục src, components.</p><p>Text Field sáu mươi chín dòng, Button sáu mươi bảy dòng, Screen ba mươi mốt dòng, Header năm mươi lăm dòng.</p><p>Thêm index chấm ts mười bốn dòng, là lý do bạn import được từ hai chấm hai chấm components.</p><p>Hiểu bốn file này thì ô nhập viền đỏ, nút xoay vòng chờ, tai thỏ được chừa, nút lùi góc trái, bạn biết hết từ đâu ra.</p></div></section><section><h3>Ai gọi · làm gì · trả về gì </h3><ol class='it'><li>Ai gọi: Login, Register, PostVideo, EditVideo, Drafts, Camera… gần như cả 9 màn</li><li>Làm gì: nhận props từ màn, tự giữ state nhỏ (focused, hidden), chọn màu và kiểu</li><li>Vẽ ra: JSX dựng từ TextInput, Pressable, SafeAreaView, View của React Native</li></ol><div class="say"><p>Ai gọi: gần như cả chín màn của bạn.</p><p>Login và Register dùng cả bốn, Post Video và Edit Video dùng Text Field, Button, Header, Drafts dùng Header có đếm số.</p><p>Làm gì: nhận props từ màn, tự giữ vài state nhỏ như đang focus hay đang ẩn mật khẩu, rồi chọn màu và kiểu cho đúng tình huống.</p><p>Vẽ ra: không trả về giá trị mà trả về JSX.</p><p>Bên trong toàn đồ gốc của React Native: Text Input, Pressable, Safe Area View, View.</p></div></section><section><h3>Props là gì </h3><ol class='it'><li>Props = đầu vào của component, giống đơn đặt hàng gửi cho quán</li><li>Màn viết &lt;TextField label=&quot;Mật khẩu&quot; error={...} /&gt; → quán nhận { label, error }</li><li>Kiểu Props là mẫu đơn: món bắt buộc, món có dấu ? là tuỳ chọn, có giá trị mặc định</li></ol><div class="say"><p>Trước khi đọc code, một khái niệm: props là đầu vào của component, giống tờ đơn đặt hàng bạn gửi cho quán, quán là component.</p><p>Màn viết Text Field label bằng Mật khẩu, error bằng cái gì đó, thì phía quán nhận một object có label và error rồi tự làm phần còn lại.</p><p>Kiểu Props ở đầu mỗi file là mẫu đơn: món nào bắt buộc, món có dấu hỏi là tuỳ chọn, không ghi thì quán dùng giá trị mặc định.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/auth/LoginScreen.tsx</p><pre>              &lt;TextField
+                label=&quot;Tên đăng nhập hoặc email&quot;
+                value={usernameOrEmail}
+                onChangeText={(t) =&gt; {
+                  setUsernameOrEmail(t);
+                  if (errors.id) setErrors((e) =&gt; ({ ...e, id: undefined }));
+                }}
+                autoCapitalize=&quot;none&quot;
+                autoCorrect={false}
+                autoComplete=&quot;username&quot;
+                textContentType=&quot;username&quot;
+                returnKeyType=&quot;next&quot;
+                error={errors.id}
+              /&gt;</pre><div class="say"><p>Ai gọi Text Field: Login Screen dòng chín mươi mốt, bạn đã thấy ở video chín màn.</p><p>Đơn gồm label, value từ state, và on Change Text để cập nhật state kiêm xoá lỗi cũ.</p><p>Các prop như auto Capitalize none hay return Key Type next, Text Field không xử lý mà chuyển thẳng xuống Text Input.</p><p>Chỉ error ở dòng một trăm lẻ ba là Text Field tự lo: có chữ thì viền đỏ và hiện câu lỗi.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/TextField.tsx</p><pre>interface Props extends TextInputProps {
+  label?: string;
+  required?: boolean;
+  error?: string | null;
+  /** Hiện &quot;14/150&quot; bên phải nhãn (cần có maxLength) */
+  showCounter?: boolean;
+}
+export function TextField({ label, required, error, showCounter = true, maxLength, value, secureTextEntry,
+  multiline, style, onFocus, onBlur, ...rest }: Props) {
+  const [focused, setFocused] = useState(false);
+  const [hidden, setHidden] = useState(true);
+  const borderColor = error ? colors.danger : focused ? colors.primary : colors.border;</pre><div class="say"><p>Mở Text Field chấm tsx, dòng mười ba.</p><p>Props extends Text Input Props: mẫu đơn gồm mọi prop của Text Input gốc, nên auto Capitalize truyền qua được, cộng bốn món riêng là label, required, error và show Counter.</p><p>Dòng hai mươi mốt, trong ngoặc nhọn là bóc từng món ra khỏi props, gọi là destructuring.</p><p>show Counter bằng true là giá trị mặc định.</p><p>Ba chấm rest gom mọi món còn lại vào một gói tên rest.</p><p>Hai state riêng của ô: focused là đang có con trỏ hay không, hidden là mật khẩu đang bị che hay không. Màn không cần biết hai state này.</p><p>Dòng hai mươi bốn là trái tim của viền đỏ.</p><p>Có error thì màu danger, không thì đang focus thì hồng, còn lại viền xám.</p><p>Ba trường hợp xếp theo thứ tự ưu tiên.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/TextField.tsx</p><pre>      &lt;View style={[styles.box, multiline &amp;&amp; styles.boxMultiline, { borderColor,
+        backgroundColor: focused ? colors.white : colors.surface }]}&gt;
+        &lt;TextInput
+          value={value}
+          secureTextEntry={secureTextEntry &amp;&amp; hidden}
+          onFocus={(e) =&gt; { setFocused(true); onFocus?.(e); }}
+          onBlur={(e) =&gt; { setFocused(false); onBlur?.(e); }}
+          {...rest}
+        /&gt;
+        {secureTextEntry &amp;&amp; (
+          &lt;Pressable onPress={() =&gt; setHidden((h) =&gt; !h)} hitSlop={10}
+            accessibilityLabel={hidden ? &#x27;Hiện mật khẩu&#x27; : &#x27;Ẩn mật khẩu&#x27;}&gt;
+            &lt;Ionicons name={hidden ? &#x27;eye-outline&#x27; : &#x27;eye-off-outline&#x27;} size={20} color={colors.muted} /&gt;
+          &lt;/Pressable&gt;
+        )}
+      &lt;/View&gt;
+      {!!error &amp;&amp; &lt;AppText size={12} color={colors.danger}&gt;{error}&lt;/AppText&gt;}</pre><div class="say"><p>Phần vẽ, dòng ba mươi chín. Hộp bọc ngoài nhận border Color vừa tính, nền trắng khi focus, nền xám khi không. Đúng quy ước thiết kế đã chốt.</p><p>Dòng bốn mươi, Text Input thật của React Native.</p><p>secure Text Entry chỉ bật khi màn yêu cầu và hidden còn true, bấm con mắt thì hidden thành false, chữ hiện ra.</p><p>Dòng bốn mươi chín, ba chấm rest rải cả gói prop còn lại lên Text Input.</p><p>Nhờ dòng này mà auto Capitalize, return Key Type, on Submit Editing của Login đều tới nơi.</p><p>Có secure Text Entry thì vẽ thêm nút con mắt, bấm là đảo hidden, có accessibility Label đổi theo trạng thái.</p><p>Dòng năm mươi bảy: có error thì vẽ câu lỗi đỏ cỡ mười hai dưới ô.</p><p>Hai dấu chấm than đổi chuỗi thành true false, chuỗi rỗng thì không vẽ.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/auth/LoginScreen.tsx</p><pre>              {/* Lỗi do backend trả về */}
+              {!!serverError &amp;&amp; (
+                &lt;View style={styles.errorBox}&gt;
+                  &lt;Ionicons name=&quot;alert-circle&quot; size={18} color={colors.danger} /&gt;
+                  &lt;AppText size={13} color={colors.danger} style={styles.flex}&gt;{serverError}&lt;/AppText&gt;
+                &lt;/View&gt;
+              )}
+              &lt;Button title=&quot;Đăng nhập&quot; onPress={onSubmit} loading={submitting} style={styles.submit} /&gt;
+            &lt;/View&gt;</pre><div class="say"><p>Ai gọi Button: Login Screen dòng một trăm hai mươi chín.</p><p>Đơn gồm title, on Press, loading bằng submitting, và style cách lề.</p><p>Không ghi variant nên mặc định là nút hồng đặc.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/auth/RegisterScreen.tsx</p><pre>            &lt;Button
+              title={step === 3 ? &#x27;Đăng ký&#x27; : &#x27;Tiếp tục&#x27;}
+              onPress={onNext}
+              loading={submitting}
+              disabled={!valid}
+              variant={valid ? &#x27;primary&#x27; : &#x27;secondary&#x27;}
+              style={!valid &amp;&amp; styles.btnBlocked}
+            /&gt;</pre><div class="say"><p>Register Screen dòng hai trăm hai mươi ba gọi Button đầy đủ hơn: disabled bằng không valid để khoá nút, variant đổi sang secondary cho nút xám.</p><p>Đó là nút Tiếp tục xám ở bước hai Đăng ký.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/Button.tsx</p><pre>type Variant = &#x27;primary&#x27; | &#x27;outline&#x27; | &#x27;secondary&#x27; | &#x27;danger&#x27;;
+interface Props {
+  title: string;
+  onPress?: () =&gt; void;
+  variant?: Variant;
+  size?: &#x27;md&#x27; | &#x27;sm&#x27;;
+  icon?: keyof typeof Ionicons.glyphMap;
+  loading?: boolean;
+  disabled?: boolean;
+  style?: StyleProp&lt;ViewStyle&gt;;
+}</pre><div class="say"><p>Mở Button chấm tsx. Dòng mười ba, kiểu Variant là một trong bốn chữ primary, outline, secondary, danger, gõ chữ khác TypeScript báo đỏ ngay.</p><p>Props của Button chỉ title là bắt buộc, còn lại đều có dấu hỏi, icon phải là tên có trong bộ Ionicons.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/Button.tsx</p><pre>const variantStyle: Record&lt;Variant, { bg: string; fg: string; border?: string }&gt; = {
+  primary: { bg: colors.primary, fg: colors.white },
+  outline: { bg: colors.white, fg: colors.primaryText, border: colors.primary },
+  secondary: { bg: colors.surface, fg: colors.text },
+  danger: { bg: colors.surface, fg: colors.danger },
+};
+export function Button({ title, onPress, variant = &#x27;primary&#x27;, size = &#x27;md&#x27;, icon, loading, disabled,
+  style }: Props) {
+  const v = variantStyle[variant];
+  const isDisabled = disabled || loading;</pre><div class="say"><p>Dòng hai mươi sáu, bảng variant Style: mỗi kiểu nút ứng với nền, chữ, và viền nếu có.</p><p>Muốn thêm kiểu nút chỉ thêm một dòng ở đây.</p><p>Dòng ba mươi ba, hàm Button với mặc định variant primary, size md, rồi dòng ba mươi bốn tra bảng lấy bộ màu v.</p><p>Dòng ba mươi lăm quan trọng: is Disabled bằng disabled hoặc loading.</p><p>Đang loading thì nút cũng bị khoá, nên bấm Đăng nhập hai lần liên tiếp không gửi hai request.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/Button.tsx</p><pre>    &lt;Pressable
+      onPress={onPress}
+      disabled={isDisabled}
+      style={({ pressed }) =&gt; [
+        { backgroundColor: v.bg, borderColor: v.border ?? v.bg,
+          opacity: isDisabled ? 0.55 : pressed ? 0.85 : 1 },
+      {loading ? (
+        &lt;ActivityIndicator color={v.fg} /&gt;
+      ) : (
+        &lt;View style={styles.row}&gt;
+          {icon &amp;&amp; &lt;Ionicons name={icon} size={size === &#x27;sm&#x27; ? 16 : 18} color={v.fg} /&gt;}
+          &lt;AppText weight=&quot;semibold&quot; size={size === &#x27;sm&#x27; ? 13 : 16} color={v.fg}&gt;
+            {title}
+          &lt;/AppText&gt;
+    &lt;/Pressable&gt;</pre><div class="say"><p>Phần vẽ: Pressable là View bấm được, disabled nhận is Disabled.</p><p>style là một hàm nhận pressed, tức đang bị đè ngón tay hay không.</p><p>Opacity: bị khoá thì mờ năm mươi lăm phần trăm, đang đè thì tám mươi lăm, bình thường thì một trăm.</p><p>Dòng bốn mươi tám: loading thì vẽ Activity Indicator, cái vòng xoay, màu theo chữ của nút.</p><p>Lúc này chữ Đăng nhập biến mất, chỉ còn vòng xoay.</p><p>Không loading thì vẽ hàng ngang: icon nếu có, rồi chữ title in đậm.</p><p>Cỡ chữ nhỏ hơn khi size sm, như nút Đăng ngay trong Video nháp.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/auth/LoginScreen.tsx</p><pre>  return (
+    &lt;Screen edges={[]}&gt;
+      &lt;KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === &#x27;ios&#x27; ? &#x27;padding&#x27; : undefined}&gt;
+        &lt;ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps=&quot;handled&quot; bounces={false}&gt;</pre><div class="say"><p>Ai gọi Screen: Login Screen dòng sáu mươi sáu, lớp ngoài cùng của mọi màn.</p><p>edges bằng mảng rỗng, nghĩa là không chừa tai thỏ, để phần hồng nhạt tràn sát mép trên.</p><p>Bên trong Screen là Keyboard Avoiding View và Scroll View của màn.</p><p>Screen chỉ là cái khung, không biết trong nó có gì.</p><p>Camera gọi Screen dark, Drafts gọi Screen không có gì.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/Screen.tsx</p><pre>interface Props {
+  children: ReactNode;
+  dark?: boolean;
+  edges?: Edge[];
+  style?: StyleProp&lt;ViewStyle&gt;;
+}
+export function Screen({ children, dark = false, edges = [&#x27;top&#x27;], style }: Props) {
+  return (
+    &lt;SafeAreaView edges={edges} style={[styles.root,
+      { backgroundColor: dark ? colors.black : colors.background }, style]}&gt;
+      &lt;StatusBar style={dark ? &#x27;light&#x27; : &#x27;dark&#x27;} /&gt;
+      {children}
+    &lt;/SafeAreaView&gt;
+  );
+}</pre><div class="say"><p>Mở Screen chấm tsx, dòng mười ba. children là mọi thứ màn viết giữa thẻ mở và thẻ đóng Screen, kiểu React Node nghĩa là bất cứ gì vẽ được.</p><p>Dòng hai mươi: mặc định dark false, edges là mảng có một chữ top, tức chỉ chừa phía trên cho tai thỏ.</p><p>Phía dưới để màn tự lo, vì có màn có thanh tab, có màn không.</p><p>Dòng hai mươi hai, Safe Area View nhận edges, nền đen khi dark, nền trắng khi thường.</p><p>Dòng hai mươi ba, Status Bar đổi chữ giờ và pin sang màu sáng khi nền đen, rồi dòng hai mươi bốn đặt children vào trong.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/DraftsScreen.tsx</p><pre>  return (
+    &lt;Screen&gt;
+      &lt;Header title=&quot;Video nháp&quot; count={list.loading ? undefined : list.totalElements} /&gt;
+      {renderBody()}</pre><div class="say"><p>Ai gọi Header: Drafts Screen dòng một trăm ba mươi ba, màn Video nháp.</p><p>title là Video nháp, count là tổng số nháp từ list chấm total Elements, còn đang tải thì là undefined. Nhớ chữ undefined này.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/Header.tsx</p><pre>interface Props {
+  title: string;
+  count?: number;
+  showBack?: boolean;
+  onBack?: () =&gt; void;
+  right?: ReactNode;
+}
+export function Header({ title, count, showBack = true, onBack, right }: Props) {
+  const navigation = useNavigation();</pre><div class="say"><p>Mở Header chấm tsx. Props gồm title bắt buộc, count là số, show Back mặc định true, on Back thay cho lùi mặc định.</p><p>right là React Node để đặt nút bên phải, như nút Lưu.</p><p>Dòng hai mươi ba gọi use Navigation để tự lấy navigation, hook này dùng được ở mọi component nằm trong Navigation Container, nên màn không cần truyền vào.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/Header.tsx</p><pre>  return (
+    &lt;View style={styles.bar}&gt;
+      {showBack &amp;&amp; (
+        &lt;Pressable
+          onPress={onBack ?? (() =&gt; navigation.goBack())}
+          accessibilityLabel=&quot;Quay lại&quot;
+          &lt;Ionicons name=&quot;chevron-back&quot; size={26} color={colors.text} /&gt;
+      &lt;AppText weight=&quot;bold&quot; size={18} numberOfLines={1} style={[styles.title,
+        !showBack &amp;&amp; { marginLeft: spacing.sm }]}&gt;
+        {title}
+      &lt;/AppText&gt;
+      {count !== undefined &amp;&amp; (
+        &lt;View style={styles.count}&gt;
+          &lt;AppText weight=&quot;semibold&quot; size={13} color={colors.muted}&gt;{count}&lt;/AppText&gt;
+      &lt;View style={styles.right}&gt;{right}&lt;/View&gt;
+  );</pre><div class="say"><p>Dòng hai mươi sáu: show Back true thì vẽ nút lùi.</p><p>on Press dùng on Back nếu màn có gửi, không thì gọi navigation go Back.</p><p>Hai dấu hỏi là toán tử nullish: trái null hoặc undefined thì lấy phải.</p><p>Dòng ba mươi sáu, tiêu đề in đậm cỡ mười tám, number Of Lines một để tiêu đề dài bị cắt thay vì tràn dòng.</p><p>Dòng ba mươi chín: count khác undefined thì vẽ ô số xám.</p><p>So với undefined chứ không so true false, nên count bằng không vẫn hiện số không, còn đang tải thì không hiện gì.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/index.ts</p><pre>/** Gom export để import gọn:  import { Button, TextField, Screen } from &#x27;../../components&#x27;; */
+export * from &#x27;./AppText&#x27;;
+export * from &#x27;./Avatar&#x27;;
+export * from &#x27;./BottomSheet&#x27;;
+export * from &#x27;./Button&#x27;;
+export * from &#x27;./Chip&#x27;;
+export * from &#x27;./Header&#x27;;
+export * from &#x27;./PlaceholderScreen&#x27;;
+export * from &#x27;./Screen&#x27;;
+export * from &#x27;./SegmentedTabs&#x27;;
+export * from &#x27;./StateViews&#x27;;
+export * from &#x27;./TextField&#x27;;
+export * from &#x27;./UserRow&#x27;;
+export * from &#x27;./VideoGrid&#x27;;</pre><div class="say"><p>Cuối cùng, index chấm ts trong thư mục components.</p><p>Dòng một là comment nói mục đích: gom export để màn import gọn một dòng.</p><p>Mỗi dòng export star from lấy toàn bộ thứ file đó export rồi export lại.</p><p>Khi màn viết from hai chấm hai chấm components mà không có tên file, JavaScript tự mở file index trong thư mục đó.</p><p>Không có index này, Login Screen phải viết bốn dòng import, và thêm component mới thì nhớ thêm một dòng ở đây.</p></div></section><section><h3>Bốn component, props hay dùng và mặc định </h3><table><tr><th>Component</th><th>Props chính</th><th>Mặc định</th></tr><tr><td>TextField</td><td>label, required, error, showCounter + mọi prop TextInput</td><td>showCounter = true</td></tr><tr><td>Button</td><td>title*, onPress, variant, size, icon, loading, disabled</td><td>variant primary, size md</td></tr><tr><td>Screen</td><td>children*, dark, edges, style</td><td>dark false, edges [&#x27;top&#x27;]</td></tr><tr><td>Header</td><td>title*, count, showBack, onBack, right</td><td>showBack true, lùi = goBack()</td></tr></table><div class="say"><p>Tóm lại, dấu sao là bắt buộc. Text Field nhận label, required, error, show Counter, cộng mọi prop của Text Input.</p><p>Button chỉ bắt buộc title, mặc định variant primary, size md, loading vừa xoay vòng vừa khoá nút.</p><p>Screen bắt buộc children, mặc định nền trắng và chỉ chừa mép trên.</p><p>Header bắt buộc title, mặc định có nút lùi và lùi bằng go Back.</p></div></section><section><h3>Tự kiểm tra trước khi qua chương kế </h3><ol class='it'><li>Tìm dòng borderColor trong TextField. Vừa có error vừa đang focus thì viền màu gì?</li><li>Tìm isDisabled trong Button. Nếu bỏ loading khỏi dòng này, bấm Đăng nhập liên tục thì sao?</li><li>Tìm count !== undefined trong Header. Đổi thành if (count) thì Video nháp có 0 nháp hiện gì?</li></ol><div class="say"><p>Câu một: tìm dòng border Color trong Text Field.</p><p>Vừa có error vừa đang focus thì viền màu gì?</p><p>Gợi ý: toán tử ba ngôi đọc từ trái sang, error đứng trước nên thắng.</p><p>Câu hai: tìm is Disabled trong Button. Nếu bỏ loading khỏi dòng này, bấm Đăng nhập liên tục thì sao?</p><p>Gợi ý: on Submit chạy nhiều lần, gửi nhiều request trong lúc vòng xoay còn quay.</p><p>Câu ba: tìm count khác undefined trong Header.</p><p>Đổi thành if count thì Video nháp có không nháp hiện gì?</p><p>Gợi ý: số không là falsy, ô số sẽ biến mất.</p></div></section><h2 id="c11">Chương 11 · Component danh sách: VideoGrid, Chip, SegmentedTabs, BottomSheet, StateViews</h2><section><h3>Component danh sách — mobile/src/components/ · VideoGrid, Chip, SegmentedTabs, BottomSheet, StateViews </h3><div class="say"><p>Chương chín: năm component nhỏ còn lại trong thư mục components, cộng lại khoảng ba trăm dòng.</p><p>Chip bốn mươi sáu dòng, State Views bốn mươi chín, Bottom Sheet năm mươi chín, Segmented Tabs sáu mươi chín, Video Grid tám mươi mốt.</p><p>Tôi đi nhanh hơn chương tám: mỗi file một dòng gọi trong màn của bạn, rồi một đoạn props và JSX chính.</p></div></section><section><h3>Ai gọi · làm gì · trả về gì </h3><ol class='it'><li>Ai gọi: PostVideo dùng Chip và SegmentedTabs, MyVideo dùng BottomSheet, Drafts dùng Loading, ErrorView, EmptyView</li><li>Làm gì: nhận props từ màn, vẽ một mảnh giao diện, bấm vào thì gọi ngược hàm callback của màn</li><li>Trả về: JSX. Ba ý cần nhớ: children, hàm truyền qua props, cờ visible</li></ol><div class="say"><p>Ai gọi: Post Video dùng Chip và Segmented Tabs, My Video dùng Bottom Sheet, Drafts và Music dùng Loading, Error View, Empty View.</p><p>Video Grid không màn nào của bạn dùng, tôi chỉ nhắc tên.</p><p>Làm gì: nhận props từ màn, vẽ một mảnh giao diện, và khi người dùng bấm thì gọi ngược hàm callback mà màn đã truyền vào.</p><p>Trả về: toàn bộ là JSX. Chương này nhấn ba ý: props children, hàm truyền qua props như on Press và on Change, và cờ visible điều khiển hiện ẩn.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/PostVideoScreen.tsx</p><pre>              &lt;ScrollView horizontal showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.topicRow}&gt;
+                {(topics.data ?? []).map((t) =&gt; (
+                  &lt;Chip
+                    key={t.id}
+                    label={t.name}
+                    selected={t.id === topicId}
+                    onPress={() =&gt; setTopicId(t.id === topicId ? undefined : t.id)}
+                  /&gt;
+                ))}
+              &lt;/ScrollView&gt;
+            )}
+          &lt;View style={styles.field}&gt;
+            &lt;AppText weight=&quot;semibold&quot; size={13}&gt;Ai được xem&lt;/AppText&gt;
+            &lt;SegmentedTabs variant=&quot;segment&quot; value={visibility} onChange={setVisibility}
+              tabs={VISIBILITY_TABS} /&gt;
+          &lt;/View&gt;</pre><div class="say"><p>Ai gọi Chip: Post Video, dòng hai trăm sáu mươi hai, bạn đã thấy ở video chín màn.</p><p>Cuộn ngang danh sách chủ đề, mỗi chủ đề một Chip.</p><p>Dòng hai trăm sáu mươi bốn tới hai trăm bảy mươi: label là tên chủ đề, selected đúng khi id trùng topic Id đang chọn.</p><p>on Press là hàm của màn truyền xuống: bấm lại chip đang chọn thì set Topic Id về undefined, tức bỏ chọn.</p><p>Dòng hai trăm bảy mươi bảy, Segmented Tabs cho mục Ai được xem: value là visibility, on Change chính là set Visibility.</p><p>Màn chỉ đưa state và hàm đổi state, vẽ ra sao là việc của component.</p><p>Hashtag ở dòng hai trăm ba mươi lăm cũng là Chip, nhưng dùng on Remove.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/Chip.tsx</p><pre>const tones = {
+  pink: { bg: colors.primarySoft, fg: colors.primaryText },
+  blue: { bg: colors.blueSoft, fg: colors.blueText },
+  gray: { bg: colors.surface, fg: colors.muted },
+};
+export function Chip({ label, tone = &#x27;gray&#x27;, selected, onPress, onRemove }: Props) {
+  const t = selected ? { bg: colors.primary, fg: colors.white } : tones[tone];
+  return (
+    &lt;Pressable onPress={onPress} disabled={!onPress} style={[styles.chip, { backgroundColor: t.bg }]}&gt;
+      &lt;AppText weight=&quot;medium&quot; size={13} color={t.fg}&gt;{label}&lt;/AppText&gt;
+      {onRemove &amp;&amp; (
+        &lt;Pressable onPress={onRemove} hitSlop={8} accessibilityLabel={`Bỏ ${label}`}&gt;
+          &lt;Ionicons name=&quot;close&quot; size={14} color={t.fg} /&gt;
+        &lt;/Pressable&gt;
+      )}
+    &lt;/Pressable&gt;
+  );
+}</pre><div class="say"><p>Mở Chip chấm tsx. Dòng hai mươi, bảng tones: ba tông hồng, xanh, xám, mỗi tông có màu nền bg và màu chữ fg, đều lấy từ theme.</p><p>Dòng hai mươi sáu nhận năm props, tone mặc định gray.</p><p>Dòng hai mươi bảy: selected thì bỏ qua tông, dùng nền hồng chữ trắng.</p><p>Vì vậy chủ đề đang chọn đổi sang hồng.</p><p>Dòng hai mươi chín, Pressable bọc ngoài, disabled khi không có on Press: màn không truyền hàm thì chip chỉ để xem. Dòng ba mươi hiện label.</p><p>Dòng ba mươi mốt: có on Remove mới vẽ nút X.</p><p>Mẫu này gặp hoài: có hàm thì có nút, không hàm thì không nút.</p><p>hit Slop tám là nới vùng bấm thêm tám điểm cho ngón tay.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/SegmentedTabs.tsx</p><pre>interface Props&lt;K extends string&gt; {
+  tabs: Tab&lt;K&gt;[];
+  value: K;
+  onChange: (key: K) =&gt; void;
+  variant?: &#x27;underline&#x27; | &#x27;segment&#x27; | &#x27;pill&#x27;;
+}
+export function SegmentedTabs&lt;K extends string&gt;({ tabs, value, onChange, variant = &#x27;underline&#x27; }: Props&lt;K&gt;) {</pre><div class="say"><p>Sang Segmented Tabs chấm tsx, dòng mười bảy.</p><p>Props: mảng tabs, value là key đang chọn, on Change nhận key mới, variant chọn kiểu vẽ.</p><p>Chữ K trong ngoặc nhọn là generic, một cái khuôn để trống: Post Video đổ kiểu Visibility vào, Music đổ kiểu Tab Key vào, TypeScript vẫn bắt được lỗi gõ sai key.</p><p>Dòng hai mươi bốn, variant mặc định underline.</p><p>Music dùng pill ở dòng một trăm sáu mươi bốn, Post Video và Edit Video dùng segment.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/SegmentedTabs.tsx</p><pre>      {tabs.map((t) =&gt; {
+        const active = t.key === value;
+        return (
+          &lt;Pressable key={t.key} onPress={() =&gt; onChange(t.key)} accessibilityRole=&quot;tab&quot;
+            accessibilityState={{ selected: active }}
+            style={[styles.item, isSegment ? [styles.segment,
+              active &amp;&amp; styles.segmentActive] : [styles.underline, active &amp;&amp; styles.underlineActive]]}&gt;
+            &lt;AppText weight={active ? &#x27;bold&#x27; : &#x27;medium&#x27;} size={14}
+              color={active ? colors.text : colors.muted}&gt;{t.label}&lt;/AppText&gt;
+          &lt;/Pressable&gt;</pre><div class="say"><p>Dòng bốn mươi bốn, tabs chấm map vẽ mỗi tab một nút, active đúng khi key trùng value.</p><p>Component không có state riêng, chọn cái nào là màn giữ.</p><p>Dòng bốn mươi bảy, bấm thì gọi on Change với key đó.</p><p>Component không tự đổi gì, chỉ báo cho màn, màn gọi set Visibility, vẽ lại, tab mới sáng lên.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/MyVideoScreen.tsx</p><pre>      &lt;BottomSheet visible={menuOpen} onClose={() =&gt; setMenuOpen(false)} heightPercent={24}&gt;
+        &lt;Pressable onPress={openEdit} style={styles.menuItem} accessibilityRole=&quot;button&quot;&gt;
+          &lt;Ionicons name=&quot;create-outline&quot; size={22} color={colors.text} /&gt;
+          &lt;AppText weight=&quot;semibold&quot; size={15}&gt;Sửa video&lt;/AppText&gt;
+        &lt;/Pressable&gt;
+        &lt;Pressable onPress={askDelete} style={styles.menuItem} accessibilityRole=&quot;button&quot;&gt;
+          &lt;Ionicons name=&quot;trash-outline&quot; size={22} color={colors.danger} /&gt;
+          &lt;AppText weight=&quot;semibold&quot; size={15} color={colors.danger}&gt;Xoá video&lt;/AppText&gt;
+        &lt;/Pressable&gt;
+      &lt;/BottomSheet&gt;</pre><div class="say"><p>Ai gọi Bottom Sheet: My Video, dòng hai trăm lẻ sáu, menu ba chấm của video.</p><p>visible bằng menu Open, state boolean ở dòng ba mươi sáu.</p><p>on Close đặt nó về false, height Percent hai mươi bốn vì chỉ có hai dòng menu.</p><p>Dòng hai trăm lẻ bảy tới hai trăm mười bốn là children: hai Pressable Sửa video và Xoá video nằm giữa thẻ mở và thẻ đóng.</p><p>Children là thứ bạn đặt giữa hai thẻ, component nhận như một props và quyết định đặt vào đâu.</p><p>Giống khung ảnh: khung lo viền, bạn lo tấm ảnh.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/BottomSheet.tsx</p><pre>export function BottomSheet({ visible, onClose, title, heightPercent = 65, headerRight, children }: Props) {
+  const insets = useSafeAreaInsets();
+  return (
+    &lt;Modal visible={visible} transparent animationType=&quot;slide&quot; onRequestClose={onClose}&gt;
+        &lt;Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel=&quot;Đóng&quot; /&gt;
+        &lt;View style={[styles.sheet, { height: `${heightPercent}%`,
+          paddingBottom: insets.bottom + spacing.md }]}&gt;
+          &lt;View style={styles.handle} /&gt;
+          {(title || headerRight) &amp;&amp; (
+            &lt;View style={styles.header}&gt;
+                &lt;Pressable onPress={onClose} hitSlop={10} accessibilityLabel=&quot;Đóng&quot;&gt;
+          )}
+          {children}
+        &lt;/View&gt;
+      &lt;/KeyboardAvoidingView&gt;
+    &lt;/Modal&gt;
+  );</pre><div class="say"><p>Mở Bottom Sheet chấm tsx, dòng hai mươi sáu: visible, on Close, title, height Percent mặc định sáu mươi lăm, header Right và children.</p><p>Dòng hai mươi chín là Modal của React Native, bài Buổi sáu.</p><p>visible truyền thẳng xuống: true thì trượt lên, false thì biến mất, nút Back trên Android cũng gọi on Close.</p><p>Dòng ba mươi mốt, backdrop là vùng tối phía trên, bấm vào là on Close.</p><p>Dòng ba mươi hai, bảng thật: cao theo phần trăm, đệm dưới bằng thanh home cộng spacing md.</p><p>Dòng ba mươi bốn: có title hoặc header Right mới vẽ phần đầu, dòng ba mươi chín nút X cũng gọi on Close, ba chỗ đóng cùng một hàm.</p><p>Dòng bốn mươi lăm, children đặt ngay dưới, hai dòng menu của My Video hiện đúng chỗ này.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/DraftsScreen.tsx</p><pre>  const renderBody = () =&gt; {
+    if (list.loading) return &lt;Loading /&gt;;
+    if (list.error) return &lt;ErrorView message={list.error} onRetry={list.reload} /&gt;;
+    return (
+      &lt;FlatList
+        data={list.items}
+        keyExtractor={(v) =&gt; String(v.id)}
+        contentContainerStyle={list.items.length ? styles.list : styles.flexGrow}
+        refreshing={list.refreshing}
+        onRefresh={list.refresh}
+        onEndReached={list.loadMore}
+        ListEmptyComponent={
+          &lt;View style={styles.empty}&gt;
+            &lt;EmptyView icon=&quot;document-outline&quot; title=&quot;Chưa có video nháp&quot; /&gt;
+            &lt;Button title=&quot;Quay video&quot; size=&quot;sm&quot; onPress={() =&gt; navigation.navigate(&#x27;Camera&#x27;)}
+              style={styles.emptyBtn} /&gt;
+          &lt;/View&gt;
+        }</pre><div class="say"><p>Ai gọi State Views: Drafts, dòng chín mươi chín tới một trăm lẻ một.</p><p>Đang tải thì return Loading, lỗi thì Error View kèm message và on Retry bằng list chấm reload.</p><p>Mẫu ba dòng này gặp lại y hệt ở Music dòng sáu mươi ba và Edit Video dòng chín mươi bốn.</p><p>Dòng một trăm mười hai, List Empty Component: Flat List tự hiện khi data rỗng.</p><p>Bên trong là Empty View với icon và title, cộng nút Quay video.</p><p>Tải, lỗi, rỗng là ba cảm giác khác nhau của người dùng, nên tách ba component.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/StateViews.tsx</p><pre>export function Loading({ dark = false }: { dark?: boolean }) {
+  return (
+    &lt;View style={[styles.center, dark &amp;&amp; { backgroundColor: colors.black }]}&gt;
+      &lt;ActivityIndicator size=&quot;large&quot; color={colors.primary} /&gt;
+    &lt;/View&gt;
+  );
+}
+export function ErrorView({ message, onRetry }: { message: string; onRetry?: () =&gt; void }) {
+  return (
+    &lt;View style={styles.center}&gt;
+      &lt;Ionicons name=&quot;cloud-offline-outline&quot; size={44} color={colors.muted} /&gt;
+      &lt;AppText align=&quot;center&quot; color={colors.muted}&gt;{message}&lt;/AppText&gt;
+      {onRetry &amp;&amp; &lt;Button title=&quot;Thử lại&quot; variant=&quot;outline&quot; size=&quot;sm&quot; icon=&quot;refresh&quot; onPress={onRetry} /&gt;}
+    &lt;/View&gt;
+  );
+}</pre><div class="say"><p>Mở State Views chấm tsx. Dòng mười ba, Loading chỉ là Activity Indicator màu hồng căn giữa, props dark để Camera và My Video dùng trên nền đen.</p><p>Dòng hai mươi mốt, Error View nhận message bắt buộc và on Retry tuỳ chọn.</p><p>Dòng hai mươi sáu: có on Retry mới vẽ nút Thử lại, bấm là chạy list chấm reload của use Paged List, chương bảy.</p><p>Empty View ở dòng ba mươi bảy cùng kiểu: icon mặc định khay trống, title đậm, message chỉ vẽ khi có.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/components/VideoGrid.tsx</p><pre>type GridProps = Omit&lt;FlatListProps&lt;Video&gt;, &#x27;renderItem&#x27; | &#x27;numColumns&#x27; | &#x27;keyExtractor&#x27;&gt; &amp; {
+  onPressItem?: (video: Video) =&gt; void;
+};
+export function VideoGrid({ onPressItem, ...rest }: GridProps) {
+  const { width } = useWindowDimensions();
+  const cell = (width - GAP * (COLUMNS - 1)) / COLUMNS;
+  return (
+    &lt;FlatList
+      numColumns={COLUMNS}
+      keyExtractor={(v) =&gt; String(v.id)}
+      columnWrapperStyle={{ gap: GAP }}
+      contentContainerStyle={{ gap: GAP }}
+      onEndReachedThreshold={0.5}
+      renderItem={({ item }) =&gt; &lt;VideoThumb video={item} width={cell} onPress={() =&gt; onPressItem?.(item)} /&gt;}
+      {...rest}
+    /&gt;
+  );
+}</pre><div class="say"><p>Cuối cùng Video Grid chấm tsx, lưới ba cột, không màn nào của bạn dùng, Hồ sơ của Long dùng Video Thumb ở nửa trên file.</p><p>Dòng năm mươi sáu: props là props của Flat List, bỏ ba cái lưới tự lo, thêm on Press Item.</p><p>Dòng bảy mươi, mỗi ô là một Video Thumb, bấm thì gọi on Press Item với video đó.</p><p>Dòng bảy mươi mốt, ba chấm rest là spread: mọi props còn lại như data, on Refresh được rải nguyên sang Flat List.</p></div></section><section><h3>Năm component, props chính </h3><table><tr><th>Component</th><th>Props vào</th><th>Gọi ngược ra màn</th></tr><tr><td>Chip</td><td>label, tone, selected</td><td>onPress, onRemove</td></tr><tr><td>SegmentedTabs</td><td>tabs, value, variant</td><td>onChange(key)</td></tr><tr><td>BottomSheet</td><td>visible, title, heightPercent, children</td><td>onClose</td></tr><tr><td>Loading / ErrorView / EmptyView</td><td>dark · message · icon, title, message</td><td>onRetry</td></tr><tr><td>VideoGrid</td><td>props của FlatList, data</td><td>onPressItem(video)</td></tr></table><div class="say"><p>Chip nhận label, tone, selected, gọi ngược on Press khi bấm và on Remove khi bấm X.</p><p>Segmented Tabs nhận tabs, value, variant, gọi ngược on Change kèm key mới, không giữ state riêng.</p><p>Bottom Sheet nhận visible, title, height Percent, children, gọi ngược on Close từ vùng tối, nút X, nút Back.</p><p>Ba màn trạng thái: Loading có dark, Error View có message, Empty View có icon, title, message, chỉ Error View gọi ngược on Retry.</p><p>Video Grid nhận nguyên props của Flat List rồi rải tiếp, thêm on Press Item kèm video vừa bấm.</p></div></section><section><h3>Tự kiểm tra trước khi qua chương kế </h3><ol class='it'><li>Trong Chip.tsx, bỏ disabled={!onPress} thì chip chủ đề ở PostVideo có khác gì không?</li><li>SegmentedTabs không có useState. Vậy tab đang chọn được nhớ ở đâu?</li><li>Trong MyVideo dòng 206, đổi visible={menuOpen} thành visible={true} thì sao?</li></ol><div class="say"><p>Câu một: trong Chip chấm tsx, bỏ disabled bằng không on Press thì chip chủ đề có khác gì không?</p><p>Gợi ý: chủ đề có on Press nên không đổi, nhưng nhãn Sắp có vẫn nhận bấm dù không làm gì, và không còn mờ đi.</p><p>Câu hai: Segmented Tabs không có use State, vậy tab đang chọn nhớ ở đâu?</p><p>Gợi ý: ở màn, qua value và on Change, component chỉ vẽ theo value.</p><p>Câu ba: ở My Video dòng hai trăm lẻ sáu, đổi visible bằng menu Open thành true thì sao?</p><p>Gợi ý: menu hiện ngay khi vào màn và bấm đóng không tắt, vì set Menu Open không còn ảnh hưởng tới visible.</p></div></section><h2 id="c12">Chương 12 · Theme, utils và hook nhỏ</h2><section><h3>Theme, utils và hook nhỏ — src/constants/theme.ts, config.ts · src/utils/format.ts, media.ts · src/hooks/useBackgroundMusic.ts </h3><div class="say"><p>Chương mười, chương cuối: năm file nhỏ mà màn nào của bạn cũng chạm tới.</p><p>Theme bốn mươi lăm dòng, config tám, format bốn mươi sáu, media ba mươi chín, use Background Music ba mươi chín.</p><p>Hiểu chúng thì bạn biết vì sao màu, số, đường dẫn file trong app luôn giống nhau.</p></div></section><section><h3>Ai gọi · làm gì · trả về gì </h3><ol class='it'><li>Ai gọi: mọi màn import colors, spacing, radius; MyVideo gọi formatCount, timeAgo; PostVideo gọi fileFromUri; Music, PostVideo, MyVideo gọi useBackgroundMusic</li><li>Làm gì: giữ hằng số một chỗ, đổi số và ngày thành chữ, dựng object file cho FormData, phát nhạc nền theo cờ playing</li><li>Trả về: object hằng, chuỗi hiển thị, object {uri, name, type}, boolean có nhạc hay không</li></ol><div class="say"><p>Ai gọi: mọi màn của bạn import colors, spacing, radius từ theme, My Video gọi format Count và time Ago, Post Video gọi file From Uri, ba màn gọi use Background Music.</p><p>Làm gì: theme và config giữ hằng số một chỗ, format đổi số và ngày thành chữ, media dựng object file cho Form Data, hook phát nhạc nền theo cờ playing.</p><p>Trả về: object hằng, chuỗi hiển thị, object uri, name, type, và boolean có nhạc hay không.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/auth/LoginScreen.tsx</p><pre>  form: { gap: 14 },
+  errorBox: {
+    flexDirection: &#x27;row&#x27;,
+    alignItems: &#x27;center&#x27;,
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
+  },
+  submit: { marginTop: 6 },</pre><div class="say"><p>Ai gọi theme: Login, dòng một trăm tám mươi hai, style error Box của khung lỗi hồng khi gõ sai mật khẩu: gap spacing sm, radius md, nền colors primary Soft.</p><p>Vì sao không gõ thẳng mã màu vào đây?</p><p>Vì cùng màu đó có ở Register dòng ba trăm ba mươi mốt, ở Chip, ở Filter, muốn đổi tông hồng cả app thì sửa một dòng trong theme là xong.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/constants/theme.ts</p><pre>export const colors = {
+  primary: &#x27;#DB2766&#x27;,      // nút chính, tab đang chọn
+  primaryText: &#x27;#C81E5B&#x27;,  // chữ/link màu hồng
+  primarySoft: &#x27;#FDECF2&#x27;,  // nền hồng nhạt
+  text: &#x27;#17141C&#x27;,         // chữ chính
+  muted: &#x27;#6B6573&#x27;,        // chữ phụ
+  placeholder: &#x27;#8A8590&#x27;,  // chữ gợi ý trong ô nhập
+  border: &#x27;#ECE7EE&#x27;,       // đường kẻ, viền
+  surface: &#x27;#F6F3F7&#x27;,      // nền ô nhập, nút xám
+  background: &#x27;#FFFFFF&#x27;,</pre><div class="say"><p>Mở theme chấm ts. Dòng năm, colors là object thường, mỗi tên một mã màu.</p><p>Tên nói ý nghĩa chứ không nói màu: primary, không phải pink, mai đổi sang xanh thì tên vẫn đúng.</p><p>Dòng sáu tới tám là bộ ba hồng: primary cho nút chính, primary Text cho chữ và link, primary Soft cho nền nhạt.</p><p>Dòng chín tới mười ba: text chữ chính, muted chữ phụ, placeholder chữ gợi ý, border viền, surface nền ô nhập, đúng quy ước thiết kế đã chốt.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/constants/theme.ts</p><pre>} as const;
+export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 } as const;
+export const radius = { sm: 8, md: 12, lg: 14, xl: 22, full: 999 } as const;
+/** Mỗi độ đậm là một file font riêng (React Native không tự làm đậm font tải ngoài). */
+export const fonts = {
+  regular: &#x27;BeVietnamPro_400Regular&#x27;,
+  medium: &#x27;BeVietnamPro_500Medium&#x27;,
+  semibold: &#x27;BeVietnamPro_600SemiBold&#x27;,
+  bold: &#x27;BeVietnamPro_700Bold&#x27;,
+} as const;
+export type FontWeight = keyof typeof fonts;
+export const fontSize = { xs: 11, sm: 12, md: 13, base: 15, lg: 17, xl: 18, xxl: 22 } as const;</pre><div class="say"><p>Dòng ba mươi, as const: object thành chỉ đọc, không ai gán đè được, và TypeScript biết đúng từng chuỗi màu thay vì string bất kỳ.</p><p>Dòng ba mươi hai spacing, sáu nấc từ bốn tới hai mươi bốn điểm.</p><p>Dòng ba mươi bốn radius, full là chín trăm chín mươi chín cho hình tròn.</p><p>Chỉ chọn trong vài nấc nên các màn cùng nhịp.</p><p>Dòng ba mươi bảy fonts: bốn độ đậm là bốn file font riêng, vì React Native không tự làm đậm font tải ngoài.</p><p>Dòng bốn mươi lăm font Size, bảy cỡ chữ.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/constants/config.ts</p><pre>/**
+ * Địa chỉ backend, đọc từ file .env.local:  EXPO_PUBLIC_API_URL=http://&lt;IP-máy-chạy-backend&gt;:8080
+ * Đổi .env.local xong phải tắt `npx expo start` rồi chạy lại mới ăn.
+ */
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? &#x27;http://localhost:8080&#x27;;
+/** Số phần tử mỗi trang khi gọi API có phân trang. */
+export const PAGE_SIZE = 10;</pre><div class="say"><p>config chấm ts, tám dòng. Dòng năm, API URL đọc từ biến EXPO PUBLIC API URL trong file chấm env chấm local, không có thì localhost cổng tám nghìn tám mươi.</p><p>Expo chỉ nhúng biến có tiền tố EXPO PUBLIC vào app, và đổi xong phải tắt expo start chạy lại mới ăn.</p><p>Không màn nào gọi trực tiếp: client chấm ts dòng ba mươi ghép thành base URL, media chấm ts dòng mười hai ghép vào đường dẫn file.</p><p>Dòng tám, PAGE SIZE mười, use Paged List lấy làm mặc định.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/MyVideoScreen.tsx</p><pre>          &lt;View style={styles.metaRow}&gt;
+            &lt;AppText size={13} color={colors.white}&gt;{`${formatCount(video.viewCount)} lượt xem`}&lt;/AppText&gt;
+            &lt;AppText size={13} color={colors.white}&gt;{visibilityLabel[video.visibility]}&lt;/AppText&gt;
+            &lt;AppText size={13} color={colors.white}&gt;{timeAgo(video.createdAt)}&lt;/AppText&gt;
+          &lt;/View&gt;</pre><div class="say"><p>Ai gọi format: My Video, dòng một trăm chín mươi tám tới hai trăm lẻ một, hàng thông tin dưới tiêu đề.</p><p>format Count đổi lượt xem thành chữ ngắn, visibility Label đổi mã PUBLIC thành Mọi người, time Ago đổi ngày tạo thành hai ngày trước.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/utils/format.ts</p><pre>/** 950 → &quot;950&quot;, 8912 → &quot;8.912&quot;, 12400 → &quot;12,4N&quot;, 1200000 → &quot;1,2Tr&quot; */
+export function formatCount(n: number): string {
+  if (n &lt; 10_000) return n.toLocaleString(&#x27;vi-VN&#x27;);
+  if (n &lt; 1_000_000) return `${trimDecimal(n / 1_000)}N`;
+  return `${trimDecimal(n / 1_000_000)}Tr`;
+}
+function trimDecimal(value: number): string {
+  return (Math.floor(value * 10) / 10).toString().replace(&#x27;.&#x27;, &#x27;,&#x27;);
+}
+/** 28 → &quot;0:28&quot;, 75 → &quot;1:15&quot; */
+export function formatDuration(totalSec: number): string {
+  const min = Math.floor(totalSec / 60);
+  const sec = Math.floor(totalSec % 60);
+  return `${min}:${sec.toString().padStart(2, &#x27;0&#x27;)}`;
+}</pre><div class="say"><p>Mở format chấm ts. Dòng bốn, format Count: dưới mười nghìn thì to Locale String vi V N, có dấu chấm ngăn nghìn.</p><p>Dưới một triệu chia nghìn thêm chữ N, còn lại chia triệu thêm chữ Tr.</p><p>Dòng mười, trim Decimal: nhân mười, làm tròn xuống, chia mười để giữ một chữ số lẻ, rồi đổi dấu chấm thành phẩy kiểu Việt Nam, ra mười hai phẩy bốn N.</p><p>Dòng mười sáu, format Duration: chia sáu mươi ra phút, chia lấy dư ra giây.</p><p>pad Start hai số không để giây năm thành không năm.</p><p>Music dòng một trăm lẻ hai dùng hàm này.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/utils/format.ts</p><pre>/** &quot;2026-10-25T10:00:00&quot; → &quot;Vừa xong&quot; / &quot;5 phút trước&quot; / &quot;3 giờ trước&quot; / &quot;2 ngày trước&quot; / &quot;25/10/2026&quot; */
+export function timeAgo(iso: string): string {
+  const diffSec = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (diffSec &lt; 60) return &#x27;Vừa xong&#x27;;
+  if (diffSec &lt; 3600) return `${Math.floor(diffSec / 60)} phút trước`;
+  if (diffSec &lt; 86400) return `${Math.floor(diffSec / 3600)} giờ trước`;
+  if (diffSec &lt; 7 * 86400) return `${Math.floor(diffSec / 86400)} ngày trước`;
+  return new Date(iso).toLocaleDateString(&#x27;vi-VN&#x27;);
+}
+/** Nhãn tiếng Việt cho chế độ hiển thị video */
+export const visibilityLabel = {
+  PUBLIC: &#x27;Mọi người&#x27;,
+  FOLLOWERS: &#x27;Người theo dõi&#x27;,
+  PRIVATE: &#x27;Chỉ mình tôi&#x27;,
+} as const;</pre><div class="say"><p>Dòng hai mươi ba, time Ago nhận chuỗi ISO backend trả, tính số giây từ đó tới giờ.</p><p>Dòng hai mươi lăm tới hai mươi chín là bậc thang: dưới một phút Vừa xong, rồi phút, giờ, ngày, quá bảy ngày thì in ngày tháng.</p><p>Thử từ mốc nhỏ tới mốc lớn, khớp cái nào return cái đó.</p><p>Dòng ba mươi ba, visibility Label là bảng tra: khoá là mã backend, giá trị là chữ tiếng Việt.</p><p>Post Video dòng ba mươi mốt lấy luôn các khoá này dựng tabs cho Segmented Tabs.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/PostVideoScreen.tsx</p><pre>  const submit = async (draft: boolean) =&gt; {
+    if (!videoUri || uploading) return;
+    setTriedSubmit(true);
+    // Chữ hashtag đang gõ dở (chưa nhấn Enter) cũng được thêm vào
+    const finalTags = tagDraft.trim() ? addTag() : tags;
+    if (!title.trim()) return;
+    setUploading(draft ? &#x27;draft&#x27; : &#x27;post&#x27;);
+    try {
+      await videoApi.create({
+        file: fileFromUri(videoUri),
+        thumbnail: coverUri ? fileFromUri(coverUri) : undefined,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        hashtags: finalTags.length ? finalTags.join(&#x27; &#x27;) : undefined,
+        topicId,</pre><div class="say"><p>Ai gọi media: Post Video, hàm submit dòng một trăm hai mươi sáu, bạn đã đọc ở video chín màn.</p><p>Dòng một trăm ba mươi lăm, file bằng file From Uri của video Uri, dòng kế là thumbnail nếu có ảnh bìa.</p><p>Object này đi vào video Api chấm create, nơi append từng khoá vào Form Data, chương bốn.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/utils/media.ts</p><pre>/**
+ * Tạo &quot;file&quot; để append vào FormData khi upload (React Native gửi file theo kiểu {uri, name, type}).
+ *   const form = new FormData();
+ *   form.append(&#x27;file&#x27;, fileFromUri(asset.uri, asset.mimeType));
+ *   form.append(&#x27;title&#x27;, title);
+ *   await postMultipart&lt;Video&gt;(&#x27;/videos&#x27;, form);
+ */
+export function fileFromUri(uri: string, mimeType?: string | null) {
+  const name = uri.split(&#x27;/&#x27;).pop() ?? &#x27;upload&#x27;;
+  // React Native chấp nhận object này trong FormData; kiểu TS mặc định chỉ biết Blob nên ép kiểu
+  return { uri, name, type: mimeType ?? guessMimeType(uri) } as unknown as Blob;
+}</pre><div class="say"><p>Mở media chấm ts, dòng hai mươi tám, comment là ví dụ dùng.</p><p>Trên web Form Data nhận Blob, còn React Native không có Blob từ đường dẫn file, nó nhận object có ba trường uri, name, type.</p><p>Dòng ba mươi sáu lấy tên file là đoạn sau dấu gạch chéo cuối.</p><p>Dòng ba mươi tám trả object ba trường, type lấy mime Type nếu có, không thì guess Mime Type đoán theo đuôi, mặc định image jpeg.</p><p>as unknown as Blob chỉ để TypeScript im lặng, chạy thật React Native vẫn gửi đúng.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/utils/media.ts</p><pre>/**
+ * Backend lưu đường dẫn tương đối &quot;/files/videos/abc.mp4&quot;.
+ * Muốn hiện lên &lt;Image&gt; / &lt;VideoView&gt; thì phải ghép thêm địa chỉ máy chủ.
+ *   &lt;Image source={{ uri: mediaUrl(video.thumbnailUrl) }} /&gt;
+ */
+export function mediaUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined;
+  if (path.startsWith(&#x27;http&#x27;) || path.startsWith(&#x27;file:&#x27;)) return path;
+  return `${API_URL}${path}`;
+}</pre><div class="say"><p>Nửa trên file, media Url dòng chín: backend lưu đường dẫn tương đối kiểu gạch chéo files gạch chéo videos, muốn Image hiện được phải ghép API URL phía trước.</p><p>Dòng mười một: đã bắt đầu bằng http hoặc file hai chấm thì giữ nguyên, vì là link đầy đủ hoặc file vừa quay trong máy.</p><p>Chuyện ảnh HEIC: iPhone lưu ảnh đuôi HEIC, backend không đọc được.</p><p>Nên Camera dòng một trăm bảy mươi ba và Post Video dòng một trăm mười chín mở thư viện với chế độ Compatible, iOS tự đổi sang JPEG trước khi đưa uri.</p><p>Nhờ vậy guess Mime Type đoán image jpeg là đúng.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/screens/create/MyVideoScreen.tsx</p><pre>  // Nhạc nền chạy theo video; có nhạc thì tắt tiếng gốc của video
+  const isFocused = useIsFocused();
+  const hasMusic = useBackgroundMusic(video?.audio?.fileUrl, isFocused &amp;&amp; !paused &amp;&amp; !deleting);
+  useEffect(() =&gt; {
+    player.muted = hasMusic;
+  }, [player, hasMusic]);</pre><div class="say"><p>Ai gọi use Background Music: My Video, dòng bảy mươi mốt.</p><p>Tham số một là đường dẫn nhạc của video, tham số hai là cờ playing: màn đang được nhìn, video không tạm dừng, không đang xoá.</p><p>Music dòng ba mươi sáu và Post Video dòng sáu mươi bốn gọi cùng kiểu.</p><p>Dòng bảy mươi hai: có nhạc thì tắt tiếng gốc của video, để nhạc nền không chồng lên tiếng quay.</p><p>has Music chính là giá trị hook trả về.</p></div></section><section><h3> </h3><p class='nodes'>mobile/src/hooks/useBackgroundMusic.ts</p><pre>// Bật 1 lần cho cả app: iPhone gạt sang chế độ im lặng vẫn nghe được nhạc
+setAudioModeAsync({ playsInSilentMode: true }).catch(() =&gt; {});
+export function useBackgroundMusic(url: string | null | undefined, playing: boolean, loop = true) {
+  const uri = mediaUrl(url);
+  // useAudioPlayer tự giải phóng khi rời màn hình
+  const player = useAudioPlayer(uri ? { uri } : null);
+  useEffect(() =&gt; {
+    player.loop = loop;
+  }, [player, loop]);
+  useEffect(() =&gt; {
+    if (!uri) return;
+    if (playing) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [player, uri, playing]);
+  return !!uri;</pre><div class="say"><p>Mở use Background Music chấm ts. Dòng mười bảy chạy một lần khi file được import, cho phép phát nhạc cả khi iPhone gạt sang im lặng.</p><p>Dòng mười chín nhận url, playing, loop mặc định true.</p><p>Dòng hai mươi hai, use Audio Player tạo trình phát và tự giải phóng khi màn bị gỡ, bạn không phải dọn dẹp.</p><p>Dòng hai mươi bốn, use Effect gán player chấm loop, chạy lại khi player hoặc loop đổi.</p><p>Dòng hai mươi chín, effect thứ hai: playing true thì play, false thì pause.</p><p>Mảng phụ thuộc có playing, nên rời sang Filter cờ thành false nhạc dừng, quay về chạy tiếp.</p><p>Dòng ba mươi tám trả về có uri hay không, My Video dùng để muted video.</p></div></section><section><h3>Một file video đi và về giữa app và server </h3><p class='nodes'><b>ImagePicker</b> <small>Compatible → JPEG</small> → <b>fileFromUri</b> <small>{uri, name, type}</small> → <b>FormData</b> <small>videoApi.create</small> → <b>Backend</b> <small>/files/videos/…</small> → <b>mediaUrl</b> <small>ghép API_URL</small> → <b>Image / VideoView</b> <small>hiện lên</small></p><div class="say"><p>Người dùng quay hoặc chọn từ thư viện, Image Picker trả uri file trong máy, ảnh đã đổi sang JPEG.</p><p>file From Uri dựng object uri, name, type, video Api chấm create append vào Form Data rồi gửi lên.</p><p>Backend lưu file, trả về video có đường dẫn tương đối bắt đầu bằng gạch chéo files.</p><p>Màn đưa đường dẫn đó qua media Url để ghép API URL phía trước, Image nhận link đầy đủ và hiện lên.</p><p>Đổi địa chỉ server trong chấm env, cả vòng này tự đúng theo.</p></div></section><section><h3>Tự kiểm tra trước khi qua chương kế </h3><ol class='it'><li>Trong theme.ts, đổi primary thành &#x27;#2563EB&#x27; rồi mở Login. Những gì đổi màu?</li><li>Gọi formatCount(1250000) ra gì? Lần theo từng dòng.</li><li>Trong useBackgroundMusic, bỏ playing khỏi mảng phụ thuộc của effect thứ hai thì sao?</li></ol><div class="say"><p>Câu một: trong theme chấm ts, đổi primary thành mã xanh rồi mở Login, những gì đổi màu?</p><p>Gợi ý: nút Đăng nhập, viền ô đang gõ, chip đang chọn.</p><p>Khung lỗi không đổi vì dùng primary Soft.</p><p>Câu hai: format Count của một triệu hai trăm năm mươi nghìn ra gì?</p><p>Gợi ý: chia triệu được một phẩy hai lăm, trim Decimal giữ một số lẻ, ra một phẩy hai Tr.</p><p>Câu ba: bỏ playing khỏi mảng phụ thuộc của effect thứ hai thì sao?</p><p>Gợi ý: effect chỉ chạy lúc đầu, bấm tạm dừng video thì nhạc vẫn chạy, vì React không biết cờ đã đổi.</p></div></section><h2 id="c13">Chương 13 · Tổng kết</h2><section><h3>Tổng kết — Màn của bạn mượn gì, từ đâu </h3><div class="say"><p>Khép lại bằng một bảng: mỗi màn của bạn mượn gì từ khung.</p><p>Nhìn bảng này là thấy chín màn chỉ ghép đồ.</p></div></section><section><h3>Màn của bạn mượn gì từ khung </h3><table><tr><th>Màn</th><th>Context, hook, api</th><th>Component</th><th>Utils, khác</th></tr><tr><td>Đăng nhập, Đăng ký</td><td>useAuth</td><td>TextField, Button, Screen</td><td>getErrorMessage</td></tr><tr><td>Video nháp</td><td>usePagedList, videoApi</td><td>Header, Loading, ErrorView, EmptyView</td><td>timeAgo, mediaUrl</td></tr><tr><td>Video của tôi</td><td>useFetch, videoApi</td><td>BottomSheet</td><td>useBackgroundMusic, formatCount</td></tr><tr><td>Sửa video</td><td>useFetch, videoApi.update</td><td>TextField, SegmentedTabs, Header</td><td>visibilityLabel</td></tr><tr><td>Bộ lọc</td><td>không gọi server</td><td>AppText</td><td>theme</td></tr><tr><td>Chọn nhạc</td><td>useFetch, catalogApi</td><td>SegmentedTabs, EmptyView</td><td>useBackgroundMusic, formatDuration</td></tr><tr><td>Đăng video</td><td>useFetch, videoApi.create</td><td>Chip, SegmentedTabs, TextField, Header</td><td>fileFromUri</td></tr><tr><td>Quay video</td><td>expo-camera, ImagePicker</td><td>Button, Loading, Screen</td><td>theme</td></tr></table><div class="say"><p>Đăng nhập và Đăng ký mượn use Auth để login, register.</p><p>Vẽ bằng Text Field, Button, Screen. Lỗi server lấy câu tiếng Việt bằng get Error Message.</p><p>Video nháp mượn use Paged List để phân trang, video Api để gọi server, bốn component trạng thái, và time Ago, media Url để hiện ngày và ảnh.</p><p>Video của tôi mượn use Fetch lấy một video, Bottom Sheet làm menu ba chấm, use Background Music phát nhạc, format Count rút gọn số.</p><p>Sửa video mượn use Fetch và video Api chấm update, Segmented Tabs cho ba mức quyền xem, visibility Label đổi mã sang chữ tiếng Việt.</p><p>Bộ lọc gần như không mượn gì ngoài App Text và theme. Nó là màn thuần giao diện.</p><p>Chọn nhạc mượn use Fetch với catalog Api lấy danh sách, Segmented Tabs chia nhóm, use Background Music để nghe thử.</p><p>Đăng video mượn nhiều nhất: use Fetch lấy chủ đề, video Api chấm create gửi multipart, Chip cho hashtag, và file From Uri dựng file để gửi.</p><p>Quay video mượn thư viện ngoài là expo camera và Image Picker, còn từ khung chỉ lấy Button, Loading, Screen và theme.</p></div></section><section><h3>Ba điều cần nhớ về khung </h3><ol class='it'><li>Màn mượn, khung làm: logic nặng không nằm trong màn</li><li>Server chỉ có một cửa: api/client.ts gắn token và dịch lỗi</li><li>Người đang đăng nhập là một bảng tin chung: AuthContext</li></ol><div class="say"><p>Điều một: màn mượn, khung làm. Màn chỉ giữ state và ghép đồ, còn tải dữ liệu, gọi server, vẽ ô nhập đều là khung.</p><p>Điều hai: server chỉ có một cửa là file client.</p><p>Mọi request đi qua đó để được gắn token và dịch lỗi sang tiếng Việt.</p><p>Điều ba: người đang đăng nhập là một bảng tin chung, Auth Context.</p><p>Màn nào cần biết thì gọi use Auth, không phải truyền tay nhau.</p></div></section><section><h3>Cách ôn </h3><ol class='it'><li>Mở một màn của bạn, nhìn khối import, tự nói mỗi thứ mượn làm gì</li><li>Bấm giữ Command rồi bấm vào tên hàm trong VS Code để nhảy tới file khung</li><li>Thầy hỏi &quot;hàm này ở đâu&quot;: trả lời tên file, rồi mới kể bên trong</li></ol><div class="say"><p>Cách ôn: mở một màn bất kỳ của bạn, nhìn khối import ở đầu file, tự nói mỗi thứ mượn làm gì.</p><p>Nói không trôi thì xem lại đúng chương đó.</p><p>Trong VS Code, giữ phím Command rồi bấm vào tên hàm là nhảy thẳng tới file khung.</p><p>Tập thói quen này thay vì tìm tay.</p><p>Thầy hỏi hàm này ở đâu, trả lời tên file trước, rồi mới kể bên trong nó làm gì.</p><p>Trả lời được vậy là bạn đã nắm cả app. Chúc bạn học tốt.</p></div></section></body></html>

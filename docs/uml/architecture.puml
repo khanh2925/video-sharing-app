@@ -19,7 +19,9 @@ package "Ứng dụng di động (Expo SDK 58, React Native)" as mobile #F3F8FF 
   [AuthContext\n(token lưu expo-secure-store)] as authctx
   [api/client.ts - Axios\n(gắn Authorization: Bearer)] as axios
   [api/lives.ts - STOMP client\n(@stomp/stompjs)] as stomp
+  [NotificationContext\n(STOMP /user/queue/notifications,\nbanner + số trên chuông)] as notictx
   screens --> authctx
+  notictx --> stomp
   screens --> axios
   screens --> stomp
   authctx --> axios
@@ -30,8 +32,9 @@ rectangle "Caddy 2 - reverse proxy\nHTTPS tự động (chỉ khi chạy product
 package "Backend Spring Boot 4 (Java 21) - cổng 8080" as backend #F4FFF4 {
   [Spring Security\nJwtAuthFilter + JwtService] as security
   [WebSocketConfig\n(endpoint /ws, broker /topic, /queue,\ninterceptor đọc JWT lúc CONNECT)] as wsconfig
-  [Controllers\nAuth, Video, Interaction, Search,\nUser, Story, Catalog, LiveStream,\nAdmin, Setting, Health,\nLiveWebSocketController] as controllers
-  [Services\nAuthService, VideoService, InteractionService,\nFollowService, StoryService, LiveStreamService,\nAdminService, FileStorageService,\nSystemSettingService ...] as services
+  [Controllers\nAuth, Video, Interaction, Search,\nUser, Story, Catalog, LiveStream,\nNotification, Admin, AdminDashboard,\nSetting, Health, LiveWebSocketController] as controllers
+  [Services\nAuthService, VideoService, InteractionService,\nFollowService, StoryService, LiveStreamService,\nNotificationService, WatchHistoryService,\nAdminService, AdminDashboardService,\nFileStorageService, SystemSettingService ...] as services
+  [Module AI (Spring AI 2.0, profile "ai")\nTrackingService, RecommendationService,\nVideoEmbeddingService, ChatbotService\n(RAG + Tool calling + nhớ hội thoại)] as ai
   [Repositories\n(Spring Data JPA, Hibernate 7)] as repos
   [Entities (14 lớp @Entity)] as entities
   [WebConfig\nphục vụ file tĩnh /files/**] as webcfg
@@ -40,9 +43,13 @@ package "Backend Spring Boot 4 (Java 21) - cổng 8080" as backend #F4FFF4 {
   controllers --> services
   services --> repos
   repos --> entities
+  controllers --> ai
+  ai --> repos
 }
 
 database "MySQL 8.4\n(Docker, cổng 3307 khi dev)" as mysql #EEF0FF
+database "PostgreSQL 17 + pgvector\n(bảng video_vectors, cổng 5433 khi dev)" as pgv #EEF6FF
+cloud "Google Gemini API\n(gemini-embedding-001: vector 768 chiều;\nmodel chat cho chatbot)" as gemini #F2FBF6
 folder "Thư mục uploads/\n(videos, thumbnails, avatars,\nstories, products, audios)" as uploads #FFFDE8
 
 axios --> caddy : REST JSON / multipart\n/api/**
@@ -54,6 +61,8 @@ caddy --> webcfg : /files/**
 repos --> mysql : JDBC
 services --> uploads : FileStorageService\nghi / xoá file
 webcfg --> uploads : đọc file
+ai --> pgv : tìm video gần nghĩa\n(cosine, JDBC)
+ai --> gemini : HTTPS\nembedding + chat
 
 note bottom of caddy
   Khi dev: app gọi thẳng http://<IP máy>:8080

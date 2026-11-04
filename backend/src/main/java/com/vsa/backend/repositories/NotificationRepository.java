@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
@@ -24,4 +26,18 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("update Notification n set n.read = true where n.recipient.id = :recipientId and n.read = false")
     int markAllRead(@Param("recipientId") Long recipientId);
+
+    // ===== Điểm xu hướng: lượt chia sẻ (UC20) =====
+
+    interface ShareRow {
+        Long getUserId();
+
+        Long getVideoId();
+    }
+
+    /** Ai đã chia sẻ video nào từ mốc :since; chia sẻ một video cho nhiều bạn vẫn chỉ ra một dòng. */
+    @Query("select distinct n.actor.id as userId, n.video.id as videoId from Notification n "
+            + "where n.type = com.vsa.backend.enums.NotificationType.SHARE "
+            + "and n.video is not null and n.createdAt >= :since")
+    List<ShareRow> findSharesSince(@Param("since") LocalDateTime since);
 }

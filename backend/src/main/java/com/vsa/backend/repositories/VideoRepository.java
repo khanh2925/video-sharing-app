@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.List;
 
 // Video. JpaRepository có sẵn: findById, findAll(Pageable), save, delete, count...
 @Repository
@@ -40,9 +41,13 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     Page<Video> findByStatusAndVisibilityOrderByViewCountDesc(
             VideoStatus status, Visibility visibility, Pageable pageable);
 
+    // Trending cho khách: điểm xu hướng cao trước (TrendingScoreService tính), bằng điểm thì nhiều lượt xem trước
+    Page<Video> findByStatusAndVisibilityOrderByTrendingScoreDescViewCountDescIdDesc(
+            VideoStatus status, Visibility visibility, Pageable pageable);
+
     /**
      * Trending cho người đã đăng nhập: video CHƯA xem lên trước, video đã xem xuống cuối,
-     * trong mỗi nhóm vẫn xếp theo lượt xem. "Đã xem" tính các lượt xem trước mốc :before
+     * trong mỗi nhóm xếp theo điểm xu hướng rồi tới lượt xem. "Đã xem" tính các lượt xem trước mốc :before
      * (lúc app tải trang đầu), để đang lướt mà xem thêm video thì các trang sau không bị lệch.
      */
     @Query(value = """
@@ -51,7 +56,7 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
               and v.visibility = com.vsa.backend.enums.Visibility.PUBLIC
             order by (select count(h) from WatchHistory h
                       where h.user.id = :userId and h.video = v and h.watchedAt < :before) asc,
-                     v.viewCount desc, v.id desc
+                     v.trendingScore desc, v.viewCount desc, v.id desc
             """,
             countQuery = """
             select count(v) from Video v
@@ -120,6 +125,29 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Modifying(flushAutomatically = true)
     @Query("update Video v set v.viewCount = v.viewCount + 1 where v.id = :videoId")
     int incrementViewCount(@Param("videoId") Long videoId);
+
+    // ===== Điểm xu hướng (TrendingScoreService) =====
+
+    /** Chỉ vài cột của video công khai đã đăng, không nạp cả entity. */
+    interface TrendingRow {
+        Long getId();
+
+        String getTitle();
+
+        LocalDateTime getCreatedAt();
+
+        Long getOwnerId();
+    }
+
+    @Query("select v.id as id, v.title as title, v.createdAt as createdAt, v.owner.id as ownerId from Video v "
+            + "where v.status = com.vsa.backend.enums.VideoStatus.PUBLISHED "
+            + "and v.visibility = com.vsa.backend.enums.Visibility.PUBLIC")
+    List<TrendingRow> findPublicForTrending();
+
+    // Chỉ ghi cột trending_score: không đụng tới lượt xem/thích đang được cộng song song
+    @Modifying
+    @Query("update Video v set v.trendingScore = :score where v.id = :videoId")
+    int updateTrendingScore(@Param("videoId") Long videoId, @Param("score") double score);
 
     // ===== Trang quản trị (UC15) =====
 

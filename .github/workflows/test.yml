@@ -1,0 +1,82 @@
+# Chạy test backend và mobile mỗi khi có code mới, để lỗi bị chặn trước khi gộp vào main.
+#
+# Chạy khi:
+#   - mở / cập nhật Pull Request vào main (kết quả hiện ngay trong PR)
+#   - push lên các nhánh làm việc khanh, long, thanh
+#   - được deploy.yml gọi trước khi cập nhật VPS (workflow_call)
+#
+# backend: JUnit 5 + Mockito (./mvnw test). Test contextLoads cần MySQL nên
+#          dựng sẵn một MySQL 8.4 tạm ở cổng 3307, giống docker-compose.yml lúc phát triển.
+# mobile:  npm test (node:test, kiểm tra logic live và phát video).
+
+name: Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [khanh, long, thanh]
+  workflow_call:
+  workflow_dispatch:
+
+# Push liên tục lên cùng một nhánh thì huỷ lần chạy cũ, chỉ giữ lần mới nhất
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (JUnit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: video_sharing
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Chạy unit test
+        run: |
+          chmod +x mvnw
+          ./mvnw -B test
+
+  mobile:
+    name: Mobile (npm test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Cài thư viện
+        run: npm ci
+
+      - name: Chạy test
+        run: npm test

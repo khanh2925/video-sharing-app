@@ -77,6 +77,7 @@ Công nghệ: Expo + React Native + TypeScript (mobile), Spring Boot 4 REST API 
 | R15 | Quản trị viên **không khoá được tài khoản quản trị**. Video bị ẩn không xoá khỏi DB (để tra lại khi cần), quản trị viên **bỏ ẩn được** khi ẩn nhầm (C4). |
 | R17 | **Thông số không viết cứng**, chia 3 loại (C12): thông số quản trị viên chỉnh trên hệ thống (bảng `system_settings`, UC19); cấu hình kỹ thuật trong `application.yaml`; giới hạn gắn với cột DB trong `AppConstants`. |
 | R16 | Các nút có trong thiết kế nhưng **ngoài phạm vi MVP** (Buy now, Message, Also post on, chia sẻ sang Facebook / Instagram / sao chép liên kết) vẫn hiện, bấm vào thì báo "Tính năng sẽ có ở phiên bản sau". |
+| R18 | **Top trending xếp theo điểm xu hướng**, không theo tổng lượt xem. Điểm = max(0, 100 × (0.35R + 0.25E + 0.30V + 0.10F) − P), tính lại mỗi 10 phút từ hành vi 72 giờ gần nhất: R xem hết, E thích / bình luận / chia sẻ, V lượt xem 24 giờ qua, F độ mới của video, P phạt lướt qua. Mỗi người chỉ tính 1 lượt cho mỗi loại hành vi trên một video; hành vi của chính tác giả không tính. Hệ số nằm trong `app.trending` (`application.yaml`). Người đã đăng nhập thấy video chưa xem lên trước. |
 
 ---
 
@@ -263,8 +264,8 @@ Mỗi use case ghi: **Actor**, **Mục đích**, **Điều kiện trước**, **
 - **Actor**: Khách, Người dùng.
 - **Luồng chính**: mở app → trang chủ (Stories, Top trending, Browse topic, Streaming, Audio) → chọn video → phát toàn màn hình, tự lặp, hiện tác giả, mô tả, hashtag, nhạc, số thích, số bình luận → tăng lượt xem → chạm để dừng / phát, vuốt lên sang video kế.
 - **Lỗi**: không kết nối được máy chủ → "Chạm để thử lại"; video không được phép xem → "Video không tồn tại hoặc bạn không có quyền xem".
-- **Quy tắc**: R3, R4, R7. File video phát qua `/files/**` có hỗ trợ HTTP Range (xem được ngay, không chờ tải hết).
-- **API**: `GET /api/videos/trending`, `GET /api/videos/{id}`, `POST /api/videos/{id}/view`, `GET /api/lives`, `GET /api/audios`.
+- **Quy tắc**: R3, R4, R7, R18. File video phát qua `/files/**` có hỗ trợ HTTP Range (xem được ngay, không chờ tải hết).
+- **API**: `GET /api/videos/trending`, `GET /api/videos/{id}`, `POST /api/videos/{id}/view`, `GET /api/lives`, `GET /api/audios`. Quản trị viên xem thành phần điểm: `GET /api/admin/trending`, tính lại ngay: `POST /api/admin/trending/refresh`.
 - **Dữ liệu**: Video, User, Audio, Hashtag, Topic.
 
 #### UC06. Xem hồ sơ người dùng

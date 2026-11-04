@@ -1,7 +1,9 @@
 # Tự động cập nhật VPS Oracle mỗi khi có code mới trên nhánh main.
 #
-# Luồng: push lên main → GitHub Actions SSH vào VPS → VPS chạy deploy/update.sh
-#        (git pull → build lại image backend → khởi động lại container).
+# Luồng: push lên main → chạy test (test.yml) → đạt thì GitHub Actions SSH vào VPS
+#        → VPS chạy deploy/update.sh (git pull → build lại image backend → khởi động lại container)
+#        → gọi /api/health để chắc chắn bản mới đã chạy.
+#        Test lỗi thì dừng, VPS giữ nguyên bản cũ.
 #
 # Secrets cần có (Settings → Secrets and variables → Actions):
 #   VPS_HOST     IP public của VPS
@@ -27,7 +29,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:

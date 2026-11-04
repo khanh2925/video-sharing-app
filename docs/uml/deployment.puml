@@ -20,6 +20,7 @@ node "Máy dev (npx expo start)" as devpc #F7F7F7 {
 }
 
 cloud "Internet" as inet
+cloud "Google Gemini API" as gemini #F2FBF6
 
 node "VPS Oracle Cloud (Always Free)\nUbuntu 24.04 - Docker Compose (project: vsa)" as vps #F4FFF4 {
   node "Container caddy\n(image caddy:2)\ncổng 80, 443 (TCP/UDP)" as caddy #FFF7E6 {
@@ -31,7 +32,11 @@ node "VPS Oracle Cloud (Always Free)\nUbuntu 24.04 - Docker Compose (project: vs
   node "Container db\n(image mysql:8.4)\nkhông mở cổng ra ngoài" as db #EEF0FF {
     database "video_sharing" as schema
   }
+  node "Container vector-db\n(image pgvector/pgvector:pg17)\nkhông mở cổng ra ngoài" as vdbc #EEF6FF {
+    database "vsa_vectors\n(bảng video_vectors)" as vschema
+  }
   storage "volume uploads\n(/app/uploads)" as vup
+  storage "volume pgvector_data" as vpg
   storage "volume mysql_data\n(/var/lib/mysql)" as vdb
   storage "volume caddy_data,\ncaddy_config\n(chứng chỉ)" as vcad
 }
@@ -43,11 +48,15 @@ rp --> jar : HTTP :8080\n(mạng Docker nội bộ)
 jar --> schema : JDBC jdbc:mysql://db:3306/video_sharing
 jar --> vup : ghi / đọc file upload
 schema --> vdb
+jar --> vschema : JDBC (chỉ khi bật profile ai)
+vschema --> vpg
+jar ..> gemini : HTTPS (embedding, chat)
 rp --> vcad
 
 note as Nenv
   Biến môi trường (MYSQL_PASSWORD,
-  JWT_SECRET, DOMAIN) đọc từ deploy/.env
+  JWT_SECRET, DOMAIN, SPRING_PROFILES_ACTIVE=ai,
+  GEMINI_API_KEY) đọc từ deploy/.env
   do deploy/setup-vps.sh sinh ra.
   DOMAIN mặc định <ip>.sslip.io.
   backend chỉ khởi động khi db healthy.

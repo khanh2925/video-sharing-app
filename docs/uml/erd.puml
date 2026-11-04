@@ -1,5 +1,4 @@
 @startuml erd
-!pragma layout smetana
 skinparam defaultFontName Arial
 skinparam defaultFontSize 12
 skinparam dpi 150
@@ -14,7 +13,8 @@ skinparam class {
 }
 hide circle
 hide methods
-title Lược đồ cơ sở dữ liệu (MySQL 8.4) - 14 bảng thực thể + 1 bảng nối
+left to right direction
+title Lược đồ cơ sở dữ liệu - MySQL 8.4 (18 bảng thực thể + 1 bảng nối) và PostgreSQL pgvector (kho vector AI)
 
 entity "users" as users {
   * id : BIGINT <<PK>>
@@ -108,6 +108,15 @@ entity "follows" as follows {
   UQ (follower_id, following_id)
 }
 
+entity "suggestion_dismissals" as suggestion_dismissals #FFF4F8 {
+  * id : BIGINT <<PK>>
+  --
+  * user_id : <<FK users>>
+  * dismissed_user_id : <<FK users>>
+  * created_at : DATETIME
+  UQ (user_id, dismissed_user_id)
+}
+
 entity "stories" as stories {
   * id : BIGINT <<PK>>
   --
@@ -162,6 +171,45 @@ entity "system_settings" as system_settings {
   VIDEO_MAX_SIZE_MB
 }
 
+entity "notifications" as notifications #FFF4F8 {
+  * id : BIGINT <<PK>>
+  --
+  * recipient_id : <<FK users>>
+  * actor_id : <<FK users>>
+  * type : LIKE | COMMENT | FOLLOW | SHARE
+  video_id : <<FK videos>>
+  text : VARCHAR(200)
+  * is_read : BOOLEAN
+  * created_at : DATETIME
+}
+entity "watch_history" as watch_history #FFF4F8 {
+  * id : BIGINT <<PK>>
+  --
+  * user_id : <<FK users>>
+  * video_id : <<FK videos>>
+  * watched_at : DATETIME
+  UQ (user_id, video_id)
+}
+entity "user_events" as user_events #F2FBF6 {
+  * id : BIGINT <<PK>>
+  --
+  user_id : BIGINT (khách = null)
+  video_id : BIGINT
+  * event_type : VIEW | WATCH | SKIP | LIKE
+    | UNLIKE | COMMENT | SEARCH
+  watch_ms, duration_ms : INT
+  query : VARCHAR
+  * created_at : DATETIME
+}
+entity "video_vectors\n(PostgreSQL 17 + pgvector)" as video_vectors #EEF6FF {
+  * id : UUID <<PK>>
+  --
+  * content : TEXT
+  (tiêu đề + mô tả + hashtag + chủ đề)
+  * metadata : JSON (videoId ...)
+  * embedding : VECTOR(768)
+  chỉ mục HNSW, khoảng cách cosine
+}
 users ||--o{ videos : owner_id
 topics |o--o{ videos : topic_id
 audios |o--o{ videos : audio_id
@@ -175,6 +223,8 @@ comments ||--o{ comment_likes
 users ||--o{ comment_likes
 users ||--o{ follows : follower_id
 users ||--o{ follows : following_id
+users ||--o{ suggestion_dismissals : user_id
+users ||--o{ suggestion_dismissals : dismissed_user_id
 users ||--o{ stories : owner_id
 audios |o--o{ stories : audio_id
 stories ||--o{ story_views
@@ -182,4 +232,12 @@ users ||--o{ story_views : viewer_id
 users ||--o{ live_streams : host_id
 live_streams ||--o{ live_messages
 users ||--o{ live_messages : sender_id
+users ||--o{ notifications : recipient_id
+users ||--o{ notifications : actor_id
+videos |o--o{ notifications : video_id
+users ||--o{ watch_history
+videos ||--o{ watch_history
+users |o..o{ user_events : user_id (không khoá ngoại)
+videos |o..o{ user_events : video_id
+videos ||..|| video_vectors : metadata.videoId
 @enduml
