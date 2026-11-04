@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "LikTok",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -17,7 +17,7 @@
     "android": {
       "package": "com.khanh2925.videosharingapp",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#DB2766",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -32,7 +32,10 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "LikTok",
+      "shortName": "LikTok",
+      "themeColor": "#DB2766"
     },
     "plugins": [
       "expo-secure-store",
@@ -41,15 +44,15 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Cho phép Video Sharing dùng camera để quay video và story.",
-          "microphonePermission": "Cho phép Video Sharing dùng micro để thu âm khi quay video.",
+          "cameraPermission": "Cho phép LikTok dùng camera để quay video và story.",
+          "microphonePermission": "Cho phép LikTok dùng micro để thu âm khi quay video.",
           "recordAudioAndroid": true
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Cho phép Video Sharing chọn ảnh và video trong thư viện để đăng."
+          "photosPermission": "Cho phép LikTok chọn ảnh và video trong thư viện để đăng."
         }
       ],
       "expo-audio"

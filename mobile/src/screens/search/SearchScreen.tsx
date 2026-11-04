@@ -3,14 +3,17 @@
  * Phụ trách: Thanh
  *
  * - Ô tìm kiếm + 4 tab: Video · Tài khoản · Live · Âm thanh (GET /api/search?type=...).
- * - Tab "Theo ý nghĩa (AI)": tìm video theo nội dung câu mô tả (GET /api/search/semantic).
- *   Tốn lượt AI nên chỉ tìm khi bấm Tìm trên bàn phím, không tự tìm khi đang gõ.
+ * - Tab Video tìm 2 kiểu cùng lúc, người dùng không phải chọn:
+ *   1. Theo từ khoá (tiêu đề, mô tả, hashtag chứa chữ đã gõ) – xếp trước, có "Xem thêm video".
+ *   2. Theo ý nghĩa (AI, GET /api/search/semantic) – video có nội dung gần nghĩa nhưng không chứa đúng chữ,
+ *      hiện ở mục "Video có nội dung liên quan" bên dưới, bỏ trùng với kết quả từ khoá.
+ *   AI tắt / hết lượt thì chỉ còn kết quả từ khoá, không báo lỗi. Mỗi từ khoá chỉ hỏi AI 1 lần (nhớ trong màn).
  * - Chưa gõ gì: tab Video hiện video "Thịnh hành" (backend tự trả video nhiều lượt xem nhất).
  * - "Có thể bạn quan tâm": hashtag gợi ý từ GET /api/search/suggestions, bấm vào thì tìm theo hashtag.
  * - Màn khác mở tab này kèm từ khoá: navigation.popTo('MainTabs', { screen: 'Search', params: { q: '#meo', nonce: Date.now() } })
  *   Mở sẵn tab khác: params: { q: 'Tên bài hát', tab: 'audio', nonce: Date.now() }
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,8 +31,7 @@ import { mediaUrl } from '../../utils/media';
 import type { Audio, FollowUser, LiveStream, PageResponse, SearchType, Video } from '../../types/models';
 import type { SearchTab, TabScreenProps } from '../../navigation/types';
 
-/** 'ai': tìm theo ý nghĩa, chỉ có trong màn này (màn khác không mở sẵn tab này) */
-type TabKey = SearchTab | 'ai';
+type TabKey = SearchTab;
 type SearchItem = Video | FollowUser | LiveStream | Audio;
 
 const TABS: { key: TabKey; label: string }[] = [
@@ -37,8 +39,10 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'user', label: 'Tài khoản' },
   { key: 'live', label: 'Live' },
   { key: 'audio', label: 'Âm thanh' },
-  { key: 'ai', label: 'Theo ý nghĩa (AI)' },
 ];
+
+/** Từ khoá ngắn hơn chừng này thì không hỏi AI (1 chữ cái chưa có nghĩa gì để tìm) */
+const SEMANTIC_MIN_LENGTH = 2;
 
 /** Tab trên màn → giá trị ?type= của API */
 const TYPE_OF: Record<SearchTab, SearchType> = { video: 'videos', user: 'accounts', live: 'streaming', audio: 'audio' };
@@ -70,17 +74,11 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
 
   // "#meo" → tìm "meo"
   const keyword = debouncedQ.trim().replace(/^#/, '');
-  // Câu tìm theo ý nghĩa: chỉ đặt khi bấm Tìm (hoặc lúc chuyển sang tab AI)
-  const [aiQuery, setAiQuery] = useState('');
-  const aiKeyword = aiQuery.trim();
-  const changeTab = (key: TabKey) => {
-    if (key === 'ai') setAiQuery(q);
-    setTab(key);
-  };
+  const changeTab = (key: TabKey) => setTab(key);
 
   // Danh sách đang hiện thuộc tab + từ khoá nào. Đổi tab thì list.items vẫn là kết quả của tab cũ
   // cho tới khi tải xong → phải chờ, không thì vẽ Video bằng LiveCard sẽ lỗi.
-  const queryKey = tab === 'ai' ? `ai|${aiKeyword}` : `${tab}|${keyword}`;
+  const queryKey = `${tab}|${keyword}`;
   const latestKey = useRef(queryKey);
   useEffect(() => { latestKey.current = queryKey; }, [queryKey]);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
@@ -88,10 +86,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
   const list = usePagedList<SearchItem>(
     async (page, size) => {
       const reqKey = queryKey;
-      const res: PageResponse<SearchItem> =
-        tab === 'ai'
-          ? await semanticPage(aiKeyword)
-          : await searchApi.search<SearchItem>(keyword, TYPE_OF[tab], page, size);
+      const res: PageResponse<SearchItem> = await searchApi.search<SearchItem>(keyword, TYPE_OF[tab], page, size);
       if (reqKey === latestKey.current) setLoadedKey(reqKey);
       return res;
     },
@@ -100,6 +95,35 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
   );
   const listReady = loadedKey === queryKey;
   const tags = useFetch(() => searchApi.suggestions(''), []);
+
+  // ----- Tìm theo ý nghĩa (AI), chạy song song với tìm theo từ khoá ở tab Video -----
+  const semanticCache = useRef(new Map<string, Video[]>());     // mỗi từ khoá chỉ hỏi AI 1 lần
+  const [semantic, setSemantic] = useState<{ key: string; videos: Video[] }>({ key: '', videos: [] });
+  const semanticKey = tab === 'video' && keyword.length >= SEMANTIC_MIN_LENGTH ? keyword.toLowerCase() : '';
+  useEffect(() => {
+    if (!semanticKey) return;
+    const cached = semanticCache.current.get(semanticKey);
+    if (cached) {
+      setSemantic({ key: semanticKey, videos: cached });
+      return;
+    }
+    let alive = true;
+    aiApi.semanticSearch(semanticKey)
+      .catch(() => [] as Video[])                 // AI tắt / hết lượt → chỉ còn kết quả theo từ khoá
+      .then((videos) => {
+        semanticCache.current.set(semanticKey, videos);
+        if (alive) setSemantic({ key: semanticKey, videos });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [semanticKey]);
+  // Chỉ lấy video chưa có trong kết quả theo từ khoá (đã tải)
+  const related = useMemo(() => {
+    if (!semanticKey || semantic.key !== semanticKey) return [];
+    const shown = new Set(list.items.map((x) => x.id));
+    return semantic.videos.filter((v) => !shown.has(v.id));
+  }, [semanticKey, semantic, list.items]);
   const pendingFollows = useRef(new Set<number>());
 
   // Đổi cờ following của 1 tài khoản trong danh sách kết quả
@@ -134,17 +158,6 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
           <VideoCard
             video={v}
             onPress={() => navigation.navigate('Watch', { videoId: v.id, source: { kind: 'search', q: keyword } })}
-            onOpenOwner={() => navigation.navigate('Profile', { userId: v.owner.id })}
-          />
-        );
-      }
-      case 'ai': {
-        // Kết quả AI không phân trang → mở xem riêng video đó
-        const v = item as Video;
-        return (
-          <VideoCard
-            video={v}
-            onPress={() => navigation.navigate('Watch', { videoId: v.id })}
             onOpenOwner={() => navigation.navigate('Profile', { userId: v.owner.id })}
           />
         );
@@ -218,6 +231,26 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
             <Ionicons name="chevron-down" size={16} color={colors.primaryText} />
           </Pressable>
         )}
+        {/* Video gần nghĩa do AI tìm (không chứa đúng chữ đã gõ). Không phân trang → bấm vào mở xem riêng video đó */}
+        {related.length > 0 && (
+          <View style={[styles.relatedSection, list.items.length > 0 && styles.relatedDivider]}>
+            <View style={styles.relatedTitle}>
+              <Ionicons name="sparkles" size={16} color={colors.primary} />
+              <AppText weight="bold" size={16}>Video có nội dung liên quan</AppText>
+            </View>
+            <View style={styles.relatedGrid}>
+              {related.map((v) => (
+                <View key={v.id} style={styles.relatedCell}>
+                  <VideoCard
+                    video={v}
+                    onPress={() => navigation.navigate('Watch', { videoId: v.id })}
+                    onOpenOwner={() => navigation.navigate('Profile', { userId: v.owner.id })}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
         {!!tags.data?.length && (
           <View style={styles.tagSection}>
             <AppText weight="bold" size={16}>Có thể bạn quan tâm</AppText>
@@ -232,7 +265,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
     );
   };
 
-  const isGrid = tab === 'video' || tab === 'live' || tab === 'ai';
+  const isGrid = tab === 'video' || tab === 'live';
 
   return (
     <Screen>
@@ -249,10 +282,7 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
-            onSubmitEditing={() => {
-              setDebouncedQ(q);
-              if (tab === 'ai') setAiQuery(q);
-            }}
+            onSubmitEditing={() => setDebouncedQ(q)}
             style={styles.searchInput}
           />
           {q.length > 0 && (
@@ -293,9 +323,8 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
             ) : undefined
           }
           ListEmptyComponent={
-            tab === 'ai' && aiKeyword.length === 0 ? (
-              <EmptyView icon="sparkles-outline" title="Tìm video theo ý nghĩa" message="Gõ mô tả nội dung (vd: cảnh biển lúc hoàng hôn) rồi bấm Tìm" />
-            ) : (
+            // Không có video chứa đúng từ khoá nhưng AI tìm được video gần nghĩa → để mục bên dưới hiện, không báo rỗng
+            related.length > 0 ? undefined : (
               <EmptyView icon="search-outline" title="Không tìm thấy kết quả" message="Thử từ khoá khác" />
             )
           }
@@ -304,12 +333,6 @@ export default function SearchScreen({ navigation, route }: TabScreenProps<'Sear
       )}
     </Screen>
   );
-}
-
-/** Tìm theo ý nghĩa trả 1 mảng (không phân trang) → gói lại thành 1 trang cho usePagedList. Câu rỗng thì không gọi API. */
-async function semanticPage(q: string): Promise<PageResponse<SearchItem>> {
-  const videos = q ? await aiApi.semanticSearch(q) : [];
-  return { content: videos, page: 0, size: videos.length, totalElements: videos.length, totalPages: 1, last: true };
 }
 
 /** Ô video 2 cột: ảnh bìa + lượt xem/thích, tiêu đề 2 dòng, người đăng */
@@ -395,4 +418,10 @@ const styles = StyleSheet.create({
   moreLoading: { marginVertical: spacing.lg },
   tagSection: { marginTop: spacing.lg, paddingTop: 18, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.md },
   tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  relatedSection: { gap: spacing.md, marginTop: spacing.sm },
+  relatedDivider: { marginTop: spacing.lg, paddingTop: 18, borderTopWidth: 1, borderTopColor: colors.border },
+  relatedTitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // 2 cột giống lưới kết quả phía trên (FlatList numColumns không dùng được trong footer)
+  relatedGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md, rowGap: 18 },
+  relatedCell: { width: '47%', flexGrow: 1, maxWidth: '50%' },
 });

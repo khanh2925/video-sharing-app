@@ -1,4 +1,4 @@
-# Nghiệp vụ và chức năng hệ thống – Video Sharing App (Đề tài 1)
+# Nghiệp vụ và chức năng hệ thống – LikTok (Video Sharing App, Đề tài 1)
 
 > Tổng hợp từ: sơ đồ use case đã chốt (19 use case, 3 actor), tài liệu SDLC trên Google Docs (bản trình bày), class diagram và khung Back-End hiện tại (25/10/2026).
 > Tên use case trong file này giữ **đúng tên trên sơ đồ use case**. Tên lớp, thuộc tính, enum giữ **đúng tên trong code** (tiếng Anh). Chú thích, câu báo lỗi vẫn tiếng Việt.

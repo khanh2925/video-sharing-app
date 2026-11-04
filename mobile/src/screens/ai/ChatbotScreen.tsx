@@ -39,7 +39,7 @@ const MAX_LENGTH = 500;
 const WELCOME: ChatMessage = {
   id: 'welcome',
   role: 'bot',
-  text: 'Chào bạn! Mình có thể tìm video, trả lời về quy định của app, hoặc xem video nào của bạn nhiều lượt xem nhất.',
+  text: 'Chào bạn! Mình là trợ lý LikTok. Mình có thể tìm video, trả lời về quy định của app, hoặc xem video nào của bạn nhiều lượt xem nhất.',
 };
 
 const SUGGESTIONS = [
