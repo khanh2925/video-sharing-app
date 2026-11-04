@@ -13,7 +13,7 @@ import java.util.Set;
 
 /** Video người dùng đăng. File .mp4 nằm trên server, ở đây chỉ lưu đường dẫn. */
 @Entity
-@Table(name = "videos")
+@Table(name = "videos", indexes = @Index(name = "idx_videos_trending", columnList = "trending_score"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -62,6 +62,11 @@ public class Video {
 
     @Builder.Default
     private long commentCount = 0;
+
+    // điểm xu hướng: TrendingScoreService tính lại định kỳ từ hành vi người dùng (bảng user_events)
+    @Builder.Default
+    @Column(nullable = false)
+    private double trendingScore = 0;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

@@ -62,14 +62,15 @@ public class VideoService {
     // ===================== UC05: xem video =====================
 
     /**
-     * Khách: xếp theo lượt xem. Đã đăng nhập: video chưa xem lên trước, đã xem xuống cuối.
+     * Xếp theo điểm xu hướng (TrendingScoreService chấm từ hành vi người dùng), rồi tới lượt xem.
+     * Đã đăng nhập: thêm quy tắc video chưa xem lên trước, đã xem xuống cuối.
      * before = mốc thời gian app tải trang đầu (null = bây giờ).
      */
     @Transactional(readOnly = true)
     public PageResponse<VideoResponse> getTrending(Pageable pageable, LocalDateTime before) {
         Long currentUserId = SecurityUtils.getCurrentUserIdOrNull();
         if (currentUserId == null) {
-            return toPage(videoRepository.findByStatusAndVisibilityOrderByViewCountDesc(
+            return toPage(videoRepository.findByStatusAndVisibilityOrderByTrendingScoreDescViewCountDescIdDesc(
                     VideoStatus.PUBLISHED, Visibility.PUBLIC, pageable), null);
         }
         LocalDateTime cutoff = before != null ? before : LocalDateTime.now();

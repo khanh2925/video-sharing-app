@@ -54,6 +54,30 @@ app:
     trending-size: 10          # số video ở mục Top trending
     suggestion-size: 10        # số tài khoản gợi ý
 
+  # Điểm xu hướng cho mục Top trending (TrendingScoreService), tính từ bảng user_events:
+  # điểm = max(0, 100 × (0.35R + 0.25E + 0.30V + 0.10F) − P)
+  trending:
+    refresh-interval: PT10M    # bao lâu tính lại một lần (PT10M = 10 phút)
+    initial-delay: PT10S       # chạy lần đầu sau khi backend bật 10 giây
+    window-hours: 72           # chỉ tính hành vi trong 72 giờ gần nhất (đồ án ít người dùng nên rộng hơn 24h)
+    velocity-hours: 24         # V: lượt xem hợp lệ trong 24 giờ gần nhất (tài liệu gợi ý 1–3 giờ, đồ án ít người nên để 24)
+    complete-ratio: 0.9        # xem từ 90% video trở lên = xem hết
+    smoothing-views: 10        # m trong làm trơn Bayes: video ít mẫu bị kéo về mức trung bình
+    freshness-hours: 48        # F = exp(−tuổi video theo giờ / 48)
+    skip-penalty: 20           # P = 20 × tỉ lệ lướt qua
+    mix:                       # hệ số của R, E, V, F (cộng lại = 1)
+      retention: 0.35
+      engagement: 0.25
+      velocity: 0.30
+      freshness: 0.10
+    retention:                 # R = 0.65 × tỉ lệ xem hết + 0.35 × tỉ lệ thời gian xem
+      completion: 0.65
+      watch-ratio: 0.35
+    engagement:                # E: thích, bình luận, chia sẻ (app chưa có "lưu video")
+      like: 0.10
+      comment: 0.20
+      share: 0.30
+
 ---
 # =====================================================================
 # Spring AI mặc định TẮT để backend chạy được khi chưa có API key (test, VPS).
