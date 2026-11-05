@@ -12,3 +12,14 @@ backend/uploads/
 # Local API test captures and machine-specific launch task
 .codex-tmp/
 .vscode/tasks.json
+
+# Tài liệu nội bộ của nhóm (hướng dẫn code, kịch bản đọc code, checklist, bản nháp báo cáo)
+docs/HuongDanCode_Mobile.html
+docs/HuongDan_SpringAI.html
+docs/KichBan_*.html
+docs/Checklist_*.html
+docs/HoiDap_ThuyetTrinh.html
+docs/ThuyetTrinh_*.md
+docs/Thanh_HoanThien.md
+docs/*(ban cu*
+review-ui-demo.html
