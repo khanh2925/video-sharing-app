@@ -1,83 +1,115 @@
 @startuml seq_post_video
 skinparam defaultFontName Arial
-skinparam defaultFontSize 13
+skinparam defaultFontSize 12
 skinparam dpi 150
 skinparam shadowing false
-skinparam sequenceMessageAlign left
-skinparam responseMessageBelowArrow true
-skinparam ParticipantPadding 2
-skinparam BoxPadding 4
-skinparam maxMessageSize 170
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow false
+skinparam maxMessageSize 260
+skinparam BoxPadding 8
+skinparam ArrowColor #333333
+skinparam sequence {
+  LifeLineBorderColor #8A8A8A
+  ParticipantBackgroundColor #EEF1F8
+  ParticipantBorderColor #6B7A90
+  ActorBackgroundColor #EEF1F8
+  ActorBorderColor #6B7A90
+  BoxBorderColor #9DB4CF
+  DividerBackgroundColor #FFFFFF
+  GroupBorderColor #333333
+}
+skinparam BoundaryBackgroundColor #EEF1F8
+skinparam BoundaryBorderColor #6B7A90
+skinparam ControlBackgroundColor #EEF1F8
+skinparam ControlBorderColor #6B7A90
+skinparam EntityBackgroundColor #EEF1F8
+skinparam EntityBorderColor #6B7A90
+skinparam DatabaseBackgroundColor #EEF1F8
+skinparam DatabaseBorderColor #6B7A90
+skinparam QueueBackgroundColor #EEF1F8
+skinparam QueueBorderColor #6B7A90
+skinparam CollectionsBackgroundColor #EEF1F8
+skinparam CollectionsBorderColor #6B7A90
 hide footbox
-autonumber
-title UC08 + UC09 - Đăng video (kèm bộ lọc, nhạc)
+title Sơ đồ tuần tự - UC08 + UC09 Đăng video (kèm bộ lọc, nhạc)
 
 actor "Người dùng" as U
-box "Ứng dụng di động" #F3F8FF
-  participant "CameraScreen" as CAM
-  participant "FilterScreen /\nMusicScreen" as FM
-  participant "PostVideoScreen" as PV
-  participant "api/videos.ts\n(videoApi)" as API
+box "Client (Ứng dụng di động)" #E8F2FC
+  boundary "CameraScreen" as CAM
+  boundary "FilterScreen /\nMusicScreen" as FM
+  boundary "PostVideoScreen" as PV
+  control "api/videos.ts\n(videoApi)" as API
 end box
-box "Backend Spring Boot" #F4FFF4
-  participant "VideoController" as CTRL
-  participant "VideoService" as SVC
-  participant "FileStorageService" as FS
-  participant "SystemSettingService" as SS
-  participant "VideoRepository /\nHashtagRepository" as REPO
+box "Server (Backend Spring Boot)" #FFF5E6
+  control "VideoController" as CTRL
+  control "VideoService" as SVC
+  control "FileStorageService" as FS
+  control "SystemSettingService" as SS
+  entity "VideoRepository /\nHashtagRepository" as REPO
 end box
 database "MySQL" as DB
 collections "uploads/" as UP
 
-U -> CAM : Quay hoặc chọn video
+== 1. Người dùng quay hoặc chọn video ==
+U -> CAM : 1: Quay hoặc chọn video
 opt Chọn bộ lọc / nhạc
-  CAM -> FM : navigate('Filter' | 'Music')
-  FM --> CAM : popTo('Camera', {filter | audio},\n{merge: true})
+  CAM -> FM : 1.1: navigate('Filter' | 'Music')
+  FM --> CAM : 1.2: popTo('Camera', {filter | audio},\n{merge: true})
 end
-CAM -> PV : navigate('PostVideo',\n{videoUri, filter, audio})
-U -> PV : Nhập tiêu đề, mô tả, hashtag, chủ đề,\nchế độ hiển thị, cho phép bình luận
-U -> PV : Bấm "Đăng" (draft = false)\nhoặc "Lưu nháp" (draft = true)
-PV -> API : videoApi.create(form)
-API -> CTRL : POST /api/videos (multipart/form-data)\nfile, thumbnail, title, description, hashtags,\ntopicId, audioId, filter, visibility,\nallowComments, draft
-CTRL -> SVC : create(file, thumbnail, request)
-SVC -> REPO : tìm User, Topic, Audio theo id
-REPO --> SVC : entity (không thấy → 404)
-SVC -> SVC : normalizeHashtags(hashtags)
-SVC -> FS : saveVideo(file)
-FS -> SS : getInt(VIDEO_MAX_SIZE_MB)
-SS --> FS : giới hạn (MB)
+CAM -> PV : 1.3: navigate('PostVideo',\n{videoUri, filter, audio})
+== 2. Người dùng nhập thông tin video ==
+U -> PV : 2: Nhập tiêu đề, mô tả, hashtag, chủ đề,\nchế độ hiển thị, cho phép bình luận
+== 3. Người dùng bấm Đăng hoặc Lưu nháp ==
+U -> PV : 3: Bấm "Đăng" (draft = false)\nhoặc "Lưu nháp" (draft = true)
+PV -> API : 3.1: videoApi.create(form)
+API -> CTRL : 3.1.1: POST /api/videos (multipart/form-data)\nfile, thumbnail, title, description, hashtags,\ntopicId, audioId, filter, visibility,\nallowComments, draft
+CTRL -> SVC : 3.1.2: create(file, thumbnail, request)
+SVC -> REPO : 3.1.3: tìm User, Topic, Audio theo id
+REPO -> DB : 3.1.4: SELECT users, topics, audios
+DB --> REPO : 3.1.5: bản ghi
+REPO --> SVC : 3.1.6: entity (không thấy → 404)
+SVC -> SVC : 3.1.7: normalizeHashtags(hashtags)
+SVC -> FS : 3.1.8: saveVideo(file)
+FS -> SS : 3.1.9: getInt(VIDEO_MAX_SIZE_MB)
+SS --> FS : 3.1.10: giới hạn (MB)
 alt Sai định dạng hoặc quá dung lượng
-  FS --> SVC : ApiException 400
-  SVC --> CTRL : lỗi
-  CTRL --> API : 400 {message: "File quá lớn, tối đa N MB"\nhoặc "Chỉ nhận file mp4, mov, webm"}
-  API --> PV : lỗi
-  PV --> U : Alert "Đăng video thất bại"
+  FS --> SVC : 3.1.11: ApiException 400
+  SVC --> CTRL : 3.1.12: lỗi
+  CTRL --> API : 3.1.13: 400 {message: "File quá lớn, tối đa N MB"\nhoặc "Chỉ nhận file mp4, mov, webm"}
+  API --> PV : 3.2: lỗi
+  PV --> U : 3.3: Alert "Đăng video thất bại"
 else Hợp lệ
-  FS -> UP : ghi videos/<uuid>.<đuôi>
-  FS --> SVC : "/files/videos/<uuid>.mp4"
+  FS -> UP : 3.1.11: ghi videos/<uuid>.<đuôi>
+  UP --> FS : 3.1.12: đã ghi
+  FS --> SVC : 3.1.13: "/files/videos/<uuid>.mp4"
   opt Có ảnh bìa
-    SVC -> FS : saveImage(thumbnail, "thumbnails")
-    FS -> UP : ghi thumbnails/<uuid>.jpg
+    SVC -> FS : 3.1.14: saveImage(thumbnail, "thumbnails")
+    FS -> UP : 3.1.15: ghi thumbnails/<uuid>.jpg
+    UP --> FS : 3.1.16: đã ghi
+    FS --> SVC : 3.1.17: "/files/thumbnails/<uuid>.jpg"
   end
-  SVC -> REPO : findOrCreateHashtags(names)\nfindByName / save
+  SVC -> REPO : 3.1.18: findOrCreateHashtags(names)\nfindByName / save
+  REPO --> SVC : 3.1.19: danh sách Hashtag
   alt draft = true
-    SVC -> SVC : status = DRAFT
+    SVC -> SVC : 3.1.20: status = DRAFT
   else draft = false
-    SVC -> SVC : status = PUBLISHED
+    SVC -> SVC : 3.1.20: status = PUBLISHED
   end
-  SVC -> REPO : videoRepository.saveAndFlush(video)
-  REPO -> DB : INSERT videos, video_hashtags
+  SVC -> REPO : 3.1.21: videoRepository.saveAndFlush(video)
+  REPO -> DB : 3.1.22: INSERT videos, video_hashtags
+  DB --> REPO : 3.1.23: OK
+  REPO --> SVC : 3.1.24: Video (đã có id)
   note right of SVC
     Lưu DB lỗi → xoá file vừa ghi
     (fileStorageService.delete) rồi ném lỗi
   end note
-  SVC --> CTRL : VideoResponse
-  CTRL --> API : 201 Created + VideoResponse
-  API --> PV : Video
+  SVC --> CTRL : 3.1.25: VideoResponse
+  CTRL --> API : 3.1.26: 201 Created + VideoResponse
+  API --> PV : 3.2: Video
   alt draft = true
-    PV -> PV : navigation.reset → MyProfile + Drafts
+    PV -> PV : 3.3: navigation.reset → MyProfile + Drafts
   else draft = false
-    PV -> PV : popTo('MainTabs', {screen: 'MyProfile'})
+    PV -> PV : 3.3: popTo('MainTabs', {screen: 'MyProfile'})
   end
 end
 @enduml
