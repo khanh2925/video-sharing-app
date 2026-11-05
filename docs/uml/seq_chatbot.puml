@@ -1,41 +1,108 @@
 @startuml seq_chatbot
 skinparam defaultFontName Arial
-skinparam defaultFontSize 13
+skinparam defaultFontSize 12
 skinparam dpi 150
 skinparam shadowing false
-skinparam ParticipantPadding 12
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow false
+skinparam maxMessageSize 260
 skinparam BoxPadding 8
-title Sơ đồ Sequence - UC22 Trợ lý AI (RAG + Tool calling)
+skinparam ArrowColor #333333
+skinparam sequence {
+  LifeLineBorderColor #8A8A8A
+  ParticipantBackgroundColor #EEF1F8
+  ParticipantBorderColor #6B7A90
+  ActorBackgroundColor #EEF1F8
+  ActorBorderColor #6B7A90
+  BoxBorderColor #9DB4CF
+  DividerBackgroundColor #FFFFFF
+  GroupBorderColor #333333
+}
+skinparam BoundaryBackgroundColor #EEF1F8
+skinparam BoundaryBorderColor #6B7A90
+skinparam ControlBackgroundColor #EEF1F8
+skinparam ControlBorderColor #6B7A90
+skinparam EntityBackgroundColor #EEF1F8
+skinparam EntityBorderColor #6B7A90
+skinparam DatabaseBackgroundColor #EEF1F8
+skinparam DatabaseBorderColor #6B7A90
+skinparam QueueBackgroundColor #EEF1F8
+skinparam QueueBorderColor #6B7A90
+skinparam CollectionsBackgroundColor #EEF1F8
+skinparam CollectionsBorderColor #6B7A90
+hide footbox
+title Sơ đồ tuần tự - UC22 Trợ lý AI (RAG + Tool calling)
 
 actor "Người dùng" as U
-participant "ChatbotScreen\n(app)" as App
-participant "ChatbotController" as C
-participant "ChatbotService\n(Spring AI ChatClient)" as S
-participant "MessageChatMemoryAdvisor\n(nhớ 10 tin gần nhất)" as M
-participant "QuestionAnswerAdvisor\n(RAG)" as R
+box "Client (Ứng dụng di động)" #E8F2FC
+  boundary "ChatbotScreen" as CS
+  control "utils/chatHistory\n(AsyncStorage)" as H
+  control "api/ai.ts\n(aiApi)" as API
+end box
+box "Server (Backend Spring Boot)" #FFF5E6
+  control "ChatbotController" as CTRL
+  control "ChatbotService\n(Spring AI ChatClient)" as SVC
+  control "ChatHistoryTrimmer" as TR
+  control "QuestionAnswerAdvisor\n(RAG)" as QA
+  control "ChatTools\n(@Tool)" as T
+  entity "VideoRepository" as REPO
+end box
 database "pgvector\nvideo_vectors" as V
+database "MySQL" as DB
 participant "Mô hình chat\n(Gemini / OpenAI)" as LLM
-participant "ChatTools\n(@Tool)" as T
 
-U -> App : gõ câu hỏi, bấm Gửi
-App -> C : POST /api/chat {message}\nAuthorization: Bearer JWT
-C -> S : ask(message)
-S -> M : thêm lịch sử hội thoại của "user-{id}"
-S -> R : tìm video liên quan
-R -> V : similaritySearch(câu hỏi)\ntopK = 5, ngưỡng 0.55
-V --> R : 5 video gần nghĩa nhất
-R --> S : chèn danh sách video vào prompt
-S -> LLM : system prompt + lịch sử + video + câu hỏi
-alt Cần quy định app hoặc video của chính người hỏi
-  LLM -> T : getAppRules() / getMyVideos()
-  T --> LLM : dữ liệu thật từ system_settings / videos
+== 1. Người dùng mở Trợ lý LikTok ==
+U -> CS : 1: Bấm nút Trợ lý LikTok ở Trang chủ
+CS -> H : 1.1: loadChatHistory(userId)
+H --> CS : 1.2: các tin nhắn đã lưu trên máy
+== 2. Người dùng gửi câu hỏi ==
+U -> CS : 2: Gõ câu hỏi, bấm Gửi
+CS -> API : 2.1: aiApi.chat(text, history)
+API -> CTRL : 2.1.1: POST /api/chat\n{message, history[]}\nAuthorization: Bearer JWT
+CTRL -> SVC : 2.1.2: ask(message, history)
+SVC -> TR : 2.1.3: countToDrop(history, 2000 token)
+TR --> SVC : 2.1.4: trimmed (số tin cũ phải bỏ)
+
+alt AI chưa bật hoặc thiếu cấu hình
+  SVC --> CTRL : 2.1.5: ApiException 503
+  CTRL --> API : 2.1.6: 503 {message: "Trợ lý AI đang tắt,\nthử lại sau"}
+  API --> CS : 2.2: lỗi
+  CS --> U : 2.3: Hiện câu báo lỗi
+else AI đã bật
+  SVC -> QA : 2.1.5: prompt(system, lịch sử đã cắt, câu hỏi)
+  QA -> V : 2.1.6: similaritySearch(câu hỏi)\ntopK = 5, ngưỡng 0.55
+  V --> QA : 2.1.7: tối đa 5 video gần nghĩa nhất
+  QA --> SVC : 2.1.8: prompt đã chèn danh sách video
+  SVC -> LLM : 2.1.9: system prompt + lịch sử\n+ video + câu hỏi
+  alt Hết lượt / sai key / mất mạng
+    LLM --> SVC : 2.1.10: lỗi 429 / 401 / timeout
+    SVC --> CTRL : 2.1.11: ApiException 503
+    CTRL --> API : 2.1.12: 503 {message: "Trợ lý đang bận hoặc\nhết lượt, thử lại sau ít phút"}
+    API --> CS : 2.2: lỗi
+    CS --> U : 2.3: Hiện câu báo lỗi
+  else Thành công
+    opt Cần quy định app hoặc video của chính người hỏi
+      LLM -> T : 2.1.10: getAppRules() / getMyVideos()
+      T -> DB : 2.1.11: SELECT system_settings / videos\n(userId lấy từ token)
+      DB --> T : 2.1.12: bản ghi
+      T --> LLM : 2.1.13: dữ liệu thật
+    end
+    LLM --> SVC : 2.1.14: câu trả lời
+    SVC -> REPO : 2.1.15: findAllById(video được nhắc\ntrong câu trả lời)
+    REPO -> DB : 2.1.16: SELECT ... FROM videos
+    DB --> REPO : 2.1.17: bản ghi
+    REPO --> SVC : 2.1.18: List<Video>
+    SVC -> SVC : 2.1.19: chỉ giữ video công khai, đã đăng
+    SVC --> CTRL : 2.1.20: ChatReply {reply, videos[], trimmed}
+    CTRL --> API : 2.1.21: 200 ChatReply
+    API --> CS : 2.2: ChatReply
+    CS -> H : 2.3: saveChatHistory(bỏ "trimmed" tin cũ,\nthêm câu hỏi + câu trả lời)
+    CS --> U : 2.4: Hiện câu trả lời + thẻ video bấm xem được
+  end
 end
-LLM --> S : câu trả lời
-S -> M : lưu câu hỏi và câu trả lời
-S --> C : ChatReply {reply, videos[]}
-C --> App : 200 OK
-App --> U : hiện câu trả lời + thẻ video bấm xem được
-alt Hết lượt / sai key / mất mạng
-  S --> C : 503 "Trợ lý đang bận hoặc hết lượt, thử lại sau ít phút"
-end
+
+note over U, API
+  Lịch sử chat chỉ lưu trên máy (web dùng localStorage);
+  server không lưu, mỗi câu hỏi app gửi kèm lịch sử.
+end note
 @enduml

@@ -5,8 +5,12 @@ Nhóm: Phạm Quốc Khánh (NT) · Nguyễn Anh Long · Huỳnh Hoài Thanh
 | Phần | Công nghệ |
 |---|---|
 | Backend | Spring Boot · Java 21 · Maven |
-| Database | MySQL 8.4 (chạy bằng Docker) |
+| Database | MySQL 8.4 + PostgreSQL/pgvector (chạy bằng Docker) |
+| AI | Spring AI · Google Gemini (tuỳ chọn) |
 | Mobile | Expo React Native + TypeScript |
+
+> **Hướng dẫn cài đặt và chạy chương trình đầy đủ (có hình minh hoạ):** [docs/HuongDan_ChayChuongTrinh.docx](docs/HuongDan_ChayChuongTrinh.docx) – bản PDF: [docs/HuongDan_ChayChuongTrinh.pdf](docs/HuongDan_ChayChuongTrinh.pdf).
+> Bản đã triển khai: https://liktok.129-221-164-93.sslip.io
 
 ## 1. Cài trước (mỗi máy 1 lần)
 - Git
@@ -28,7 +32,7 @@ Mở Docker Desktop trước, rồi:
 docker compose up -d
 docker ps
 ~~~
-Thấy container `vsa-mysql` trạng thái `Up` là được.
+Thấy 2 container `vsa-mysql` (MySQL) và `vsa-pgvector` (kho vector cho AI) trạng thái `Up` là được.
 
 | Thông số | Giá trị |
 |---|---|
