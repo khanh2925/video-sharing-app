@@ -64,7 +64,7 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_CHAT_API_KEY: ${GEMINI_CHAT_API_KEY:-${GEMINI_API_KEY:-}}
-      AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-google-genai}
+      AI_CHAT_PROVIDER: ${AI_CHAT_PROVIDER:-openai}
       APP_AI_VECTORDB_URL: jdbc:postgresql://vector-db:5432/vsa_vectors
       APP_AI_VECTORDB_PASSWORD: ${VECTOR_DB_PASSWORD:-vsa}
       TZ: Asia/Ho_Chi_Minh
